@@ -5,7 +5,7 @@ Guidance for Claude Code (claude.ai/code) working in this repository.
 ## What this is
 
 A private web app for a group holiday at **La Perdrix**, St Martin de Ribérac, Dordogne —
-9–23 August, around 27 people across several households. Two halves:
+15–30 August 2026, around 27 people across several households. Two halves:
 
 1. **The landing page** — atmosphere first. A cinematic hero, the shape of the fortnight, and a
    presence chart showing who's there on which days. You go here to *enjoy the feeling of the
@@ -74,7 +74,7 @@ terracotta `#b0552f` (the heads, roof tiles), limestone `#e9e4d7`, lichen `#7e8a
 interiors lit by one warm lamp, and that's the evening-on-the-terrace mood. Accent shifts from
 terracotta in light to lamp amber in dark.
 
-People pick a **rustic icon** as their profile — partridge, chicken, cheese, wine, dog, fig, walnut,
+People pick an **icon** as their profile — partridge, chicken, cheese, wine, dog, fig, walnut,
 olive, bread, tomato, sunflower, straw hat, boules, swimming, hammock, steeple, snail, goat. One
 inline SVG sprite. Each icon carries its owner's colour through the whole app.
 

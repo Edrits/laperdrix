@@ -3,7 +3,7 @@
 --
 -- DESIGN NOTE, and it drives everything below:
 -- This is a spend *tracker*, not an accounting tool. People make themselves a
--- profile (a name and a rustic icon), log what they spent, and the group keeps a
+-- profile (a name and an icon), log what they spent, and the group keeps a
 -- loose eye on the balance. It never tells anyone they owe anyone money.
 --
 -- Therefore THE PERSON IS THE ATOM. Households exist only as an optional label
@@ -75,14 +75,14 @@ create index if not exists households_trip_idx on households (trip_id, sort_orde
 
 -- ---------------------------------------------------------------- people
 
--- Self-created: you open the share link, type your name, pick a rustic icon,
+-- Self-created: you open the share link, type your name, pick an icon,
 -- and you exist. No admin sets these up in advance.
 create table if not exists members (
   id            uuid primary key default gen_random_uuid(),
   trip_id       uuid not null references trips(id) on delete cascade,
   household_id  uuid references households(id) on delete set null,
   name          text not null,
-  -- Icon slug from the app's rustic set: 'partridge', 'chicken', 'cheese',
+  -- Icon slug from the app's icon set: 'partridge', 'chicken', 'cheese',
   -- 'wine', 'dog', 'fig', 'walnut', 'olive', 'bread', 'tomato', 'sunflower',
   -- 'hat', 'boules', 'swim', 'hammock', 'steeple', 'snail', 'goat'.
   icon          text not null default 'partridge',
