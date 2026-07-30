@@ -1,0 +1,14 @@
+.DS_Store
+
+# Local secrets — never commit. The Worker's real secrets live only in the
+# Cloudflare dashboard; this file is for local scripts (see scripts/).
+.env
+secrets.txt
+
+# Receipt fixtures for the extraction accuracy harness. Real receipts, so they
+# stay off GitHub — the repo is public via Pages.
+scripts/fixtures/
+Photos for project /
+
+# Local copies of the photographs — the Pages repo is public.
+photos/

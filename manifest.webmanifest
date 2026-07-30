@@ -1,0 +1,16 @@
+{
+  "name": "La Perdrix",
+  "short_name": "La Perdrix",
+  "description": "Plan the trip and keep track of what everyone's spending.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f6f3ec",
+  "theme_color": "#4a6b52",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192'%3E%3Crect width='192' height='192' rx='36' fill='%234a6b52'/%3E%3Ctext x='96' y='132' font-size='104' text-anchor='middle' fill='white' font-family='Georgia,serif' font-weight='bold'%3ELP%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}

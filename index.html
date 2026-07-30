@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>La Perdrix</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#efe7d6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<style>
+/* ------------------------------------------------------------------ palette
+   Lifted off the film photographs: bone and cream, shade-green, dusty
+   denim blue, terracotta, ochre. Nothing saturated, nothing cold. */
+:root{
+  --cream:      #f7f2e8;
+  --cream-warm: #efe7d6;
+  --ink:        #322e26;
+  --ink-soft:   #6f6656;
+  --ink-faint:  #9a9080;
+  --green:      #5f7355;
+  --rule:       rgba(50,46,38,.13);
+
+  --serif: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body{ margin:0; padding:0; }
+body{
+  font-family:var(--sans);
+  color:var(--ink);
+  background:var(--cream-warm);
+  min-height:100dvh;
+  overscroll-behavior-y:none;
+}
+
+/* ------------------------------------------------------------------ scene
+   A soft, heavily blurred wash of the same photograph sits behind the whole
+   page, so the cream below the picture still carries its light and colour. */
+.scene{ position:fixed; inset:0; z-index:0; overflow:hidden; background:var(--cream-warm); }
+.scene img{
+  width:110%; height:110%; margin:-5% 0 0 -5%;
+  object-fit:cover; object-position:50% 30%;
+  filter:blur(46px) saturate(.62) brightness(1.24);
+  opacity:.55;
+}
+.veil{
+  position:absolute; inset:0;
+  background:linear-gradient(180deg,
+    rgba(247,242,232,.55) 0%,
+    rgba(247,242,232,.72) 45%,
+    rgba(239,231,214,.88) 100%);
+}
+/* 35mm grain, so the interface sits in the same air as the photograph */
+.grain{
+  position:absolute; inset:0; opacity:.30; mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'>\
+<filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/>\
+<feColorMatrix type='saturate' values='0'/></filter>\
+<rect width='140' height='140' filter='url(%23n)' opacity='.5'/></svg>");
+}
+
+/* ------------------------------------------------------------------ page */
+.page{
+  position:relative; z-index:1;
+  max-width:540px; margin:0 auto;
+  padding:0 18px calc(112px + var(--safe-b));
+  min-height:100dvh;
+  display:flex; flex-direction:column;
+}
+
+/* ------------------------------------------------------------------ hero */
+.hero{ padding:38px 0 0; text-align:center; }
+.hero h1{
+  font-family:var(--serif); font-weight:400; font-style:italic;
+  font-size:clamp(36px, 11vw, 48px); line-height:1; margin:0;
+  color:var(--ink); letter-spacing:.01em;
+}
+.hero .range{
+  margin:13px 0 0; font-size:10.5px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-soft);
+}
+
+/* The photograph itself: whole frame, nothing cropped away, its lower edge
+   dissolving downward so the calendar can rise out of the grass. */
+.photo{ margin:22px -18px 0; position:relative; }
+.photo img{
+  display:block; width:100%; height:auto;
+  filter:saturate(.86) brightness(1.06) contrast(.95) sepia(.10);
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 42%,rgba(0,0,0,.55) 74%,transparent 100%);
+  mask-image:linear-gradient(180deg,#000 0%,#000 42%,rgba(0,0,0,.55) 74%,transparent 100%);
+}
+
+/* ------------------------------------------------------------------ calendar
+   Only the days of the holiday exist. The week grid keeps the weekdays
+   honest; days outside the trip are simply not there. */
+.cal{
+  position:relative; z-index:2;
+  margin:-16% -18px 0;                   /* rises into the bottom of the picture */
+  padding:16% 20px 52px;
+  -webkit-backdrop-filter:blur(6px) saturate(.85) brightness(1.06);
+  backdrop-filter:blur(6px) saturate(.85) brightness(1.06);
+  background:linear-gradient(180deg,
+    rgba(247,242,232,0) 0%,
+    rgba(247,242,232,.55) 34%,
+    rgba(247,242,232,.78) 62%,
+    rgba(247,242,232,.84) 100%);
+  -webkit-mask-image:linear-gradient(180deg, transparent 0%, #000 30%, #000 76%, transparent 100%);
+  mask-image:linear-gradient(180deg, transparent 0%, #000 30%, #000 76%, transparent 100%);
+}
+.dow{
+  display:grid; grid-template-columns:repeat(7,1fr);
+  font-size:10px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-faint); text-align:center; padding-bottom:8px;
+}
+.grid{ display:grid; grid-template-columns:repeat(7,1fr); }
+.blank{ aspect-ratio:1/1.14; }
+
+.day{
+  appearance:none; border:0; padding:7px 0 0; margin:0;
+  background:transparent; color:inherit; font:inherit;
+  aspect-ratio:1/1.14; max-height:70px; position:relative; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center;
+  border-radius:13px; transition:background .14s ease;
+}
+.day .num{ font-family:var(--serif); font-size:19px; line-height:1.05; }
+.day .mon{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-faint); margin-top:2px;
+}
+.day.has{ background:rgba(255,255,255,.34); border-radius:10px; }
+.day.focus{ box-shadow:inset 0 0 0 1.5px rgba(95,115,85,.55); }
+
+/* range being picked */
+.day.inrange{ background:rgba(122,142,102,.20); border-radius:0; }
+.day.edge-a{ border-radius:13px 0 0 13px; }
+.day.edge-b{ border-radius:0 13px 13px 0; }
+.day.edge-a.edge-b{ border-radius:13px; }
+.day.pick{ background:rgba(122,142,102,.42); }
+.day.pick .num{ font-weight:600; }
+
+.dots{
+  margin-top:auto; margin-bottom:8px;
+  display:flex; flex-wrap:nowrap; gap:3px;
+  align-items:center; justify-content:center;
+  min-height:7px;
+}
+.dot{ width:6px; height:6px; border-radius:50%; flex:none; }
+.more{ font-size:9px; font-style:normal; color:var(--ink-faint); margin-left:1px; }
+
+.who{
+  min-height:18px; margin:-30px 2px 0; text-align:center;
+  font-size:12.5px; color:var(--ink-soft); letter-spacing:.01em;
+}
+.who b{ font-weight:600; color:var(--ink); }
+
+/* ------------------------------------------------------------------ folk */
+.folk{
+  padding:16px 6px 0; display:flex; flex-wrap:wrap; gap:7px;
+  justify-content:center;
+}
+.chip{
+  appearance:none; font:inherit; cursor:pointer;
+  display:inline-flex; align-items:center; gap:7px;
+  padding:6px 12px 6px 9px; border-radius:999px;
+  border:1px solid var(--rule); background:rgba(255,255,255,.5);
+  color:var(--ink); font-size:12.5px;
+}
+.chip .sw{ width:9px; height:9px; border-radius:50%; flex:none; }
+.chip .when{ color:var(--ink-soft); font-size:11.5px; }
+.empty{
+  text-align:center; font-size:13px; color:var(--ink-soft);
+  font-family:var(--serif); font-style:italic; padding:18px 0 0;
+}
+
+/* ------------------------------------------------------------------ bar */
+.bar{
+  position:fixed; left:0; right:0; bottom:0; z-index:3;
+  padding:14px 18px calc(14px + var(--safe-b));
+  display:flex; justify-content:center;
+  background:linear-gradient(180deg, rgba(239,231,214,0), rgba(239,231,214,.92) 46%);
+  pointer-events:none;
+}
+.bar button{ pointer-events:auto; }
+.btn{
+  appearance:none; font:inherit; cursor:pointer;
+  padding:13px 26px; border-radius:999px; border:1px solid rgba(95,115,85,.35);
+  background:var(--green); color:#f8f4ea;
+  font-size:14px; letter-spacing:.04em;
+  box-shadow:0 6px 20px rgba(50,46,38,.16);
+}
+.btn.ghost{
+  background:rgba(255,255,255,.72); color:var(--ink);
+  border-color:var(--rule); box-shadow:none;
+}
+.btn[disabled]{ opacity:.42; cursor:default; }
+
+/* ------------------------------------------------------------------ sheet */
+.sheet{
+  position:fixed; left:0; right:0; bottom:0; z-index:4;
+  transform:translateY(102%); transition:transform .28s cubic-bezier(.32,.72,0,1);
+  background:var(--cream); border-radius:22px 22px 0 0;
+  box-shadow:0 -10px 40px rgba(50,46,38,.20);
+  padding:20px 20px calc(20px + var(--safe-b));
+}
+.sheet.open{ transform:translateY(0); }
+.sheet .inner{ max-width:540px; margin:0 auto; }
+/* while picking, the page grows a tail so the calendar can be scrolled clear
+   of the sheet — you must be able to see every day you are choosing between */
+body.picking .page{ padding-bottom:var(--sheet-h, 340px); }
+.sheet h2{
+  font-family:var(--serif); font-weight:400; font-size:19px; margin:0 0 3px;
+}
+.sheet .hint{ font-size:12.5px; color:var(--ink-soft); margin:0 0 16px; min-height:16px; }
+.sheet label{
+  display:block; font-size:10px; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--ink-faint); margin-bottom:7px;
+}
+.sheet input{
+  width:100%; font:inherit; font-size:16px; padding:11px 13px;
+  border:1px solid var(--rule); border-radius:12px;
+  background:rgba(255,255,255,.75); color:var(--ink);
+}
+.sheet input:focus{ outline:none; border-color:rgba(95,115,85,.5); }
+.swatches{ display:flex; gap:9px; margin:16px 0 20px; flex-wrap:wrap; }
+.sw-btn{
+  appearance:none; border:0; padding:0; cursor:pointer;
+  width:28px; height:28px; border-radius:50%;
+  box-shadow:0 0 0 1px rgba(255,255,255,.7) inset;
+}
+.sw-btn[aria-pressed="true"]{ box-shadow:0 0 0 2px var(--cream) inset, 0 0 0 3.5px currentColor; }
+.sheet .row{ display:flex; gap:9px; }
+.sheet .row .btn{ flex:1; text-align:center; }
+.remove{
+  display:block; margin:14px auto 0; background:none; border:0; cursor:pointer;
+  font:inherit; font-size:12px; color:var(--ink-faint); text-decoration:underline;
+}
+.remove[hidden]{ display:none; }
+</style>
+</head>
+<body>
+
+<div class="scene">
+  <img src="photos/group.jpg" alt="">
+  <div class="veil"></div>
+  <div class="grain"></div>
+</div>
+
+<div class="page">
+  <header class="hero">
+    <h1>La Perdrix</h1>
+    <p class="range" id="range"></p>
+    <div class="photo"><img src="photos/group.jpg" alt="The group at La Perdrix"></div>
+  </header>
+
+  <section class="cal">
+    <div class="dow" id="dow"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <p class="who" id="who"></p>
+  <section class="folk" id="folk"></section>
+</div>
+
+<div class="bar">
+  <button class="btn" id="add">Add your dates</button>
+</div>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Your dates">
+  <div class="inner">
+    <h2 id="sheetTitle">Your dates</h2>
+    <p class="hint" id="hint">Tap the day you arrive, then the day you leave.</p>
+
+    <label for="name">Name</label>
+    <input id="name" type="text" autocomplete="given-name" placeholder="" enterkeyhint="done">
+
+    <div class="swatches" id="swatches"></div>
+
+    <div class="row">
+      <button class="btn ghost" id="cancel">Cancel</button>
+      <button class="btn" id="save" disabled>Save</button>
+    </div>
+    <button class="remove" id="remove" hidden>Remove me</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================== the trip
+   The only thing to change when the dates firm up. Everything on the page
+   is derived from these two days — the calendar cannot show anything else. */
+const TRIP = { start:'2026-08-15', end:'2026-08-30' };
+
+/* ---------------------------------------------------------------- dates
+   Noon UTC throughout, so no summer-time shift can ever move a day. */
+const D       = s => new Date(s + 'T12:00:00Z');
+const iso     = d => d.toISOString().slice(0,10);
+const addDays = (d,n) => new Date(d.getTime() + n*86400000);
+const DOW  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DOWL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const MON  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const dowIdx = d => (d.getUTCDay() + 6) % 7;          // Monday-first
+
+const START = D(TRIP.start), END = D(TRIP.end);
+const DAYS = (() => {
+  const out = [];
+  for (let d = START; d <= END; d = addDays(d,1)) out.push(d);
+  return out;
+})();
+
+/* ---------------------------------------------------------------- people */
+const COLOURS = ['#87936d','#7b93a7','#c58a72','#b39055','#8e7183','#5e7355','#c49a9a','#6f7b85'];
+const STORE = 'laperdrix.stays.v1';
+
+let people = load();
+let mode   = 'idle';          // 'idle' | 'picking'
+let draft  = null;            // {id?, name, colour, from, to}
+let hover  = null;            // live end of the range while picking
+let focus  = null;            // day whose names are shown
+
+function load(){
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE) || '[]');
+    return Array.isArray(raw) ? raw.filter(p => p && p.name && p.from && p.to) : [];
+  } catch { return []; }
+}
+function save(){ localStorage.setItem(STORE, JSON.stringify(people)); }
+
+const here = (p, dayIso) => p.from <= dayIso && dayIso <= p.to;
+
+/* ---------------------------------------------------------------- render */
+const $ = id => document.getElementById(id);
+
+function renderRange(){
+  const sameMonth = START.getUTCMonth() === END.getUTCMonth();
+  $('range').textContent =
+    DOWL[dowIdx(START)] + ' ' + START.getUTCDate() +
+    (sameMonth ? '' : ' ' + MONL[START.getUTCMonth()]) +
+    ' – ' + DOWL[dowIdx(END)] + ' ' + END.getUTCDate() +
+    ' ' + MONL[END.getUTCMonth()] + ' ' + END.getUTCFullYear();
+}
+
+function renderDow(){
+  $('dow').innerHTML = DOW.map(d => '<span>' + d[0] + '</span>').join('');
+}
+
+function renderGrid(){
+  const grid = $('grid');
+  grid.innerHTML = '';
+
+  // leading blanks so the first day lands on its real weekday
+  for (let i = 0; i < dowIdx(START); i++) grid.appendChild(blank());
+
+  // the live range while someone is picking their dates
+  let a = null, b = null;
+  if (mode === 'picking' && draft && draft.from){
+    const other = draft.to || hover || draft.from;
+    a = draft.from < other ? draft.from : other;
+    b = draft.from < other ? other : draft.from;
+  }
+
+  let lastMonth = null;
+  DAYS.forEach(d => {
+    const k = iso(d);
+    const cell = document.createElement('button');
+    cell.className = 'day';
+    cell.type = 'button';
+    cell.dataset.d = k;
+
+    const showMonth = d.getUTCMonth() !== lastMonth;
+    lastMonth = d.getUTCMonth();
+
+    cell.innerHTML =
+      '<span class="num">' + d.getUTCDate() + '</span>' +
+      (showMonth ? '<span class="mon">' + MON[d.getUTCMonth()] + '</span>' : '');
+
+    const staying = people.filter(p => here(p, k));
+
+    if (mode === 'picking'){
+      if (a && k >= a && k <= b){
+        cell.classList.add('inrange');
+        if (k === a) cell.classList.add('edge-a');
+        if (k === b) cell.classList.add('edge-b');
+        if (k === draft.from || k === draft.to) cell.classList.add('pick');
+      }
+    } else {
+      if (staying.length) cell.classList.add('has');
+      if (k === focus) cell.classList.add('focus');
+    }
+
+    // Who is here, as dots. Four fit across a day on a phone; beyond that the
+    // count takes a dot's place, so every cell stays exactly one row tall.
+    const dots = document.createElement('span');
+    dots.className = 'dots';
+    const shown = staying.length > 4 ? 3 : staying.length;
+    staying.slice(0, shown).forEach(p => {
+      const dot = document.createElement('i');
+      dot.className = 'dot';
+      dot.style.background = p.colour;
+      dots.appendChild(dot);
+    });
+    if (staying.length > shown){
+      const more = document.createElement('i');
+      more.className = 'more';
+      more.textContent = '+' + (staying.length - shown);
+      dots.appendChild(more);
+    }
+    cell.appendChild(dots);
+
+    cell.setAttribute('aria-label',
+      DOWL[dowIdx(d)] + ' ' + d.getUTCDate() + ' ' + MONL[d.getUTCMonth()] +
+      (staying.length ? ' — ' + staying.map(p => p.name).join(', ') : ''));
+
+    grid.appendChild(cell);
+  });
+
+  // trailing blanks
+  for (let i = dowIdx(END); i < 6; i++) grid.appendChild(blank());
+}
+function blank(){
+  const s = document.createElement('span');
+  s.className = 'blank';
+  return s;
+}
+
+function renderWho(){
+  const el = $('who');
+  if (mode === 'picking'){ el.textContent = ''; return; }
+  if (!focus){
+    el.textContent = people.length ? 'Tap a day to see who’s here.' : '';
+    return;
+  }
+  const d = D(focus);
+  const staying = people.filter(p => here(p, focus));
+  const label = DOW[dowIdx(d)] + ' ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()];
+  el.innerHTML = '<b>' + label + '</b> · ' +
+    (staying.length ? staying.map(p => p.name).join(', ') : 'nobody yet');
+}
+
+function renderFolk(){
+  const el = $('folk');
+  el.innerHTML = '';
+  if (mode === 'picking') return;
+  if (!people.length){
+    const p = document.createElement('p');
+    p.className = 'empty';
+    p.textContent = 'Nobody has put their dates in yet.';
+    el.appendChild(p);
+    return;
+  }
+  people.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.type = 'button';
+    b.dataset.id = p.id;
+    const f = D(p.from), t = D(p.to);
+    const span = f.getUTCMonth() === t.getUTCMonth()
+      ? f.getUTCDate() + '–' + t.getUTCDate() + ' ' + MON[t.getUTCMonth()]
+      : f.getUTCDate() + ' ' + MON[f.getUTCMonth()] + ' – ' + t.getUTCDate() + ' ' + MON[t.getUTCMonth()];
+    b.innerHTML = '<span class="sw" style="background:' + p.colour + '"></span>' +
+                  '<span>' + escapeHtml(p.name) + '</span>' +
+                  '<span class="when">' + span + '</span>';
+    el.appendChild(b);
+  });
+}
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderSwatches(){
+  const el = $('swatches');
+  el.innerHTML = '';
+  COLOURS.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'sw-btn';
+    b.type = 'button';
+    b.style.background = c;
+    b.style.color = c;
+    b.setAttribute('aria-pressed', String(draft && draft.colour === c));
+    b.setAttribute('aria-label', 'Colour');
+    b.onclick = () => { draft.colour = c; renderSwatches(); renderGrid(); };
+    el.appendChild(b);
+  });
+}
+
+function renderSheet(){
+  const open = mode === 'picking';
+  $('sheet').classList.toggle('open', open);
+  document.body.classList.toggle('picking', open);
+  $('add').style.visibility = open ? 'hidden' : 'visible';
+  if (!open){ document.body.style.removeProperty('--sheet-h'); return; }
+
+  $('sheetTitle').textContent = draft.id ? 'Your dates' : 'Add your dates';
+  $('remove').hidden = !draft.id;
+  $('hint').textContent =
+    !draft.from ? 'Tap the day you arrive.'
+    : !draft.to ? 'Now tap the day you leave.'
+    : nights(draft) + ' — tap a day to start again.';
+  $('save').disabled = !(draft.name.trim() && draft.from && draft.to);
+}
+
+function nights(p){
+  const n = Math.round((D(p.to) - D(p.from)) / 86400000);
+  const f = D(p.from), t = D(p.to);
+  const span = f.getUTCMonth() === t.getUTCMonth()
+    ? f.getUTCDate() + '–' + t.getUTCDate() + ' ' + MON[t.getUTCMonth()]
+    : f.getUTCDate() + ' ' + MON[f.getUTCMonth()] + ' – ' + t.getUTCDate() + ' ' + MON[t.getUTCMonth()];
+  return span + ', ' + n + (n === 1 ? ' night' : ' nights');
+}
+
+function render(){
+  renderGrid(); renderWho(); renderFolk(); renderSheet();
+}
+
+/* ---------------------------------------------------------------- events */
+$('grid').addEventListener('click', e => {
+  const cell = e.target.closest('.day');
+  if (!cell) return;
+  const k = cell.dataset.d;
+
+  if (mode !== 'picking'){
+    focus = (focus === k) ? null : k;
+    render();
+    return;
+  }
+  // picking: first tap sets arrival, second sets departure, third restarts
+  if (!draft.from || draft.to){
+    draft.from = k; draft.to = null; hover = null;
+  } else if (k < draft.from){
+    draft.to = draft.from; draft.from = k;
+  } else {
+    draft.to = k;
+  }
+  render();
+});
+
+$('grid').addEventListener('pointerover', e => {
+  if (mode !== 'picking' || !draft.from || draft.to) return;
+  const cell = e.target.closest('.day');
+  if (!cell || cell.dataset.d === hover) return;
+  hover = cell.dataset.d;
+  renderGrid();
+});
+
+/* Slide the calendar clear of the sheet, so no day is hidden behind it.
+   Deliberately no autofocus on the name field: on a phone the keyboard would
+   swallow the very thing you are being asked to tap. */
+function clearOfSheet(){
+  requestAnimationFrame(() => {
+    const h = $('sheet').offsetHeight;
+    document.body.style.setProperty('--sheet-h', (h + 24) + 'px');
+    const bottom = $('grid').getBoundingClientRect().bottom;
+    const room = window.innerHeight - h - 14;
+    if (bottom > room) window.scrollBy({ top: bottom - room, behavior:'smooth' });
+  });
+}
+
+$('add').addEventListener('click', () => {
+  draft = { name:'', colour:COLOURS[people.length % COLOURS.length], from:null, to:null };
+  mode = 'picking'; hover = null; focus = null;
+  renderSwatches(); render();
+  $('name').value = '';
+  clearOfSheet();
+});
+
+$('folk').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  const p = people.find(x => x.id === chip.dataset.id);
+  if (!p) return;
+  draft = { id:p.id, name:p.name, colour:p.colour, from:p.from, to:p.to };
+  mode = 'picking'; hover = null; focus = null;
+  renderSwatches(); render();
+  $('name').value = p.name;
+  clearOfSheet();
+});
+
+$('name').addEventListener('input', e => { draft.name = e.target.value; renderSheet(); });
+$('name').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+
+$('cancel').addEventListener('click', () => { mode = 'idle'; draft = null; hover = null; render(); });
+
+$('save').addEventListener('click', () => {
+  const rec = {
+    id: draft.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
+    name: draft.name.trim(), colour: draft.colour, from: draft.from, to: draft.to
+  };
+  const i = people.findIndex(p => p.id === rec.id);
+  if (i >= 0) people[i] = rec; else people.push(rec);
+  people.sort((a,b) => a.from.localeCompare(b.from) || a.name.localeCompare(b.name));
+  save();
+  mode = 'idle'; draft = null; hover = null; focus = rec.from;
+  render();
+});
+
+$('remove').addEventListener('click', () => {
+  people = people.filter(p => p.id !== draft.id);
+  save();
+  mode = 'idle'; draft = null; hover = null; focus = null;
+  render();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && mode === 'picking') $('cancel').click();
+});
+
+/* ---------------------------------------------------------------- go */
+renderRange(); renderDow(); render();
+</script>
+</body>
+</html>
