@@ -1,286 +1,132 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>La Perdrix</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#efe7d6">
+<meta name="description" content="La Perdrix, St Martin de Ribérac — 15–30 August 2026.">
+<meta name="theme-color" content="#e9e4d7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171b14" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-<style>
-/* ------------------------------------------------------------------ palette
-   Lifted off the film photographs: bone and cream, shade-green, dusty
-   denim blue, terracotta, ochre. Nothing saturated, nothing cold. */
-:root{
-  --cream:      #f7f2e8;
-  --cream-warm: #efe7d6;
-  --ink:        #322e26;
-  --ink-soft:   #6f6656;
-  --ink-faint:  #9a9080;
-  --green:      #5f7355;
-  --rule:       rgba(50,46,38,.13);
-
-  --serif: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-
-  --safe-b: env(safe-area-inset-bottom, 0px);
-}
-
-*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html,body{ margin:0; padding:0; }
-body{
-  font-family:var(--sans);
-  color:var(--ink);
-  background:var(--cream-warm);
-  min-height:100dvh;
-  overscroll-behavior-y:none;
-}
-
-/* ------------------------------------------------------------------ scene
-   A soft, heavily blurred wash of the same photograph sits behind the whole
-   page, so the cream below the picture still carries its light and colour. */
-.scene{ position:fixed; inset:0; z-index:0; overflow:hidden; background:var(--cream-warm); }
-.scene img{
-  width:110%; height:110%; margin:-5% 0 0 -5%;
-  object-fit:cover; object-position:50% 30%;
-  filter:blur(46px) saturate(.62) brightness(1.24);
-  opacity:.55;
-}
-.veil{
-  position:absolute; inset:0;
-  background:linear-gradient(180deg,
-    rgba(247,242,232,.55) 0%,
-    rgba(247,242,232,.72) 45%,
-    rgba(239,231,214,.88) 100%);
-}
-/* 35mm grain, so the interface sits in the same air as the photograph */
-.grain{
-  position:absolute; inset:0; opacity:.30; mix-blend-mode:multiply;
-  background-image:url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'>\
-<filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/>\
-<feColorMatrix type='saturate' values='0'/></filter>\
-<rect width='140' height='140' filter='url(%23n)' opacity='.5'/></svg>");
-}
-
-/* ------------------------------------------------------------------ page */
-.page{
-  position:relative; z-index:1;
-  max-width:540px; margin:0 auto;
-  padding:0 18px calc(112px + var(--safe-b));
-  min-height:100dvh;
-  display:flex; flex-direction:column;
-}
-
-/* ------------------------------------------------------------------ hero */
-.hero{ padding:38px 0 0; text-align:center; }
-.hero h1{
-  font-family:var(--serif); font-weight:400; font-style:italic;
-  font-size:clamp(36px, 11vw, 48px); line-height:1; margin:0;
-  color:var(--ink); letter-spacing:.01em;
-}
-.hero .range{
-  margin:13px 0 0; font-size:10.5px; letter-spacing:.2em; text-transform:uppercase;
-  color:var(--ink-soft);
-}
-
-/* The photograph itself: whole frame, nothing cropped away, its lower edge
-   dissolving downward so the calendar can rise out of the grass. */
-.photo{ margin:22px -18px 0; position:relative; }
-.photo img{
-  display:block; width:100%; height:auto;
-  filter:saturate(.86) brightness(1.06) contrast(.95) sepia(.10);
-  -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 42%,rgba(0,0,0,.55) 74%,transparent 100%);
-  mask-image:linear-gradient(180deg,#000 0%,#000 42%,rgba(0,0,0,.55) 74%,transparent 100%);
-}
-
-/* ------------------------------------------------------------------ calendar
-   Only the days of the holiday exist. The week grid keeps the weekdays
-   honest; days outside the trip are simply not there. */
-.cal{
-  position:relative; z-index:2;
-  margin:-16% -18px 0;                   /* rises into the bottom of the picture */
-  padding:16% 20px 52px;
-  -webkit-backdrop-filter:blur(6px) saturate(.85) brightness(1.06);
-  backdrop-filter:blur(6px) saturate(.85) brightness(1.06);
-  background:linear-gradient(180deg,
-    rgba(247,242,232,0) 0%,
-    rgba(247,242,232,.55) 34%,
-    rgba(247,242,232,.78) 62%,
-    rgba(247,242,232,.84) 100%);
-  -webkit-mask-image:linear-gradient(180deg, transparent 0%, #000 30%, #000 76%, transparent 100%);
-  mask-image:linear-gradient(180deg, transparent 0%, #000 30%, #000 76%, transparent 100%);
-}
-.dow{
-  display:grid; grid-template-columns:repeat(7,1fr);
-  font-size:10px; letter-spacing:.16em; text-transform:uppercase;
-  color:var(--ink-faint); text-align:center; padding-bottom:8px;
-}
-.grid{ display:grid; grid-template-columns:repeat(7,1fr); }
-.blank{ aspect-ratio:1/1.14; }
-
-.day{
-  appearance:none; border:0; padding:7px 0 0; margin:0;
-  background:transparent; color:inherit; font:inherit;
-  aspect-ratio:1/1.14; max-height:70px; position:relative; cursor:pointer;
-  display:flex; flex-direction:column; align-items:center;
-  border-radius:13px; transition:background .14s ease;
-}
-.day .num{ font-family:var(--serif); font-size:19px; line-height:1.05; }
-.day .mon{
-  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
-  color:var(--ink-faint); margin-top:2px;
-}
-.day.has{ background:rgba(255,255,255,.34); border-radius:10px; }
-.day.focus{ box-shadow:inset 0 0 0 1.5px rgba(95,115,85,.55); }
-
-/* range being picked */
-.day.inrange{ background:rgba(122,142,102,.20); border-radius:0; }
-.day.edge-a{ border-radius:13px 0 0 13px; }
-.day.edge-b{ border-radius:0 13px 13px 0; }
-.day.edge-a.edge-b{ border-radius:13px; }
-.day.pick{ background:rgba(122,142,102,.42); }
-.day.pick .num{ font-weight:600; }
-
-.dots{
-  margin-top:auto; margin-bottom:8px;
-  display:flex; flex-wrap:nowrap; gap:3px;
-  align-items:center; justify-content:center;
-  min-height:7px;
-}
-.dot{ width:6px; height:6px; border-radius:50%; flex:none; }
-.more{ font-size:9px; font-style:normal; color:var(--ink-faint); margin-left:1px; }
-
-.who{
-  min-height:18px; margin:-30px 2px 0; text-align:center;
-  font-size:12.5px; color:var(--ink-soft); letter-spacing:.01em;
-}
-.who b{ font-weight:600; color:var(--ink); }
-
-/* ------------------------------------------------------------------ folk */
-.folk{
-  padding:16px 6px 0; display:flex; flex-wrap:wrap; gap:7px;
-  justify-content:center;
-}
-.chip{
-  appearance:none; font:inherit; cursor:pointer;
-  display:inline-flex; align-items:center; gap:7px;
-  padding:6px 12px 6px 9px; border-radius:999px;
-  border:1px solid var(--rule); background:rgba(255,255,255,.5);
-  color:var(--ink); font-size:12.5px;
-}
-.chip .sw{ width:9px; height:9px; border-radius:50%; flex:none; }
-.chip .when{ color:var(--ink-soft); font-size:11.5px; }
-.empty{
-  text-align:center; font-size:13px; color:var(--ink-soft);
-  font-family:var(--serif); font-style:italic; padding:18px 0 0;
-}
-
-/* ------------------------------------------------------------------ bar */
-.bar{
-  position:fixed; left:0; right:0; bottom:0; z-index:3;
-  padding:14px 18px calc(14px + var(--safe-b));
-  display:flex; justify-content:center;
-  background:linear-gradient(180deg, rgba(239,231,214,0), rgba(239,231,214,.92) 46%);
-  pointer-events:none;
-}
-.bar button{ pointer-events:auto; }
-.btn{
-  appearance:none; font:inherit; cursor:pointer;
-  padding:13px 26px; border-radius:999px; border:1px solid rgba(95,115,85,.35);
-  background:var(--green); color:#f8f4ea;
-  font-size:14px; letter-spacing:.04em;
-  box-shadow:0 6px 20px rgba(50,46,38,.16);
-}
-.btn.ghost{
-  background:rgba(255,255,255,.72); color:var(--ink);
-  border-color:var(--rule); box-shadow:none;
-}
-.btn[disabled]{ opacity:.42; cursor:default; }
-
-/* ------------------------------------------------------------------ sheet */
-.sheet{
-  position:fixed; left:0; right:0; bottom:0; z-index:4;
-  transform:translateY(102%); transition:transform .28s cubic-bezier(.32,.72,0,1);
-  background:var(--cream); border-radius:22px 22px 0 0;
-  box-shadow:0 -10px 40px rgba(50,46,38,.20);
-  padding:20px 20px calc(20px + var(--safe-b));
-}
-.sheet.open{ transform:translateY(0); }
-.sheet .inner{ max-width:540px; margin:0 auto; }
-/* while picking, the page grows a tail so the calendar can be scrolled clear
-   of the sheet — you must be able to see every day you are choosing between */
-body.picking .page{ padding-bottom:var(--sheet-h, 340px); }
-.sheet h2{
-  font-family:var(--serif); font-weight:400; font-size:19px; margin:0 0 3px;
-}
-.sheet .hint{ font-size:12.5px; color:var(--ink-soft); margin:0 0 16px; min-height:16px; }
-.sheet label{
-  display:block; font-size:10px; letter-spacing:.18em; text-transform:uppercase;
-  color:var(--ink-faint); margin-bottom:7px;
-}
-.sheet input{
-  width:100%; font:inherit; font-size:16px; padding:11px 13px;
-  border:1px solid var(--rule); border-radius:12px;
-  background:rgba(255,255,255,.75); color:var(--ink);
-}
-.sheet input:focus{ outline:none; border-color:rgba(95,115,85,.5); }
-.swatches{ display:flex; gap:9px; margin:16px 0 20px; flex-wrap:wrap; }
-.sw-btn{
-  appearance:none; border:0; padding:0; cursor:pointer;
-  width:28px; height:28px; border-radius:50%;
-  box-shadow:0 0 0 1px rgba(255,255,255,.7) inset;
-}
-.sw-btn[aria-pressed="true"]{ box-shadow:0 0 0 2px var(--cream) inset, 0 0 0 3.5px currentColor; }
-.sheet .row{ display:flex; gap:9px; }
-.sheet .row .btn{ flex:1; text-align:center; }
-.remove{
-  display:block; margin:14px auto 0; background:none; border:0; cursor:pointer;
-  font:inherit; font-size:12px; color:var(--ink-faint); text-decoration:underline;
-}
-.remove[hidden]{ display:none; }
-</style>
+<!-- Bump ?v= whenever styles.css changes. Neither python's http.server nor
+     GitHub Pages sends useful cache headers, so without this the browser will
+     happily serve a stale stylesheet and you'll debug a fix you already made. -->
+<link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
 
-<div class="scene">
-  <img src="photos/group.jpg" alt="">
-  <div class="veil"></div>
-  <div class="grain"></div>
-</div>
-
-<div class="page">
-  <header class="hero">
-    <h1>La Perdrix</h1>
-    <p class="range" id="range"></p>
-    <div class="photo"><img src="photos/group.jpg" alt="The group at La Perdrix"></div>
-  </header>
-
-  <section class="cal">
-    <div class="dow" id="dow"></div>
-    <div class="grid" id="grid"></div>
-  </section>
-
-  <p class="who" id="who"></p>
-  <section class="folk" id="folk"></section>
-</div>
-
-<div class="bar">
-  <button class="btn" id="add">Add your dates</button>
-</div>
-
-<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Your dates">
+<!-- ============================================================ hero -->
+<header class="hero">
+  <div class="plate" role="img" aria-label="Photographs of La Perdrix: the group in the garden, the lake, terracotta heads, hens in the shade">
+    <span></span><span></span><span></span><span></span>
+  </div>
+  <span class="wash"></span>
+  <div class="themes">
+    <button id="t-light" aria-pressed="false">Light</button>
+    <button id="t-dark" aria-pressed="false">Dark</button>
+    <button id="t-auto" aria-pressed="true">Auto</button>
+  </div>
   <div class="inner">
+    <p class="place">St Martin de Ribérac · Dordogne</p>
+    <h1>La&nbsp;Perdrix</h1>
+    <p class="when" id="range"></p>
+    <p class="count"><b id="cd">—</b> <span id="cdl"></span></p>
+  </div>
+  <span class="cue" aria-hidden="true"><i></i>Scroll</span>
+</header>
+
+<!-- ============================================================ the place -->
+<section class="sec welcome">
+  <div class="reveal">
+    <p class="eyebrow">The place</p>
+    <h2 class="big">A monastery with a swimming pool and too many walnut trees.</h2>
+    <p class="lede">Thirteenth century, gated, on the edge of the village. Three houses joined by a passage, a vine terrace that takes the afternoon shade, and a church steeple to watch the sun go behind. Johnny and Ingrid have lived here since 2007 and it is, by their own account, a little ramshackle.</p>
+    <p class="muted">Nothing to organise up here. Put your dates in further down when you know them.</p>
+  </div>
+  <div class="sheet3 reveal">
+    <figure class="print">
+      <span class="im" style="background-image:url(photos/heads.jpg)" role="img" aria-label="Terracotta heads against a lichened limestone wall"></span>
+      <figcaption>the studio spills into the garden</figcaption>
+    </figure>
+    <figure class="print">
+      <span class="im" style="background-image:url(photos/hens.jpg)" role="img" aria-label="Two hens in dappled shade"></span>
+      <figcaption>there are hens</figcaption>
+    </figure>
+    <figure class="print">
+      <span class="im" style="background-image:url(photos/mirror.jpg)" role="img" aria-label="A dim room of gilt mirrors lit by one lamp"></span>
+      <figcaption>every wall has a mirror on it</figcaption>
+    </figure>
+  </div>
+</section>
+
+<div class="band abbey reveal">
+  <div class="cap"><small>Twenty minutes away</small><p>Brantôme, where the abbey is cut straight into the cliff.</p></div>
+</div>
+
+<!-- ============================================================ calendar + who's here -->
+<section class="sec cal-sec">
+  <div class="reveal">
+    <p class="eyebrow">Who's here when</p>
+    <h2 class="big">Not everybody's there for the whole fortnight.</h2>
+    <p class="muted">People trickle in and out. Add your dates and everyone can see who overlaps with whom — handy before you promise anyone a lift from the airport.</p>
+  </div>
+
+  <div class="cal reveal">
+    <div class="dow" id="dow" aria-hidden="true"></div>
+    <div class="grid" id="grid" role="group" aria-label="The days of the trip"></div>
+  </div>
+
+  <p class="who" id="who" role="status"></p>
+  <div class="folk" id="folk"></div>
+
+  <div class="chart reveal" id="chartWrap" hidden>
+    <div class="chart-in">
+      <div class="scale" id="scale"></div>
+      <div class="tally" id="tally"></div>
+      <div id="bars"></div>
+    </div>
+  </div>
+  <p class="chart-empty" id="chartEmpty">Once a few people have put their dates in, a chart of who overlaps appears here.</p>
+</section>
+
+<div class="band chair reveal">
+  <div class="cap"><small>And then</small><p>The evenings, which are the actual point of the whole thing.</p></div>
+</div>
+
+<!-- ============================================================ the kitty, behind a click -->
+<section class="sec door">
+  <div class="card reveal">
+    <span class="veil"></span>
+    <div class="body">
+      <p class="eb">When you're ready</p>
+      <h2>The kitty</h2>
+      <p>Who's put what in, what the big shop cost, and roughly where everyone stands. None of it needs looking at until somebody's been to Carrefour.</p>
+      <div class="pot">
+        <div><b id="potTotal">—</b><span>in so far</span></div>
+        <div><b id="potCount">—</b><span>entries</span></div>
+        <div><b id="potPeople">—</b><span>chipping in</span></div>
+      </div>
+      <button class="enter" id="openKitty">Open the kitty
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"/><path d="M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </div>
+  <p class="foot">La Perdrix · 2–4 Rue des Anciens Combattants, 24600 St Martin de Ribérac · Johnny &amp; Ingrid <a href="tel:+33553912477">+33 553 91 24 77</a></p>
+</section>
+
+<!-- ============================================================ add your dates -->
+<div class="bar"><button class="btn" id="add">Add your dates</button></div>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="in2">
     <h2 id="sheetTitle">Your dates</h2>
-    <p class="hint" id="hint">Tap the day you arrive, then the day you leave.</p>
-
-    <label for="name">Name</label>
-    <input id="name" type="text" autocomplete="given-name" placeholder="" enterkeyhint="done">
-
-    <div class="swatches" id="swatches"></div>
-
+    <p class="hint" id="hint"></p>
+    <label for="name">Your name</label>
+    <input id="name" type="text" autocomplete="given-name" enterkeyhint="done" maxlength="40">
+    <label id="pickLabel">Pick something rustic</label>
+    <div class="picker" id="picker" role="group" aria-labelledby="pickLabel"></div>
     <div class="row">
       <button class="btn ghost" id="cancel">Cancel</button>
       <button class="btn" id="save" disabled>Save</button>
@@ -289,10 +135,75 @@ body.picking .page{ padding-bottom:var(--sheet-h, 340px); }
   </div>
 </div>
 
+<!-- rustic icon sprite: one set, inherits each person's colour via currentColor -->
+<svg style="position:absolute;width:0;height:0" aria-hidden="true"><defs>
+  <g id="i-partridge" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15.6 9.4a4.6 4.6 0 0 0-2-.7c-1 0-1.8.5-2.5 1.2-1.6 1.4-4.3 1.8-5.9 3.4-1.6 1.6-1.5 4 .4 5.2 2.2 1.4 6.3 1.2 8.8-.7 2.3-1.8 3.1-4.7 2.3-7z"/>
+    <circle cx="16.9" cy="7.4" r="2"/><path d="M18.9 7 21.4 6.4l-2.3 1.7"/><path d="M9.2 18.9v1.8M12.8 18.6v2"/></g>
+  <g id="i-chicken" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="14.2" cy="8.2" r="2.4"/><path d="M13.4 5.5c-.3-1.3.3-2.2 1.2-2.5.6 1 .7 1.9.3 2.6"/>
+    <path d="M16.6 8.7 19.2 8.1l-2.4 1.6"/>
+    <path d="M14.7 10.5c2 1 3.3 2.9 3.3 5.1 0 3-2.6 4.9-5.8 4.9s-5.9-1.9-5.9-4.9c0-2.7 1.9-4.8 4.5-5.4"/>
+    <path d="M6.5 14 3.2 12.1l3 3.7"/></g>
+  <g id="i-cheese" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.4 16.8h17.2v-4.4L3.4 16.8z"/><path d="M20.6 12.4 8.8 9.6 3.4 16.8"/><circle cx="14.6" cy="14.6" r=".9"/></g>
+  <g id="i-wine" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.3 2.8h3.4v3.5c0 1 1.9 2.1 1.9 4.3v8.6a1.9 1.9 0 0 1-1.9 1.9h-3.4a1.9 1.9 0 0 1-1.9-1.9v-8.6c0-2.2 1.9-3.3 1.9-4.3z"/><path d="M8.4 13.8h7.2"/></g>
+  <g id="i-dog" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6.4 7.6C5 7.6 4.2 9.2 4.2 11.2c0 1.4.4 2.6 1.1 3.3"/><path d="M17.6 7.6c1.4 0 2.2 1.6 2.2 3.6 0 1.4-.4 2.6-1.1 3.3"/>
+    <path d="M5.4 12.4c0-3.7 2.9-6.2 6.6-6.2s6.6 2.5 6.6 6.2c0 4.1-3 7.2-6.6 7.2s-6.6-3.1-6.6-7.2z"/><circle cx="12" cy="14.2" r="1"/></g>
+  <g id="i-fig" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 8.6c3.5 0 6 2.8 6 6.2s-2.7 6-6 6-6-2.6-6-6 2.5-6.2 6-6.2z"/><path d="M12 8.6V5.4"/>
+    <path d="M12 6.6C10.3 4.7 8.2 4.3 6.8 4.6c0 1.7 1.5 3.3 3.6 3.5"/></g>
+  <g id="i-walnut" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12.4" r="7.6"/><path d="M12 4.8v15.2"/>
+    <path d="M8.3 7.2c1.5 1.7 1.7 3.7.7 5.5-1 1.8-.8 3.9.6 5.3"/>
+    <path d="M15.7 7.2c-1.5 1.7-1.7 3.7-.7 5.5 1 1.8.8 3.9-.6 5.3"/></g>
+  <g id="i-olive" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.6 20c4.2-1.2 8.4-4.9 10.9-9C16.2 8.2 17.9 6 20.4 4.4"/>
+    <ellipse cx="10.4" cy="13.4" rx="1.7" ry="2.3" transform="rotate(-38 10.4 13.4)"/>
+    <ellipse cx="15.6" cy="8.4" rx="1.7" ry="2.3" transform="rotate(-38 15.6 8.4)"/></g>
+  <g id="i-bread" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4.4 17.4 16.6 5.6a2.4 2.4 0 0 1 3.4 3.4L7.8 20.8a2.4 2.4 0 0 1-3.4-3.4z"/>
+    <path d="M8.4 13.6 10.2 15.4M11.2 10.8 13 12.6M14 8l1.8 1.8"/></g>
+  <g id="i-tomato" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="14.2" r="6.6"/><path d="M12 7.6V5.2"/><path d="M8.6 6.6 12 8.6l3.4-2"/></g>
+  <g id="i-sunflower" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3.4"/>
+    <path d="M12 3.2v3.2M12 17.6v3.2M3.2 12h3.2M17.6 12h3.2M5.8 5.8l2.3 2.3M15.9 15.9l2.3 2.3M18.2 5.8l-2.3 2.3M8.1 15.9l-2.3 2.3"/></g>
+  <g id="i-hat" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7.9 12.6c0-4.1 1.8-7.1 4.1-7.1s4.1 3 4.1 7.1"/>
+    <path d="M3.4 13.6c0-1.2 3.9-2.1 8.6-2.1s8.6.9 8.6 2.1-3.9 2.7-8.6 2.7-8.6-1.5-8.6-2.7z"/>
+    <path d="M8.1 11.9c1.2-.5 2.5-.7 3.9-.7s2.7.2 3.9.7"/></g>
+  <g id="i-boules" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="7.8" cy="15.4" r="4.2"/><circle cx="16.6" cy="16.4" r="3.4"/><circle cx="14.4" cy="7.8" r="1.7"/>
+    <path d="M6 13.6 9.6 17.2"/></g>
+  <g id="i-swim" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="7.4" r="3.2"/>
+    <path d="M2.6 15.6c1.6 0 1.6 1.6 3.1 1.6s1.6-1.6 3.1-1.6 1.6 1.6 3.2 1.6 1.6-1.6 3.1-1.6 1.6 1.6 3.1 1.6 1.6-1.6 3.2-1.6"/>
+    <path d="M2.6 19.4c1.6 0 1.6 1.6 3.1 1.6s1.6-1.6 3.1-1.6 1.6 1.6 3.2 1.6 1.6-1.6 3.1-1.6 1.6 1.6 3.1 1.6 1.6-1.6 3.2-1.6"/></g>
+  <g id="i-hammock" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.4 5.4v14.2M20.6 5.4v14.2"/><path d="M3.6 9.2c3.2 6.6 13.6 6.6 16.8 0"/>
+    <path d="M6.2 11.8v2.2M9.2 13.6v2.2M12.6 14.2v2.2M15.8 13.4v2.2M18.2 11.6v2.2"/></g>
+  <g id="i-steeple" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 2.4 7.2 8.2h9.6z"/><path d="M8.2 8.2h7.6v12.2H8.2z"/>
+    <path d="M12 11.4a1.7 1.7 0 0 1 1.7 1.7v2.4h-3.4v-2.4A1.7 1.7 0 0 1 12 11.4z"/><path d="M6.2 20.4h11.6"/></g>
+  <g id="i-snail" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="14.4" cy="13.4" r="5.4"/><path d="M14.4 13.4a2.3 2.3 0 1 1 2.3 2.3 3.7 3.7 0 0 0 3.1-3.7"/>
+    <path d="M9.4 18.8H4.2c-1 0-1.6-.6-1.6-1.5 0-1.4 1.6-2.1 3-2.7"/>
+    <path d="M3.4 14.6c-.6-1-1-1.9-1-2.7M5.6 14c0-1 .2-2 .8-2.9"/></g>
+  <g id="i-goat" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8.6 8.2C7.4 6.3 5.9 5.1 4.4 4.9c.2 2.1 1 3.8 2.5 5"/>
+    <path d="M15.4 8.2c1.2-1.9 2.7-3.1 4.2-3.3-.2 2.1-1 3.8-2.5 5"/>
+    <path d="M7.9 9.8c0-1.5 1.8-2.5 4.1-2.5s4.1 1 4.1 2.5v2.7c0 1.6-.8 2.9-1.9 3.7l-.4 3.5h-3.6l-.4-3.5c-1.1-.8-1.9-2.1-1.9-3.7z"/>
+    <path d="M10.6 19.4c0 1.4.5 2.4 1.4 2.9.9-.5 1.4-1.5 1.4-2.9"/></g>
+</defs></svg>
+
 <script>
-/* ============================================================== the trip
-   The only thing to change when the dates firm up. Everything on the page
-   is derived from these two days — the calendar cannot show anything else. */
+/* ======================================================================= trip
+   The only thing to change when the dates move. Everything on the page is
+   derived from these two days — nothing can show a date outside them.
+   (Inherited from the calendar work, along with the noon-UTC handling below.) */
 const TRIP = { start:'2026-08-15', end:'2026-08-30' };
 
 /* ---------------------------------------------------------------- dates
@@ -304,59 +215,87 @@ const DOW  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const DOWL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const MON  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const dowIdx = d => (d.getUTCDay() + 6) % 7;          // Monday-first
+const dowIdx = d => (d.getUTCDay() + 6) % 7;            // Monday-first
 
 const START = D(TRIP.start), END = D(TRIP.end);
-const DAYS = (() => {
-  const out = [];
-  for (let d = START; d <= END; d = addDays(d,1)) out.push(d);
-  return out;
-})();
+const DAYS = (() => { const o=[]; for (let d=START; d<=END; d=addDays(d,1)) o.push(d); return o; })();
+const DAY_KEYS = DAYS.map(iso);
 
-/* ---------------------------------------------------------------- people */
-const COLOURS = ['#87936d','#7b93a7','#c58a72','#b39055','#8e7183','#5e7355','#c49a9a','#6f7b85'];
+/* ---------------------------------------------------------------- icons
+   Each rustic icon carries its own colour, so picking a partridge picks
+   terracotta. One choice, not two. */
+const ICONS = [
+  ['partridge','#b0552f'], ['chicken','#7e8a6a'], ['cheese','#d99a3f'],
+  ['wine','#8c3f52'],      ['dog','#5c7d7a'],     ['fig','#6a4b7c'],
+  ['walnut','#7a6248'],    ['olive','#5f7148'],   ['bread','#c08040'],
+  ['tomato','#b34733'],    ['sunflower','#c99a2e'],['hat','#a08a5c'],
+  ['boules','#4f6b80'],    ['swim','#3f7f96'],    ['hammock','#8a7a4e'],
+  ['steeple','#77706a'],   ['snail','#96683f'],   ['goat','#6d6552']
+];
+const colourOf = slug => (ICONS.find(i => i[0] === slug) || ICONS[0])[1];
+
 const STORE = 'laperdrix.stays.v1';
 
 let people = load();
-let mode   = 'idle';          // 'idle' | 'picking'
-let draft  = null;            // {id?, name, colour, from, to}
-let hover  = null;            // live end of the range while picking
-let focus  = null;            // day whose names are shown
+let mode   = 'idle';      // 'idle' | 'picking'
+let draft  = null;        // {id?, name, icon, from, to}
+let hover  = null;        // live end of the range while picking
+let focus  = null;        // day whose names are shown
 
 function load(){
-  try {
+  try{
     const raw = JSON.parse(localStorage.getItem(STORE) || '[]');
-    return Array.isArray(raw) ? raw.filter(p => p && p.name && p.from && p.to) : [];
-  } catch { return []; }
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(p => p && p.name && p.from && p.to).map((p,i) => ({
+      id: p.id || String(i),
+      name: p.name,
+      /* Records written before profiles existed have a colour but no icon.
+         Keep them working: give them one rather than dropping the row. */
+      icon: p.icon || ICONS[i % ICONS.length][0],
+      from: p.from, to: p.to
+    }));
+  }catch{ return []; }
 }
 function save(){ localStorage.setItem(STORE, JSON.stringify(people)); }
 
-const here = (p, dayIso) => p.from <= dayIso && dayIso <= p.to;
-
-/* ---------------------------------------------------------------- render */
+const here = (p, k) => p.from <= k && k <= p.to;
 const $ = id => document.getElementById(id);
+const esc = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const icon = (slug, cls) => '<svg viewBox="0 0 24 24" class="'+(cls||'')+'"><use href="#i-'+slug+'"/></svg>';
 
+/* ---------------------------------------------------------------- header */
 function renderRange(){
-  const sameMonth = START.getUTCMonth() === END.getUTCMonth();
+  const same = START.getUTCMonth() === END.getUTCMonth();
   $('range').textContent =
-    DOWL[dowIdx(START)] + ' ' + START.getUTCDate() +
-    (sameMonth ? '' : ' ' + MONL[START.getUTCMonth()]) +
-    ' – ' + DOWL[dowIdx(END)] + ' ' + END.getUTCDate() +
-    ' ' + MONL[END.getUTCMonth()] + ' ' + END.getUTCFullYear();
+    DOWL[dowIdx(START)] + ' ' + START.getUTCDate() + (same ? '' : ' ' + MONL[START.getUTCMonth()]) +
+    ' – ' + DOWL[dowIdx(END)] + ' ' + END.getUTCDate() + ' ' + MONL[END.getUTCMonth()] + ' ' + END.getUTCFullYear();
+}
+function renderCountdown(){
+  /* Compare noon-UTC to noon-UTC. Taking local midnight against a noon-UTC
+     start leaves a half-day in the difference, which rounds up and shows a
+     day too many. */
+  const t = new Date();
+  const pad = v => String(v).padStart(2,'0');
+  const today = D(t.getFullYear() + '-' + pad(t.getMonth()+1) + '-' + pad(t.getDate()));
+  const days = Math.round((START - today) / 86400000);
+  const n = $('cd'), l = $('cdl');
+  if (days > 1){ n.textContent = days; l.textContent = 'days to go'; }
+  else if (days === 1){ n.textContent = '1'; l.textContent = 'day to go'; }
+  else if (days === 0){ n.textContent = 'Today'; l.textContent = ''; }
+  else if (days > -DAYS.length){ n.textContent = 'Day ' + (1 - days); l.textContent = 'of the trip'; }
+  else { n.textContent = 'Until'; l.textContent = 'next time'; }
 }
 
-function renderDow(){
-  $('dow').innerHTML = DOW.map(d => '<span>' + d[0] + '</span>').join('');
-}
+/* ---------------------------------------------------------------- calendar */
+function renderDow(){ $('dow').innerHTML = DOW.map(d => '<span>'+d[0]+'</span>').join(''); }
+
+function blank(){ const s = document.createElement('span'); s.className = 'blank'; return s; }
 
 function renderGrid(){
   const grid = $('grid');
   grid.innerHTML = '';
-
-  // leading blanks so the first day lands on its real weekday
   for (let i = 0; i < dowIdx(START); i++) grid.appendChild(blank());
 
-  // the live range while someone is picking their dates
   let a = null, b = null;
   if (mode === 'picking' && draft && draft.from){
     const other = draft.to || hover || draft.from;
@@ -374,10 +313,8 @@ function renderGrid(){
 
     const showMonth = d.getUTCMonth() !== lastMonth;
     lastMonth = d.getUTCMonth();
-
-    cell.innerHTML =
-      '<span class="num">' + d.getUTCDate() + '</span>' +
-      (showMonth ? '<span class="mon">' + MON[d.getUTCMonth()] + '</span>' : '');
+    cell.innerHTML = '<span class="num">'+d.getUTCDate()+'</span>' +
+      (showMonth ? '<span class="mon">'+MON[d.getUTCMonth()]+'</span>' : '');
 
     const staying = people.filter(p => here(p, k));
 
@@ -393,15 +330,15 @@ function renderGrid(){
       if (k === focus) cell.classList.add('focus');
     }
 
-    // Who is here, as dots. Four fit across a day on a phone; beyond that the
-    // count takes a dot's place, so every cell stays exactly one row tall.
+    /* Who is here, as dots. Four fit across a day on a phone; beyond that the
+       count takes a dot's place, so every cell stays exactly one row tall. */
     const dots = document.createElement('span');
     dots.className = 'dots';
     const shown = staying.length > 4 ? 3 : staying.length;
     staying.slice(0, shown).forEach(p => {
       const dot = document.createElement('i');
       dot.className = 'dot';
-      dot.style.background = p.colour;
+      dot.style.background = colourOf(p.icon);
       dots.appendChild(dot);
     });
     if (staying.length > shown){
@@ -419,27 +356,24 @@ function renderGrid(){
     grid.appendChild(cell);
   });
 
-  // trailing blanks
   for (let i = dowIdx(END); i < 6; i++) grid.appendChild(blank());
-}
-function blank(){
-  const s = document.createElement('span');
-  s.className = 'blank';
-  return s;
 }
 
 function renderWho(){
   const el = $('who');
   if (mode === 'picking'){ el.textContent = ''; return; }
-  if (!focus){
-    el.textContent = people.length ? 'Tap a day to see who’s here.' : '';
-    return;
-  }
+  if (!focus){ el.textContent = people.length ? 'Tap a day to see who’s here.' : ''; return; }
   const d = D(focus);
   const staying = people.filter(p => here(p, focus));
-  const label = DOW[dowIdx(d)] + ' ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()];
-  el.innerHTML = '<b>' + label + '</b> · ' +
-    (staying.length ? staying.map(p => p.name).join(', ') : 'nobody yet');
+  el.innerHTML = '<b>' + DOW[dowIdx(d)] + ' ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()] + '</b> · ' +
+    (staying.length ? staying.map(p => esc(p.name)).join(', ') : 'nobody yet');
+}
+
+function spanLabel(p){
+  const f = D(p.from), t = D(p.to);
+  return f.getUTCMonth() === t.getUTCMonth()
+    ? f.getUTCDate() + '–' + t.getUTCDate() + ' ' + MON[t.getUTCMonth()]
+    : f.getUTCDate() + ' ' + MON[f.getUTCMonth()] + ' – ' + t.getUTCDate() + ' ' + MON[t.getUTCMonth()];
 }
 
 function renderFolk(){
@@ -447,10 +381,7 @@ function renderFolk(){
   el.innerHTML = '';
   if (mode === 'picking') return;
   if (!people.length){
-    const p = document.createElement('p');
-    p.className = 'empty';
-    p.textContent = 'Nobody has put their dates in yet.';
-    el.appendChild(p);
+    el.innerHTML = '<p class="empty">Nobody has put their dates in yet.</p>';
     return;
   }
   people.forEach(p => {
@@ -458,85 +389,85 @@ function renderFolk(){
     b.className = 'chip';
     b.type = 'button';
     b.dataset.id = p.id;
-    const f = D(p.from), t = D(p.to);
-    const span = f.getUTCMonth() === t.getUTCMonth()
-      ? f.getUTCDate() + '–' + t.getUTCDate() + ' ' + MON[t.getUTCMonth()]
-      : f.getUTCDate() + ' ' + MON[f.getUTCMonth()] + ' – ' + t.getUTCDate() + ' ' + MON[t.getUTCMonth()];
-    b.innerHTML = '<span class="sw" style="background:' + p.colour + '"></span>' +
-                  '<span>' + escapeHtml(p.name) + '</span>' +
-                  '<span class="when">' + span + '</span>';
+    b.innerHTML = '<span class="av" style="background:'+colourOf(p.icon)+'">'+icon(p.icon)+'</span>' +
+                  '<span>'+esc(p.name)+'</span><span class="when">'+spanLabel(p)+'</span>';
     el.appendChild(b);
   });
 }
 
-function escapeHtml(s){
-  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* ------------------------------------------------- presence chart
+   Same `people` array as the calendar — two views of one source of truth,
+   so they can never disagree. */
+function renderChart(){
+  const wrap = $('chartWrap'), empty = $('chartEmpty');
+  if (people.length < 2 || mode === 'picking'){
+    wrap.hidden = true;
+    empty.hidden = !(people.length < 2 && mode !== 'picking');
+    return;
+  }
+  wrap.hidden = false; empty.hidden = true;
+  wrap.style.setProperty('--days', DAYS.length);
+
+  const counts = DAY_KEYS.map(k => people.filter(p => here(p, k)).length);
+  const peak = Math.max(...counts);
+
+  $('scale').innerHTML = '<span></span>' + DAYS.map((d,i) =>
+    '<i class="'+(counts[i] === peak && peak > 0 ? 'hot' : '')+'"><b>'+d.getUTCDate()+'</b>'+DOW[dowIdx(d)].slice(0,2)+'</i>'
+  ).join('');
+
+  $('tally').innerHTML = '<span class="sp">Heads</span>' + counts.map(c =>
+    '<u class="'+(c === peak && peak > 0 ? 'hot' : '')+'" style="height:'+Math.max(2, Math.round(c / peak * 30))+'px"></u>'
+  ).join('');
+
+  $('bars').innerHTML = people.map(p => {
+    const from = Math.max(0, DAY_KEYS.indexOf(p.from));
+    const to   = Math.max(from, DAY_KEYS.indexOf(p.to));
+    const c    = colourOf(p.icon);
+    return '<div class="prow" style="--days:'+DAYS.length+'">' +
+      '<span class="nm"><i style="background:'+c+'">'+icon(p.icon)+'</i><span>'+esc(p.name)+'</span></span>' +
+      '<span class="stay" style="background:'+c+';grid-column:'+(from+2)+' / span '+(to-from+1)+'"></span></div>';
+  }).join('');
 }
 
-function renderSwatches(){
-  const el = $('swatches');
-  el.innerHTML = '';
-  COLOURS.forEach(c => {
-    const b = document.createElement('button');
-    b.className = 'sw-btn';
-    b.type = 'button';
-    b.style.background = c;
-    b.style.color = c;
-    b.setAttribute('aria-pressed', String(draft && draft.colour === c));
-    b.setAttribute('aria-label', 'Colour');
-    b.onclick = () => { draft.colour = c; renderSwatches(); renderGrid(); };
-    el.appendChild(b);
-  });
+/* ---------------------------------------------------------------- sheet */
+function renderPicker(){
+  $('picker').innerHTML = ICONS.map(([slug,c]) => {
+    const on = draft && draft.icon === slug;
+    return '<button type="button" class="ic-btn" data-icon="'+slug+'" aria-pressed="'+on+'" aria-label="'+slug+'"'+
+      (on ? ' style="background:'+c+'"' : '') + '>' + icon(slug) + '</button>';
+  }).join('');
+}
+
+function nights(p){
+  const n = Math.round((D(p.to) - D(p.from)) / 86400000);
+  return spanLabel(p) + ', ' + n + (n === 1 ? ' night' : ' nights');
 }
 
 function renderSheet(){
   const open = mode === 'picking';
   $('sheet').classList.toggle('open', open);
   document.body.classList.toggle('picking', open);
-  $('add').style.visibility = open ? 'hidden' : 'visible';
   if (!open){ document.body.style.removeProperty('--sheet-h'); return; }
-
   $('sheetTitle').textContent = draft.id ? 'Your dates' : 'Add your dates';
   $('remove').hidden = !draft.id;
   $('hint').textContent =
-    !draft.from ? 'Tap the day you arrive.'
-    : !draft.to ? 'Now tap the day you leave.'
-    : nights(draft) + ' — tap a day to start again.';
+    !draft.from ? 'Tap the day you arrive.' :
+    !draft.to   ? 'Now tap the day you leave.' :
+                  nights(draft) + ' — tap a day to start again.';
   $('save').disabled = !(draft.name.trim() && draft.from && draft.to);
 }
 
-function nights(p){
-  const n = Math.round((D(p.to) - D(p.from)) / 86400000);
-  const f = D(p.from), t = D(p.to);
-  const span = f.getUTCMonth() === t.getUTCMonth()
-    ? f.getUTCDate() + '–' + t.getUTCDate() + ' ' + MON[t.getUTCMonth()]
-    : f.getUTCDate() + ' ' + MON[f.getUTCMonth()] + ' – ' + t.getUTCDate() + ' ' + MON[t.getUTCMonth()];
-  return span + ', ' + n + (n === 1 ? ' night' : ' nights');
-}
-
-function render(){
-  renderGrid(); renderWho(); renderFolk(); renderSheet();
-}
+function render(){ renderGrid(); renderWho(); renderFolk(); renderChart(); renderSheet(); }
 
 /* ---------------------------------------------------------------- events */
 $('grid').addEventListener('click', e => {
   const cell = e.target.closest('.day');
   if (!cell) return;
   const k = cell.dataset.d;
-
-  if (mode !== 'picking'){
-    focus = (focus === k) ? null : k;
-    render();
-    return;
-  }
-  // picking: first tap sets arrival, second sets departure, third restarts
-  if (!draft.from || draft.to){
-    draft.from = k; draft.to = null; hover = null;
-  } else if (k < draft.from){
-    draft.to = draft.from; draft.from = k;
-  } else {
-    draft.to = k;
-  }
+  if (mode !== 'picking'){ focus = (focus === k) ? null : k; render(); return; }
+  if (!draft.from || draft.to){ draft.from = k; draft.to = null; hover = null; }
+  else if (k < draft.from){ draft.to = draft.from; draft.from = k; }
+  else { draft.to = k; }
   render();
 });
 
@@ -561,48 +492,53 @@ function clearOfSheet(){
   });
 }
 
-$('add').addEventListener('click', () => {
-  draft = { name:'', colour:COLOURS[people.length % COLOURS.length], from:null, to:null };
-  mode = 'picking'; hover = null; focus = null;
-  renderSwatches(); render();
-  $('name').value = '';
+function startDraft(d){
+  draft = d; mode = 'picking'; hover = null; focus = null;
+  renderPicker(); render();
+  $('name').value = d.name;
   clearOfSheet();
+}
+
+$('add').addEventListener('click', () => {
+  startDraft({ name:'', icon: ICONS[people.length % ICONS.length][0], from:null, to:null });
 });
 
 $('folk').addEventListener('click', e => {
   const chip = e.target.closest('.chip');
   if (!chip) return;
   const p = people.find(x => x.id === chip.dataset.id);
-  if (!p) return;
-  draft = { id:p.id, name:p.name, colour:p.colour, from:p.from, to:p.to };
-  mode = 'picking'; hover = null; focus = null;
-  renderSwatches(); render();
-  $('name').value = p.name;
-  clearOfSheet();
+  if (p) startDraft({ id:p.id, name:p.name, icon:p.icon, from:p.from, to:p.to });
+});
+
+$('picker').addEventListener('click', e => {
+  const b = e.target.closest('.ic-btn');
+  if (!b) return;
+  draft.icon = b.dataset.icon;
+  renderPicker(); renderGrid();
 });
 
 $('name').addEventListener('input', e => { draft.name = e.target.value; renderSheet(); });
 $('name').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
 
-$('cancel').addEventListener('click', () => { mode = 'idle'; draft = null; hover = null; render(); });
+$('cancel').addEventListener('click', () => { mode='idle'; draft=null; hover=null; render(); });
 
 $('save').addEventListener('click', () => {
   const rec = {
     id: draft.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
-    name: draft.name.trim(), colour: draft.colour, from: draft.from, to: draft.to
+    name: draft.name.trim(), icon: draft.icon, from: draft.from, to: draft.to
   };
   const i = people.findIndex(p => p.id === rec.id);
   if (i >= 0) people[i] = rec; else people.push(rec);
   people.sort((a,b) => a.from.localeCompare(b.from) || a.name.localeCompare(b.name));
   save();
-  mode = 'idle'; draft = null; hover = null; focus = rec.from;
+  mode='idle'; draft=null; hover=null; focus=rec.from;
   render();
 });
 
 $('remove').addEventListener('click', () => {
   people = people.filter(p => p.id !== draft.id);
   save();
-  mode = 'idle'; draft = null; hover = null; focus = null;
+  mode='idle'; draft=null; hover=null; focus=null;
   render();
 });
 
@@ -610,8 +546,52 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && mode === 'picking') $('cancel').click();
 });
 
+/* The kitty is not built yet — say so plainly rather than dead-ending. */
+$('openKitty').addEventListener('click', () => {
+  $('openKitty').textContent = 'Not built yet — coming next';
+  $('openKitty').disabled = true;
+});
+
+/* ---------------------------------------------------------------- theme */
+(function(){
+  const root = document.documentElement;
+  const b = { light:$('t-light'), dark:$('t-dark'), auto:$('t-auto') };
+  const set = m => {
+    if (m === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', m);
+    try { localStorage.setItem('laperdrix.theme', m); } catch {}
+    for (const k in b) b[k].setAttribute('aria-pressed', String(k === m));
+  };
+  for (const k in b) b[k].addEventListener('click', () => set(k));
+  let saved = 'auto';
+  try { saved = localStorage.getItem('laperdrix.theme') || 'auto'; } catch {}
+  set(saved);
+})();
+
+/* ------------------------------------------------- keep the hero uncluttered
+   The landing page is for enjoying the look of the holiday, so the "Add your
+   dates" bar stays out of sight until you have actually scrolled to the
+   calendar. It has nothing to do until then. */
+(function(){
+  const bar = document.querySelector('.bar');
+  const cal = document.querySelector('.cal-sec');
+  if (!('IntersectionObserver' in window)){ bar.classList.add('show'); return; }
+  new IntersectionObserver(es => {
+    es.forEach(e => bar.classList.toggle('show', e.isIntersecting || e.boundingClientRect.top < 0));
+  }, { rootMargin:'-20% 0px 0px 0px' }).observe(cal);
+})();
+
+/* ---------------------------------------------------------------- reveals */
+if ('IntersectionObserver' in window){
+  const io = new IntersectionObserver(es => {
+    es.forEach(e => { if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { rootMargin:'0px 0px -8% 0px', threshold:.05 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+} else {
+  document.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
+}
+
 /* ---------------------------------------------------------------- go */
-renderRange(); renderDow(); render();
+renderRange(); renderCountdown(); renderDow(); render();
 </script>
 </body>
 </html>
