@@ -16,7 +16,10 @@
 <!-- Bump ?v= whenever styles.css changes. Neither python's http.server nor
      GitHub Pages sends useful cache headers, so without this the browser will
      happily serve a stale stylesheet and you'll debug a fix you already made. -->
-<link rel="stylesheet" href="styles.css?v=6">
+<!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
+     are in place when the rules that use var(--ph-*) are parsed. -->
+<link rel="stylesheet" href="photos.css?v=1">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 
@@ -50,15 +53,15 @@
   </div>
   <div class="sheet3 reveal">
     <figure class="print">
-      <span class="im" style="background-image:url(photos/heads.jpg)" role="img" aria-label="Terracotta heads against a lichened limestone wall"></span>
+      <span class="im" style="background-image:var(--ph-heads)" role="img" aria-label="Terracotta heads against a lichened limestone wall"></span>
       <figcaption>the studio spills into the garden</figcaption>
     </figure>
     <figure class="print">
-      <span class="im" style="background-image:url(photos/hens.jpg)" role="img" aria-label="Two hens in dappled shade"></span>
+      <span class="im" style="background-image:var(--ph-hens)" role="img" aria-label="Two hens in dappled shade"></span>
       <figcaption>there are hens</figcaption>
     </figure>
     <figure class="print">
-      <span class="im" style="background-image:url(photos/mirror.jpg)" role="img" aria-label="A dim room of gilt mirrors lit by one lamp"></span>
+      <span class="im" style="background-image:var(--ph-mirror)" role="img" aria-label="A dim room of gilt mirrors lit by one lamp"></span>
       <figcaption>every wall has a mirror on it</figcaption>
     </figure>
   </div>
@@ -567,6 +570,58 @@ $('openKitty').addEventListener('click', () => {
   $('openKitty').textContent = 'Not built yet — coming next';
   $('openKitty').disabled = true;
 });
+
+/* ------------------------------------------------- the photographs
+   The site is public; the photographs are not, because they show the family
+   including children. They live in a private bucket and the Worker hands out
+   short-lived signed URLs.
+
+   The awkward constraint: CSS `background-image` cannot send an auth header, so
+   the token cannot travel that way — and the stylesheet is public, so it cannot
+   contain the token either. Hence custom properties, set here at runtime.
+   Until then the blur stand-ins from photos.css are showing. */
+
+// Set once deployed, e.g. 'https://laperdrix.neddritchie.workers.dev'.
+// Empty means "not deployed yet", which is the normal state during development.
+const WORKER_URL = '';
+
+const PHOTO_NAMES = ['group', 'lake', 'abbey', 'chair', 'mirror', 'heads', 'hens'];
+const TOKEN_KEY = 'laperdrix.token';
+
+/* The share link looks like  …/#t=<token>  . Take it, keep it, and tidy the URL
+   so the token isn't sitting in the address bar to be screenshotted. */
+(function claimToken(){
+  const m = location.hash.match(/[#&]t=([^&]+)/);
+  if (!m) return;
+  try { localStorage.setItem(TOKEN_KEY, decodeURIComponent(m[1])); } catch {}
+  history.replaceState(null, '', location.pathname + location.search);
+})();
+
+function setPhoto(name, url){
+  document.documentElement.style.setProperty('--ph-' + name, `url("${url}")`);
+}
+
+(async function loadPhotos(){
+  // Development: if the full-size files are sitting next to index.html, just
+  // use them. Keeps local work free of tokens and Workers entirely.
+  try {
+    const probe = await fetch('photos/group.jpg', { method: 'HEAD' });
+    if (probe.ok) { PHOTO_NAMES.forEach(n => setPhoto(n, `photos/${n}.jpg`)); return; }
+  } catch {}
+
+  let token = '';
+  try { token = localStorage.getItem(TOKEN_KEY) || ''; } catch {}
+  if (!WORKER_URL || !token) return;          // stand-ins stay; nothing is broken
+
+  try {
+    const res = await fetch(`${WORKER_URL}/photos?t=${encodeURIComponent(token)}`);
+    if (!res.ok) return;
+    const map = await res.json();
+    for (const [name, url] of Object.entries(map)) {
+      if (PHOTO_NAMES.includes(name)) setPhoto(name, url);
+    }
+  } catch {}
+})();
 
 /* ---------------------------------------------------------------- theme */
 (function(){

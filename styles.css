@@ -79,10 +79,10 @@ body::before{
   position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;
   filter:brightness(.8) saturate(.95) contrast(1.05);animation:cycle 34s infinite;
 }
-.plate span:nth-child(1){background-image:url(photos/group.jpg);background-position:center 26%;animation-delay:0s}
-.plate span:nth-child(2){background-image:url(photos/lake.jpg);animation-delay:8.5s}
-.plate span:nth-child(3){background-image:url(photos/heads.jpg);animation-delay:17s}
-.plate span:nth-child(4){background-image:url(photos/hens.jpg);animation-delay:25.5s}
+.plate span:nth-child(1){background-image:var(--ph-group);background-position:center 26%;animation-delay:0s}
+.plate span:nth-child(2){background-image:var(--ph-lake);animation-delay:8.5s}
+.plate span:nth-child(3){background-image:var(--ph-heads);animation-delay:17s}
+.plate span:nth-child(4){background-image:var(--ph-hens);animation-delay:25.5s}
 @keyframes cycle{
   0%{opacity:0;transform:scale(1.02)} 4%{opacity:1} 25%{opacity:1} 31%{opacity:0}
   31.01%{transform:scale(1.02)} 100%{opacity:0;transform:scale(1.11)}
@@ -180,8 +180,8 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
   display:block;font:400 11px/1 var(--sans);letter-spacing:.2em;
   text-transform:uppercase;opacity:.72;margin-bottom:12px;
 }
-.band.abbey{background-image:url(photos/abbey.jpg)}
-.band.chair{background-image:url(photos/chair.jpg)}
+.band.abbey{background-image:var(--ph-abbey)}
+.band.chair{background-image:var(--ph-chair)}
 
 /* ---------------------------------------------------------------- calendar */
 .cal-sec{padding-block:78px 0}
@@ -256,7 +256,7 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 .door{padding-block:86px calc(120px + var(--safe-b))}
 .card{
   position:relative;border-radius:5px;overflow:hidden;min-height:290px;
-  display:flex;align-items:flex-end;background:#12160f url(photos/mirror.jpg) center/cover;
+  display:flex;align-items:flex-end;background:#12160f var(--ph-mirror) center/cover;
   isolation:isolate;
 }
 .card .veil{
