@@ -129,9 +129,16 @@ anything genuinely sensitive.
 
 ## What is deliberately not done yet
 
+- **Nothing is shared yet — this is the big one.** Dates and spending live in
+  each phone's `localStorage`, not in the database. So everyone sees their own
+  entries and nobody else's, and the kitty on your phone is not the kitty on
+  Kate's. Deploying does **not** change this. Making it shared is the next real
+  piece of work, and the tables `schema.sql` already creates are waiting for it.
+- **No receipt photography.** Snapping a receipt and having the number read off
+  it needs an `ANTHROPIC_API_KEY` added to the Worker. Not built yet.
 - **No offline support.** No service worker, so a first visit on a bad line
   shows the stand-ins until it can reach the Worker. Deferred on purpose.
-- **The kitty is not built.** The button says so rather than pretending.
-- **Dates live only on each phone.** `localStorage`, not the database — so
-  everyone sees their own entries and nobody else's. Making that shared is the
-  next real piece of work and needs the tables `schema.sql` already creates.
+
+The kitty itself **is** built — `kitty.html`, reached from the button at the
+bottom of the landing page. It needs no extra deployment step; it is just
+another file in the repo and Pages will serve it.
