@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>money.js tests</title>
+<style>
+ body{font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:#171b14;color:#ebe4d3;
+   margin:0;padding:24px;max-width:900px}
+ h1{font:600 20px/1.2 Georgia,serif;margin:0 0 4px}
+ .sum{margin:0 0 20px;padding:11px 14px;border-radius:8px;font-weight:600}
+ .sum.ok{background:#233020;color:#9fd48f}
+ .sum.bad{background:#3a2018;color:#f0a48c}
+ h2{font:600 12px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;
+   color:#8e9583;margin:22px 0 8px;border-bottom:1px solid #2d3328;padding-bottom:6px}
+ .t{padding:3px 0;display:flex;gap:10px;align-items:baseline}
+ .t.pass::before{content:"✓";color:#7fb96a;flex:none;width:14px}
+ .t.fail::before{content:"✗";color:#e07d55;flex:none;width:14px}
+ .t.fail{color:#f0a48c}
+ .exp{color:#8e9583}
+</style>
+</head>
+<body>
+<h1>money.js</h1>
+<div id="summary" class="sum">running…</div>
+<div id="out"></div>
+
+<script src="money.js"></script>
+<script>
+const out = document.getElementById('out');
+let pass = 0, fail = 0;
+
+function group(name){ const h = document.createElement('h2'); h.textContent = name; out.appendChild(h); }
+function show(ok, label, detail){
+  const d = document.createElement('div');
+  d.className = 't ' + (ok ? 'pass' : 'fail');
+  d.innerHTML = label + (detail ? ' <span class="exp">' + detail + '</span>' : '');
+  out.appendChild(d);
+  ok ? pass++ : fail++;
+}
+function eq(actual, expected, label){
+  const ok = Object.is(actual, expected) ||
+             (typeof actual === 'number' && typeof expected === 'number' && Math.abs(actual - expected) < 1e-9);
+  show(ok, label, ok ? '' : `— got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`);
+}
+function deep(actual, expected, label){
+  const a = JSON.stringify(actual), b = JSON.stringify(expected);
+  show(a === b, label, a === b ? '' : `— got ${a}, expected ${b}`);
+}
+
+const M = window.Money;
+
+/* ----------------------------------------------------------- parseAmount */
+group('parseAmount — French receipts are the dangerous case');
+eq(M.parseAmount('12,50'), 12.5,      '"12,50" is twelve-fifty, NOT 1250');
+eq(M.parseAmount('12.50'), 12.5,      '"12.50"');
+eq(M.parseAmount('0,99'), 0.99,       '"0,99"');
+eq(M.parseAmount('12,5'), 12.5,       '"12,5" — one decimal digit');
+eq(M.parseAmount('1 234,56'), 1234.56,'"1 234,56" — space thousands');
+eq(M.parseAmount('1 234,56'), 1234.56, 'non-breaking space thousands');
+eq(M.parseAmount('1 234,56'), 1234.56, 'narrow no-break space thousands');
+eq(M.parseAmount('1.234,56'), 1234.56,'"1.234,56" — French full form');
+eq(M.parseAmount('1,234.56'), 1234.56,'"1,234.56" — English full form');
+eq(M.parseAmount('1,234'), 1234,      '"1,234" — three trailing digits means thousands');
+eq(M.parseAmount('1.234'), 1234,      '"1.234" — likewise');
+eq(M.parseAmount('142,60 €'), 142.6,  'trailing euro sign');
+eq(M.parseAmount('€142,60'), 142.6,   'leading euro sign');
+eq(M.parseAmount('TOTAL 217,00'), 217, 'stray letters ignored');
+eq(M.parseAmount(1234.567), 1234.57,  'a number rounds to 2dp');
+eq(M.parseAmount('-5,25'), -5.25,     'negative');
+
+group('parseAmount — refuses rather than guesses');
+eq(M.parseAmount(''), null,           'empty string');
+eq(M.parseAmount('   '), null,        'whitespace only');
+eq(M.parseAmount('abc'), null,        'letters only');
+eq(M.parseAmount('12,345,678'), 12345678, '"12,345,678" is twelve million, English style');
+eq(M.parseAmount('12,3456'), null,    'four decimal digits is not a money amount');
+eq(M.parseAmount('12.3456'), null,    'likewise with a dot');
+eq(M.parseAmount('..'), null,         'separators with no digits');
+eq(M.parseAmount(null), null,         'null');
+eq(M.parseAmount(undefined), null,    'undefined');
+eq(M.parseAmount(NaN), null,          'NaN');
+
+/* ------------------------------------------------------------ conversion */
+group('currency conversion');
+eq(M.toHome(100, 0.85), 85,           '€100 at 0.85 is £85');
+eq(M.toHome(142.6, 0.85), 121.21,     '€142.60 → £121.21 (rounded)');
+eq(M.toLocal(85, 0.85), 100,          '£85 back to €100');
+eq(M.toHome(100, 0), null,            'a zero rate is refused');
+eq(M.toHome(100, -1), null,           'a negative rate is refused');
+eq(M.toHome('100', 0.85), null,       'a string amount is refused');
+
+group('formatMoney');
+eq(M.formatMoney(1234.5, 'EUR'), '€1,234.50', 'thousands separator');
+eq(M.formatMoney(0, 'GBP'), '£0.00',          'zero');
+eq(M.formatMoney(-12.3, 'GBP'), '−£12.30',    'negative uses a real minus sign');
+eq(M.formatMoney(NaN, 'EUR'), '—',            'not-a-number shows a dash');
+
+/* ---------------------------------------------------------------- shares */
+const people = [
+  { id: 'a', name: 'Ed' },
+  { id: 'b', name: 'Kate' },
+  { id: 'c', name: 'Sam' },
+];
+const evenly = [
+  { paidBy: 'a', amountHome: 90, beneficiaries: null },
+];
+
+group('summarise — the even case');
+{
+  const s = M.summarise(people, evenly, 'per_person');
+  eq(s.find(x => x.id === 'a').paid, 90,     'Ed paid 90');
+  eq(s.find(x => x.id === 'a').share, 30,    'his share is 30');
+  eq(s.find(x => x.id === 'a').balance, 60,  'so he is 60 up');
+  eq(s.find(x => x.id === 'b').balance, -30, 'Kate is 30 down');
+  eq(M.round2(s.reduce((t, x) => t + x.balance, 0)), 0, 'balances sum to zero');
+}
+
+group('summarise — a cost that was not for everyone');
+{
+  const s = M.summarise(people, [
+    { paidBy: 'a', amountHome: 60, beneficiaries: ['a', 'b'] },
+  ], 'per_person');
+  eq(s.find(x => x.id === 'a').share, 30, 'Ed shares it');
+  eq(s.find(x => x.id === 'b').share, 30, 'Kate shares it');
+  eq(s.find(x => x.id === 'c').share, 0,  'Sam was not on the boat trip');
+}
+
+group('summarise — split_basis "none" really computes nothing');
+{
+  const s = M.summarise(people, evenly, 'none');
+  eq(s.find(x => x.id === 'a').paid, 90,    'still shows what was paid');
+  eq(s.find(x => x.id === 'a').share, 0,    'but no share is computed');
+  eq(s.find(x => x.id === 'a').balance, 0,  'and nobody is up or down');
+  eq(s.find(x => x.id === 'c').balance, 0,  'including people who paid nothing');
+}
+
+group('summarise — people who do not count toward a share');
+{
+  const withBaby = people.concat([{ id: 'd', name: 'Baby', counts: false }]);
+  const s = M.summarise(withBaby, evenly, 'per_person');
+  eq(s.find(x => x.id === 'd').share, 0,  'the baby is charged nothing');
+  eq(s.find(x => x.id === 'a').share, 30, 'and the others still split three ways');
+}
+
+group('summarise — awkward inputs');
+{
+  eq(M.summarise(people, [], 'per_person').every(x => x.balance === 0), true, 'no expenses is not a crash');
+  eq(M.summarise([], evenly, 'per_person').length, 0, 'no people is not a crash');
+  const s = M.summarise(people, [{ paidBy: 'ghost', amountHome: 30, beneficiaries: null }], 'per_person');
+  eq(M.round2(s.reduce((t, x) => t + x.paid, 0)), 0, 'a payer who no longer exists contributes nothing');
+  const s2 = M.summarise(people, [{ paidBy: 'a', amountHome: 30, beneficiaries: ['gone'] }], 'per_person');
+  eq(s2.find(x => x.id === 'a').share, 10, 'beneficiaries who were removed fall back to everyone');
+}
+
+/* ------------------------------------------------------------- transfers */
+group('levellingTransfers');
+{
+  const s = M.summarise(people, evenly, 'per_person');
+  const t = M.levellingTransfers(s);
+  eq(t.length, 2, 'two payments settle three people');
+  eq(M.round2(t.reduce((x, y) => x + y.amount, 0)), 60, 'and they total 60');
+  eq(t.every(x => x.to === 'a'), true, 'both go to the person who is up');
+}
+{
+  const flat = [{ id: 'a', paid: 10, share: 10, balance: 0 },
+                { id: 'b', paid: 10, share: 10, balance: 0 }];
+  deep(M.levellingTransfers(flat), [], 'nobody owes anything when it is already level');
+}
+{
+  const tiny = [{ id: 'a', balance: 0.004 }, { id: 'b', balance: -0.004 }];
+  deep(M.levellingTransfers(tiny), [], 'rounding dust does not generate a payment');
+}
+
+/* ---------------------------------------------------------------- totals */
+group('total');
+eq(M.total([{ amountHome: 1.1 }, { amountHome: 2.2 }]), 3.3, '1.1 + 2.2 is 3.3, not 3.3000000000000003');
+eq(M.total([]), 0, 'empty');
+eq(M.total([{ amountHome: 'x' }, { amountHome: 5 }]), 5, 'junk entries are skipped');
+eq(M.total([{ amountLocal: 4 }], 'amountLocal'), 4, 'can total a different field');
+
+/* ------------------------------------------------------------------ done */
+const s = document.getElementById('summary');
+s.className = 'sum ' + (fail ? 'bad' : 'ok');
+s.textContent = fail ? `${fail} failing, ${pass} passing` : `all ${pass} passing`;
+window.__results = { pass, fail };
+</script>
+</body>
+</html>

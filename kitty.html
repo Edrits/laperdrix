@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The kitty · La Perdrix</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#e9e4d7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171b14" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="styles.css?v=10">
+</head>
+<body class="kitty-page">
+
+<header class="ktop">
+  <a class="back" href="index.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H6"/><path d="M12 5l-7 7 7 7"/></svg>
+    La Perdrix
+  </a>
+  <div class="themes ktheme">
+    <button id="t-light" aria-pressed="false">Light</button>
+    <button id="t-dark" aria-pressed="false">Dark</button>
+    <button id="t-auto" aria-pressed="true">Auto</button>
+  </div>
+</header>
+
+<!-- Shown when nobody has made a profile yet on the front page. -->
+<section class="sec gate" id="gateNobody" hidden>
+  <h1 class="big">The kitty</h1>
+  <p class="lede">Nobody's put themselves on the trip yet, and the kitty needs to know who's who before it can track anything.</p>
+  <a class="btn" href="index.html">Add your dates first</a>
+</section>
+
+<!-- Shown until this device knows which of those people it belongs to. -->
+<section class="sec gate" id="gateWho" hidden>
+  <h1 class="big">Which one are you?</h1>
+  <p class="muted">Only so the app can fill in "who paid" for you. You can change it later.</p>
+  <div class="whoList" id="whoList"></div>
+</section>
+
+<main id="main" hidden>
+  <section class="sec pot-sec">
+    <p class="eyebrow">The kitty</p>
+    <div class="pot-big">
+      <span class="pot-local" id="potLocal">—</span>
+      <span class="pot-home" id="potHome"></span>
+    </div>
+    <p class="pot-cap" id="potCap"></p>
+
+    <div class="seg" role="tablist">
+      <button class="seg-b on" id="tabSpend" role="tab" aria-selected="true">Spending</button>
+      <button class="seg-b" id="tabBalance" role="tab" aria-selected="false">Balance</button>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------- spending -->
+  <section class="sec view" id="viewSpend">
+    <div class="filters" id="phaseFilters">
+      <button class="pill on" data-phase="all">Whole trip</button>
+      <button class="pill" data-phase="pre_trip">Before we go</button>
+      <button class="pill" data-phase="on_trip">Out there</button>
+    </div>
+    <div id="spendList"></div>
+    <p class="empty-note" id="spendEmpty" hidden>Nothing in the kitty yet. Add the first thing somebody paid for.</p>
+  </section>
+
+  <!-- ----------------------------------------------------------- balance -->
+  <section class="sec view" id="viewBalance" hidden>
+    <div id="balanceList"></div>
+
+    <div class="level" id="levelBox" hidden>
+      <h3>If you wanted to level up</h3>
+      <div id="levelList"></div>
+      <p class="level-note">Only a suggestion. Nothing here is owed, and the trip doesn't need to balance.</p>
+    </div>
+
+    <div class="settings">
+      <h3>Settings</h3>
+      <div class="set-row">
+        <label for="basis">Work out shares</label>
+        <select id="basis">
+          <option value="per_person">Evenly, per person</option>
+          <option value="none">Don't — just show who paid</option>
+        </select>
+      </div>
+      <div class="set-row">
+        <label for="rate">£ per €</label>
+        <input id="rate" type="text" inputmode="decimal" size="8">
+      </div>
+      <p class="set-note" id="rateNote"></p>
+      <button class="linkish" id="changeMe">Not <span id="meName">you</span>?</button>
+    </div>
+  </section>
+</main>
+
+<div class="bar" id="addBar" hidden><button class="btn" id="addBtn">＋ Add spend</button></div>
+
+<!-- ------------------------------------------------------------ the form -->
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="fTitle">
+  <div class="in2">
+    <h2 id="fTitle">Add spend</h2>
+
+    <label for="fAmount">How much</label>
+    <div class="amount-row">
+      <input id="fAmount" type="text" inputmode="decimal" enterkeyhint="done" placeholder="0,00" autocomplete="off">
+      <div class="ccy" id="fCcy">
+        <button type="button" class="ccy-b on" data-ccy="EUR">€</button>
+        <button type="button" class="ccy-b" data-ccy="GBP">£</button>
+      </div>
+    </div>
+    <p class="conv" id="fConv"></p>
+
+    <label for="fWhat">What for</label>
+    <input id="fWhat" type="text" maxlength="60" placeholder="Big shop, dinner, tolls…" autocomplete="off">
+
+    <label for="fWho">Who paid</label>
+    <select id="fWho"></select>
+
+    <label for="fWhen">When</label>
+    <input id="fWhen" type="date">
+    <p class="conv" id="fPhase"></p>
+
+    <label>Who it was for</label>
+    <div class="forwho">
+      <button type="button" class="pill on" id="forAll">Everyone</button>
+      <button type="button" class="pill" id="forSome">Just some of us</button>
+    </div>
+    <div class="somePick" id="somePick" hidden></div>
+
+    <div class="row">
+      <button class="btn ghost" id="fCancel">Cancel</button>
+      <button class="btn" id="fSave" disabled>Save</button>
+    </div>
+    <button class="remove" id="fDelete" hidden>Delete this</button>
+  </div>
+</div>
+
+<script src="icons.js?v=1"></script>
+<script src="money.js?v=1"></script>
+<script>
+/* =========================================================================
+   The kitty.
+
+   Ed's framing, which governs every decision in here:
+     "a spending tracker so we can keep an eye on the balance, not a direct
+      accounting tool which helps settle"
+
+   So: it shows what people have put in. It never tells anyone they owe
+   anyone money. The levelling suggestions exist but are framed as optional
+   and carry an explicit line saying nothing is owed.
+
+   Storage is localStorage for now — each phone keeps its own copy. Making it
+   shared is the next piece of work and needs the Supabase tables that
+   schema.sql already creates.
+   ========================================================================= */
+
+const TRIP = { start: '2026-08-15', end: '2026-08-30' };
+
+const K_PEOPLE = 'laperdrix.stays.v1';     // written by the landing page
+const K_ME     = 'laperdrix.me';
+const K_SPEND  = 'laperdrix.expenses.v1';
+const K_CONF   = 'laperdrix.kitty.v1';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOWL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const D = s => new Date(s + 'T12:00:00Z');
+const todayISO = () => {
+  const n = new Date(), p = v => String(v).padStart(2, '0');
+  return n.getFullYear() + '-' + p(n.getMonth() + 1) + '-' + p(n.getDate());
+};
+function dayLabel(iso){
+  const d = D(iso);
+  return DOWL[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()];
+}
+
+function read(key, fallback){
+  try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; }
+  catch { return fallback; }
+}
+function write(key, value){
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
+/* ------------------------------------------------------------- the data */
+
+// People come from the landing page's records, so the two halves of the app
+// always agree about who is on the trip.
+function loadPeople(){
+  const raw = read(K_PEOPLE, []);
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(p => p && p.name).map((p, i) => ({
+    id: p.id || String(i),
+    name: p.name,
+    icon: p.icon || window.ICONS[i % window.ICONS.length][0],
+    counts: p.counts !== false,
+  }));
+}
+
+let people   = loadPeople();
+let expenses = read(K_SPEND, []);
+let conf     = Object.assign({ fxRate: 0.85, fxAt: null, fxSource: 'default', basis: 'per_person' }, read(K_CONF, {}));
+let me       = read(K_ME, null);
+let view     = 'spend';
+let phase    = 'all';
+let draft    = null;
+
+const personById = id => people.find(p => p.id === id);
+const phaseOf = iso => (iso < TRIP.start ? 'pre_trip' : 'on_trip');
+
+/* --------------------------------------------------------------- gating */
+
+function route(){
+  people = loadPeople();
+  const nobody = people.length === 0;
+  const unknownMe = !nobody && !personById(me);
+
+  $('gateNobody').hidden = !nobody;
+  $('gateWho').hidden = !unknownMe;
+  $('main').hidden = nobody || unknownMe;
+  $('addBar').hidden = nobody || unknownMe;
+
+  if (unknownMe) renderWhoList();
+  if (!nobody && !unknownMe) render();
+}
+
+function renderWhoList(){
+  $('whoList').innerHTML = people.map(p =>
+    `<button class="whoBtn" data-id="${esc(p.id)}">
+       <span class="av" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>
+       <span>${esc(p.name)}</span>
+     </button>`).join('');
+}
+
+$('whoList').addEventListener('click', e => {
+  const b = e.target.closest('.whoBtn');
+  if (!b) return;
+  me = b.dataset.id;
+  write(K_ME, me);
+  route();
+});
+
+/* ------------------------------------------------------------ rendering */
+
+const fmtL = v => Money.formatMoney(v, 'EUR');
+const fmtH = v => Money.formatMoney(v, 'GBP');
+
+function visible(){
+  return expenses.filter(e => phase === 'all' || e.phase === phase);
+}
+
+function renderPot(){
+  const list = visible();
+  const local = Money.total(list, 'amountLocal');
+  const home  = Money.total(list, 'amountHome');
+  const payers = new Set(list.map(e => e.paidBy).filter(id => personById(id))).size;
+  $('potLocal').textContent = fmtL(local);
+  $('potHome').textContent = list.length ? '≈ ' + fmtH(home) : '';
+  $('potCap').textContent = list.length
+    ? `${list.length} ${list.length === 1 ? 'entry' : 'entries'} · ${payers} ${payers === 1 ? 'person' : 'people'} chipping in`
+    : 'Nothing in it yet';
+}
+
+function renderSpend(){
+  const list = visible().slice().sort((a, b) =>
+    b.spentOn.localeCompare(a.spentOn) || b.createdAt - a.createdAt);
+  $('spendEmpty').hidden = list.length > 0;
+
+  const byDay = new Map();
+  for (const e of list) {
+    if (!byDay.has(e.spentOn)) byDay.set(e.spentOn, []);
+    byDay.get(e.spentOn).push(e);
+  }
+
+  $('spendList').innerHTML = [...byDay.entries()].map(([day, items]) => {
+    const dayTotal = Money.total(items, 'amountLocal');
+    const rows = items.map(e => {
+      const payer = personById(e.paidBy);
+      const some = e.beneficiaries && e.beneficiaries.length
+        ? `<span class="tag">${e.beneficiaries.length} of ${people.filter(p=>p.counts).length}</span>` : '';
+      return `<button class="erow" data-id="${esc(e.id)}">
+        <span class="eav" style="background:${payer ? colourOf(payer.icon) : 'var(--mut)'}">${payer ? iconOf(payer.icon) : ''}</span>
+        <span class="emain">
+          <span class="edesc">${esc(e.what || 'Spending')} ${some}</span>
+          <span class="emeta">${payer ? esc(payer.name) : 'someone who has left'}</span>
+        </span>
+        <span class="eamt">
+          <span class="eloc">${fmtL(e.amountLocal)}</span>
+          <span class="ehome">${fmtH(e.amountHome)}</span>
+        </span>
+      </button>`;
+    }).join('');
+    return `<section class="day-group">
+      <div class="day-head"><span class="day-name">${dayLabel(day)}</span><span class="day-sum">${fmtL(dayTotal)}</span></div>
+      ${rows}
+    </section>`;
+  }).join('');
+}
+
+function renderBalance(){
+  const summary = Money.summarise(people, expenses, conf.basis);
+  const most = Math.max(1, ...summary.map(s => s.paid));
+
+  $('balanceList').innerHTML = summary
+    .slice().sort((a, b) => b.paid - a.paid)
+    .map(s => {
+      const p = personById(s.id);
+      if (!p) return '';
+      const pct = Math.max(1.5, (s.paid / most) * 100);
+      const diff = conf.basis === 'none' ? '' :
+        (Math.abs(s.balance) < 0.01
+          ? '<span class="bal level">level</span>'
+          : `<span class="bal ${s.balance > 0 ? 'up' : 'down'}">${s.balance > 0 ? '+' : '−'}${fmtH(Math.abs(s.balance)).replace('£','£')}</span>`);
+      return `<div class="brow">
+        <div class="bhead">
+          <span class="bname"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</span>
+          <span class="bnums">${fmtH(s.paid)} ${diff}</span>
+        </div>
+        <div class="btrack"><i style="width:${pct}%;background:${colourOf(p.icon)}"></i></div>
+      </div>`;
+    }).join('');
+
+  const transfers = conf.basis === 'none' ? [] : Money.levellingTransfers(summary);
+  $('levelBox').hidden = transfers.length === 0;
+  $('levelList').innerHTML = transfers.map(t => {
+    const from = personById(t.from), to = personById(t.to);
+    if (!from || !to) return '';
+    return `<div class="lrow"><span>${esc(from.name)} → ${esc(to.name)}</span><span>${fmtH(t.amount)}</span></div>`;
+  }).join('');
+
+  $('basis').value = conf.basis;
+  $('rate').value = String(conf.fxRate);
+  const when = conf.fxAt ? new Date(conf.fxAt).toLocaleDateString('en-GB') : null;
+  $('rateNote').textContent = conf.fxSource === 'manual'
+    ? 'Set by hand.'
+    : when ? `From the European Central Bank, ${when}.` : 'Using a rough default until a rate can be fetched.';
+  const meP = personById(me);
+  $('meName').textContent = meP ? meP.name : 'you';
+}
+
+function render(){
+  renderPot();
+  if (view === 'spend') renderSpend(); else renderBalance();
+  $('viewSpend').hidden = view !== 'spend';
+  $('viewBalance').hidden = view !== 'balance';
+  $('tabSpend').classList.toggle('on', view === 'spend');
+  $('tabBalance').classList.toggle('on', view === 'balance');
+  $('tabSpend').setAttribute('aria-selected', String(view === 'spend'));
+  $('tabBalance').setAttribute('aria-selected', String(view === 'balance'));
+}
+
+/* ---------------------------------------------------------------- tabs */
+
+$('tabSpend').addEventListener('click', () => { view = 'spend'; render(); });
+$('tabBalance').addEventListener('click', () => { view = 'balance'; render(); });
+
+$('phaseFilters').addEventListener('click', e => {
+  const b = e.target.closest('.pill');
+  if (!b) return;
+  phase = b.dataset.phase;
+  [...$('phaseFilters').children].forEach(x => x.classList.toggle('on', x === b));
+  render();
+});
+
+/* ------------------------------------------------------------ the form */
+
+function openForm(existing){
+  draft = existing ? Object.assign({}, existing) : {
+    id: null, what: '', amountInput: '', currency: 'EUR',
+    paidBy: me, spentOn: todayISO(), beneficiaries: null,
+  };
+  if (existing) {
+    draft.amountInput = String(existing.currency === 'GBP' ? existing.amountHome : existing.amountLocal);
+  }
+
+  $('fTitle').textContent = existing ? 'Edit spend' : 'Add spend';
+  $('fDelete').hidden = !existing;
+  $('fAmount').value = draft.amountInput;
+  $('fWhat').value = draft.what || '';
+  $('fWhen').value = draft.spentOn;
+  $('fWho').innerHTML = people.map(p =>
+    `<option value="${esc(p.id)}"${p.id === draft.paidBy ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
+  [...$('fCcy').children].forEach(b => b.classList.toggle('on', b.dataset.ccy === draft.currency));
+  setForWho(Boolean(draft.beneficiaries && draft.beneficiaries.length));
+  renderSomePick();
+  updateForm();
+
+  $('sheet').classList.add('open');
+  document.body.classList.add('picking');
+  $('addBar').hidden = true;
+}
+
+function closeForm(){
+  $('sheet').classList.remove('open');
+  document.body.classList.remove('picking');
+  $('addBar').hidden = false;
+  draft = null;
+}
+
+function setForWho(some){
+  $('forAll').classList.toggle('on', !some);
+  $('forSome').classList.toggle('on', some);
+  $('somePick').hidden = !some;
+  if (!some && draft) draft.beneficiaries = null;
+  if (some && draft && !draft.beneficiaries) draft.beneficiaries = [];
+}
+
+function renderSomePick(){
+  const chosen = new Set(draft && draft.beneficiaries ? draft.beneficiaries : []);
+  $('somePick').innerHTML = people.filter(p => p.counts).map(p =>
+    `<button type="button" class="who-chip${chosen.has(p.id) ? ' on' : ''}" data-id="${esc(p.id)}">
+       <span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}
+     </button>`).join('');
+}
+
+function updateForm(){
+  const parsed = Money.parseAmount($('fAmount').value);
+  const rate = Number(conf.fxRate);
+  let conv = '';
+  if (parsed !== null) {
+    conv = draft.currency === 'EUR'
+      ? `≈ ${fmtH(Money.toHome(parsed, rate))}`
+      : `≈ ${fmtL(Money.toLocal(parsed, rate))}`;
+  } else if ($('fAmount').value.trim()) {
+    conv = "Can't read that — try 12,50";
+  }
+  $('fConv').textContent = conv;
+
+  const when = $('fWhen').value || todayISO();
+  $('fPhase').textContent = phaseOf(when) === 'pre_trip'
+    ? 'Counted as before we go.' : 'Counted as out there.';
+
+  const someButNobody = $('forSome').classList.contains('on') &&
+                        (!draft.beneficiaries || draft.beneficiaries.length === 0);
+  $('fSave').disabled = parsed === null || parsed === 0 || someButNobody;
+}
+
+$('addBtn').addEventListener('click', () => openForm(null));
+$('fCancel').addEventListener('click', closeForm);
+$('fAmount').addEventListener('input', updateForm);
+$('fWhen').addEventListener('change', updateForm);
+$('fWhat').addEventListener('input', updateForm);
+$('fWho').addEventListener('change', () => { draft.paidBy = $('fWho').value; });
+
+$('fCcy').addEventListener('click', e => {
+  const b = e.target.closest('.ccy-b');
+  if (!b) return;
+  draft.currency = b.dataset.ccy;
+  [...$('fCcy').children].forEach(x => x.classList.toggle('on', x === b));
+  updateForm();
+});
+
+$('forAll').addEventListener('click', () => { setForWho(false); updateForm(); });
+$('forSome').addEventListener('click', () => { setForWho(true); renderSomePick(); updateForm(); });
+
+$('somePick').addEventListener('click', e => {
+  const b = e.target.closest('.who-chip');
+  if (!b) return;
+  const id = b.dataset.id;
+  const list = new Set(draft.beneficiaries || []);
+  list.has(id) ? list.delete(id) : list.add(id);
+  draft.beneficiaries = [...list];
+  renderSomePick();
+  updateForm();
+});
+
+$('fSave').addEventListener('click', () => {
+  const typed = Money.parseAmount($('fAmount').value);
+  if (typed === null || typed === 0) return;
+  const rate = Number(conf.fxRate);
+  const currency = draft.currency;
+
+  // Both figures are computed and stored now, so a later change to the rate
+  // never silently rewrites what an old entry cost.
+  const amountLocal = currency === 'EUR' ? typed : Money.toLocal(typed, rate);
+  const amountHome  = currency === 'EUR' ? Money.toHome(typed, rate) : typed;
+  const spentOn = $('fWhen').value || todayISO();
+
+  const rec = {
+    id: draft.id || (crypto.randomUUID ? crypto.randomUUID() : 'e' + Date.now()),
+    what: $('fWhat').value.trim(),
+    paidBy: $('fWho').value,
+    spentOn,
+    phase: phaseOf(spentOn),
+    currency,
+    amountLocal, amountHome,
+    fxRateUsed: rate,
+    beneficiaries: draft.beneficiaries && draft.beneficiaries.length ? draft.beneficiaries : null,
+    createdAt: draft.createdAt || Date.now(),
+  };
+
+  const i = expenses.findIndex(e => e.id === rec.id);
+  if (i >= 0) expenses[i] = rec; else expenses.push(rec);
+  write(K_SPEND, expenses);
+  closeForm();
+  render();
+});
+
+$('fDelete').addEventListener('click', () => {
+  expenses = expenses.filter(e => e.id !== draft.id);
+  write(K_SPEND, expenses);
+  closeForm();
+  render();
+});
+
+$('spendList').addEventListener('click', e => {
+  const row = e.target.closest('.erow');
+  if (!row) return;
+  const found = expenses.find(x => x.id === row.dataset.id);
+  if (found) openForm(found);
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('sheet').classList.contains('open')) closeForm();
+});
+
+/* --------------------------------------------------------- settings */
+
+$('basis').addEventListener('change', () => {
+  conf.basis = $('basis').value;
+  write(K_CONF, conf);
+  render();
+});
+
+$('rate').addEventListener('change', () => {
+  const v = Money.parseAmount($('rate').value);
+  if (v !== null && v > 0) {
+    conf.fxRate = v; conf.fxSource = 'manual'; conf.fxAt = Date.now();
+    write(K_CONF, conf);
+  }
+  render();
+});
+
+$('changeMe').addEventListener('click', () => {
+  me = null;
+  write(K_ME, null);
+  route();
+});
+
+/* Fetch a real rate if ours is missing or more than a day old. Keyless, and
+   entirely optional — a failure just leaves the stored rate in place. */
+(async function refreshRate(){
+  if (conf.fxSource === 'manual') return;
+  const dayOld = !conf.fxAt || (Date.now() - conf.fxAt) > 86400000;
+  if (!dayOld) return;
+  try {
+    const res = await fetch('https://api.frankfurter.app/latest?from=EUR&to=GBP');
+    if (!res.ok) return;
+    const body = await res.json();
+    const rate = body && body.rates && body.rates.GBP;
+    if (typeof rate === 'number' && rate > 0) {
+      conf.fxRate = Money.round2(rate * 10000) / 10000;
+      conf.fxAt = Date.now();
+      conf.fxSource = 'ecb';
+      write(K_CONF, conf);
+      if (!$('main').hidden) render();
+    }
+  } catch {}
+})();
+
+/* ------------------------------------------------------------- theme */
+(function(){
+  const root = document.documentElement;
+  const b = { light: $('t-light'), dark: $('t-dark'), auto: $('t-auto') };
+  const set = m => {
+    if (m === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', m);
+    try { localStorage.setItem('laperdrix.theme', m); } catch {}
+    for (const k in b) b[k].setAttribute('aria-pressed', String(k === m));
+  };
+  for (const k in b) b[k].addEventListener('click', () => set(k));
+  let saved = 'auto';
+  try { saved = localStorage.getItem('laperdrix.theme') || 'auto'; } catch {}
+  set(saved);
+})();
+
+route();
+</script>
+</body>
+</html>
