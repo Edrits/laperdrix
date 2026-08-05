@@ -145,7 +145,9 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 }
 
 /* ---------------------------------------------------------------- contact sheet */
-.welcome{padding:78px 0 0}
+/* padding-block only — a shorthand `padding` here would silently wipe out
+   .sec's 24px horizontal padding and run every line to the screen edge. */
+.welcome{padding-block:78px 0}
 .sheet3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:38px}
 .print{
   margin:0;background:#fbf8f0;padding:9px 9px 8px;border-radius:2px;
@@ -182,7 +184,7 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 .band.chair{background-image:url(photos/chair.jpg)}
 
 /* ---------------------------------------------------------------- calendar */
-.cal-sec{padding:78px 0 0}
+.cal-sec{padding-block:78px 0}
 .cal{margin-top:26px}
 .dow{
   display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:7px;
@@ -251,7 +253,7 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 .chart-empty{color:var(--mut);font-size:14px;margin:18px 0 0}
 
 /* ---------------------------------------------------------------- kitty door */
-.door{padding:86px 0 calc(120px + var(--safe-b))}
+.door{padding-block:86px calc(120px + var(--safe-b))}
 .card{
   position:relative;border-radius:5px;overflow:hidden;min-height:290px;
   display:flex;align-items:flex-end;background:#12160f url(photos/mirror.jpg) center/cover;
@@ -275,6 +277,25 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 }
 .enter svg{width:17px;height:17px}
 .foot{border-top:1px solid var(--hair);padding:24px 0 40px;color:var(--mut);font-size:12.5px}
+
+/* add-to-home-screen hint (iOS Safari only, dismissed for good once closed) */
+.a2hs{
+  display:flex;gap:13px;align-items:flex-start;position:relative;
+  margin:26px 0 0;padding:15px 16px;border-radius:12px;
+  border:1px solid var(--hair);background:var(--surface);
+}
+.a2hs[hidden]{display:none}
+.a2hs-ic{
+  width:34px;height:34px;border-radius:99px;flex:none;
+  background:var(--terra);color:#fff;display:grid;place-items:center;
+}
+.a2hs-ic svg{width:20px;height:20px}
+.a2hs p{margin:0;font-size:13.5px;line-height:1.5;color:var(--mut);padding-right:16px}
+.a2hs p b{color:var(--tx);font-weight:600}
+.a2hs-x{
+  position:absolute;top:7px;right:9px;background:none;border:0;cursor:pointer;
+  color:var(--mut);font-size:21px;line-height:1;padding:2px 7px;border-radius:6px;
+}
 
 /* ---------------------------------------------------------------- add-dates bar + sheet */
 .bar{

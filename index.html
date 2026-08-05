@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>La Perdrix</title>
 <link rel="manifest" href="manifest.webmanifest">
+<!-- iOS ignores the manifest's icons for Add to Home Screen and uses this instead,
+     and Safari will not accept an SVG here — hence the one PNG in the repo. -->
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="description" content="La Perdrix, St Martin de Ribérac — 15–30 August 2026.">
 <meta name="theme-color" content="#e9e4d7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#171b14" media="(prefers-color-scheme: dark)">
@@ -13,7 +16,7 @@
 <!-- Bump ?v= whenever styles.css changes. Neither python's http.server nor
      GitHub Pages sends useful cache headers, so without this the browser will
      happily serve a stale stylesheet and you'll debug a fix you already made. -->
-<link rel="stylesheet" href="styles.css?v=4">
+<link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
 
@@ -113,6 +116,15 @@
       </button>
     </div>
   </div>
+  <!-- Shown only to iOS Safari, and only once. Placed in the page rather than
+       floating over it: a toast on the hero would be exactly the "straight to
+       business" feel the landing page is meant to avoid. -->
+  <div class="a2hs" id="a2hs" hidden>
+    <span class="a2hs-ic"><svg viewBox="0 0 24 24"><use href="#i-partridge"/></svg></span>
+    <p>Keep this on your home screen — tap <b>Share</b>, then <b>Add to Home Screen</b>. It opens like an app, without the browser bar.</p>
+    <button class="a2hs-x" id="a2hsClose" aria-label="Dismiss">&times;</button>
+  </div>
+
   <p class="foot">La Perdrix · 2–4 Rue des Anciens Combattants, 24600 St Martin de Ribérac · Johnny &amp; Ingrid <a href="tel:+33553912477">+33 553 91 24 77</a></p>
 </section>
 
@@ -569,6 +581,26 @@ $('openKitty').addEventListener('click', () => {
   let saved = 'auto';
   try { saved = localStorage.getItem('laperdrix.theme') || 'auto'; } catch {}
   set(saved);
+})();
+
+/* ------------------------------------------------- add to home screen
+   Safari has no beforeinstallprompt, so on iOS the only option is to tell
+   people where the button is. Shown once; closing it is remembered. */
+(function(){
+  const el = $('a2hs');
+  let dismissed = false;
+  try { dismissed = localStorage.getItem('laperdrix.a2hs') === '1'; } catch {}
+  const ua = navigator.userAgent;
+  // iPads on recent iPadOS identify as Macintosh, hence the touch-points check.
+  const iOS = /iP(hone|od|ad)/.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua));
+  const otherBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);   // only Safari can do this
+  const installed = window.navigator.standalone === true ||
+                    window.matchMedia('(display-mode: standalone)').matches;
+  if (!dismissed && iOS && !otherBrowser && !installed) el.hidden = false;
+  $('a2hsClose').addEventListener('click', () => {
+    el.hidden = true;
+    try { localStorage.setItem('laperdrix.a2hs', '1'); } catch {}
+  });
 })();
 
 /* ------------------------------------------------- keep the hero uncluttered
