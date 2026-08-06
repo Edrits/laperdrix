@@ -153,6 +153,7 @@
 <!-- the icon sprite is injected by icons.js, shared with kitty.html -->
 
 <script src="icons.js?v=1"></script>
+<script src="sync.js?v=1"></script>
 <script>
 /* ======================================================================= trip
    The only thing to change when the dates move. Everything on the page is
@@ -184,20 +185,15 @@ let hover  = null;        // live end of the range while picking
 let focus  = null;        // day whose names are shown
 
 function load(){
-  try{
-    const raw = JSON.parse(localStorage.getItem(STORE) || '[]');
-    if (!Array.isArray(raw)) return [];
-    return raw.filter(p => p && p.name && p.from && p.to).map((p,i) => ({
-      id: p.id || String(i),
-      name: p.name,
-      /* Records written before profiles existed have a colour but no icon.
-         Keep them working: give them one rather than dropping the row. */
-      icon: p.icon || ICONS[i % ICONS.length][0],
-      from: p.from, to: p.to
-    }));
-  }catch{ return []; }
+  return Sync.people().filter(p => p && p.name && p.from && p.to).map((p,i) => ({
+    id: p.id || Sync.newId(),
+    name: p.name,
+    /* Records written before profiles existed have a colour but no icon.
+       Keep them working: give them one rather than dropping the row. */
+    icon: p.icon || ICONS[i % ICONS.length][0],
+    from: p.from, to: p.to
+  }));
 }
-function save(){ localStorage.setItem(STORE, JSON.stringify(people)); }
 
 const here = (p, k) => p.from <= k && k <= p.to;
 const $ = id => document.getElementById(id);
@@ -464,20 +460,19 @@ $('cancel').addEventListener('click', () => { mode='idle'; draft=null; hover=nul
 
 $('save').addEventListener('click', () => {
   const rec = {
-    id: draft.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
+    id: draft.id || Sync.newId(),
     name: draft.name.trim(), icon: draft.icon, from: draft.from, to: draft.to
   };
-  const i = people.findIndex(p => p.id === rec.id);
-  if (i >= 0) people[i] = rec; else people.push(rec);
-  people.sort((a,b) => a.from.localeCompare(b.from) || a.name.localeCompare(b.name));
-  save();
+  // Saves locally at once and queues for the server; the entry is safe even if
+  // the line is down.
+  people = Sync.savePerson(rec);
   mode='idle'; draft=null; hover=null; focus=rec.from;
   render();
 });
 
 $('remove').addEventListener('click', () => {
-  people = people.filter(p => p.id !== draft.id);
-  save();
+  Sync.removePerson(draft.id);
+  people = Sync.people();
   mode='idle'; draft=null; hover=null; focus=null;
   render();
 });
@@ -489,9 +484,8 @@ document.addEventListener('keydown', e => {
 /* ------------------------------------------------- the kitty, behind a click */
 $('openKitty').addEventListener('click', () => { location.href = 'kitty.html'; });
 
-(function summariseKitty(){
-  let spend = [];
-  try { spend = JSON.parse(localStorage.getItem('laperdrix.expenses.v1')) || []; } catch {}
+function summariseKitty(){
+  const spend = Sync.expenses();
   if (!Array.isArray(spend) || !spend.length) {
     $('potTotal').textContent = '—';
     $('potCount').textContent = '0';
@@ -503,7 +497,8 @@ $('openKitty').addEventListener('click', () => { location.href = 'kitty.html'; }
   $('potTotal').textContent = '€' + Math.round(sum).toLocaleString('en-GB');
   $('potCount').textContent = String(spend.length);
   $('potPeople').textContent = String(payers);
-})();
+}
+summariseKitty();
 
 /* ------------------------------------------------- the photographs
    The site is public; the photographs are not, because they show the family
@@ -515,21 +510,9 @@ $('openKitty').addEventListener('click', () => { location.href = 'kitty.html'; }
    contain the token either. Hence custom properties, set here at runtime.
    Until then the blur stand-ins from photos.css are showing. */
 
-// Not a secret — it's a public address. The SHARE_TOKEN is what actually gates
-// access, and that never appears in this file.
-const WORKER_URL = 'https://laperdrix.neddritchie.workers.dev';
-
+// The Worker address and the token handling both live in sync.js now, so the
+// two pages can't disagree about them.
 const PHOTO_NAMES = ['group', 'lake', 'abbey', 'chair', 'mirror', 'heads', 'hens'];
-const TOKEN_KEY = 'laperdrix.token';
-
-/* The share link looks like  …/#t=<token>  . Take it, keep it, and tidy the URL
-   so the token isn't sitting in the address bar to be screenshotted. */
-(function claimToken(){
-  const m = location.hash.match(/[#&]t=([^&]+)/);
-  if (!m) return;
-  try { localStorage.setItem(TOKEN_KEY, decodeURIComponent(m[1])); } catch {}
-  history.replaceState(null, '', location.pathname + location.search);
-})();
 
 function setPhoto(name, url){
   document.documentElement.style.setProperty('--ph-' + name, `url("${url}")`);
@@ -543,12 +526,10 @@ function setPhoto(name, url){
     if (probe.ok) { PHOTO_NAMES.forEach(n => setPhoto(n, `photos/${n}.jpg`)); return; }
   } catch {}
 
-  let token = '';
-  try { token = localStorage.getItem(TOKEN_KEY) || ''; } catch {}
-  if (!WORKER_URL || !token) return;          // stand-ins stay; nothing is broken
+  if (!Sync.configured()) return;             // stand-ins stay; nothing is broken
 
   try {
-    const res = await fetch(`${WORKER_URL}/photos?t=${encodeURIComponent(token)}`);
+    const res = await fetch(`${Sync.WORKER_URL}/photos?t=${encodeURIComponent(Sync.token())}`);
     if (!res.ok) return;
     const map = await res.json();
     for (const [name, url] of Object.entries(map)) {
@@ -617,6 +598,16 @@ if ('IntersectionObserver' in window){
 
 /* ---------------------------------------------------------------- go */
 renderRange(); renderCountdown(); renderDow(); render();
+
+/* Pick up anything other people have added. Local data is already on screen by
+   this point, so a slow or failed pull costs nothing but freshness. */
+(async function refresh(){
+  const got = await Sync.pull();
+  if (!got) return;
+  people = load();
+  render();
+  summariseKitty();
+})();
 </script>
 </body>
 </html>

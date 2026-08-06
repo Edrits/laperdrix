@@ -3,21 +3,26 @@
 // ⚠️  DEPLOYS ARE MANUAL. This file is the source of truth, but it reaches
 //     Cloudflare by being pasted into the dashboard. If you change it, say so
 //     loudly — otherwise the live version silently drifts from the repo.
+//     THIS FILE HAS CHANGED: it now does data sync as well as photographs, so
+//     it must be re-pasted or the app will keep working device-by-device.
 //
-// Right now it does one job: hand out short-lived signed URLs for the
-// photographs, which live in a PRIVATE Supabase Storage bucket. The site itself
-// is public on GitHub Pages; the photographs are not, because they show the
-// family including children.
+// Two jobs:
+//   1. Hand out short-lived signed URLs for the photographs, which live in a
+//      PRIVATE Supabase bucket. The site is public on Pages; the photos are not.
+//   2. Store the shared data — who is coming, and what everyone has spent — so
+//      that 27 phones see the same thing instead of 27 private copies.
 //
 // Routes
-//   GET /health          → {ok:true}. No token. For checking the deploy works.
-//   GET /photos?t=TOKEN  → {name: signedUrl, …} for all photographs at once.
+//   GET    /health              → {ok:true}. No token. For checking the deploy.
+//   GET    /photos?t=           → {name: signedUrl, …} for all photographs.
+//   GET    /data?t=             → {people:[…], expenses:[…]}
+//   POST   /person?t=           → upsert one person   (body = the record)
+//   POST   /expense?t=          → upsert one expense  (body = the record)
+//   DELETE /person?t=&id=       → remove one person
+//   DELETE /expense?t=&id=      → remove one expense
 //
-// Why one batch route rather than /photo/:name seven times: connectivity at the
-// villa is poor, and seven round trips on a bad line is seven chances to stall.
-// One request gets the whole set.
-//
-// Secrets to set in the dashboard (Settings → Variables → Add secret):
+// Secrets to set in the dashboard (Settings → Variables and Secrets → Add,
+// with Type set to **Secret**, not Text):
 //   SUPABASE_URL                e.g. https://yumadmlyepizjxneunqe.supabase.co
 //   SUPABASE_SERVICE_ROLE_KEY   bypasses row-level security — never put this in
 //                               the repo, the page, or a chat window
@@ -34,11 +39,12 @@ const PHOTOS = ['group', 'lake', 'abbey', 'chair', 'mirror', 'heads', 'hens'];
 
 const BUCKET = 'trip-photos';
 const EXPIRES_IN = 60 * 60 * 12;   // 12 hours; a page load always gets fresh ones
+const TRIP_NAME = 'La Perdrix';
 
 function corsHeaders(origin) {
   return {
     'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
 }
@@ -51,6 +57,47 @@ function tokenMatches(given, expected) {
   let diff = 0;
   for (let i = 0; i < given.length; i++) diff |= given.charCodeAt(i) ^ expected.charCodeAt(i);
   return diff === 0;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/* ----------------------------------------------------------- supabase */
+
+function sb(env, path, init) {
+  return fetch(`${env.SUPABASE_URL}/rest/v1/${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      'Content-Type': 'application/json',
+      ...(init && init.headers),
+    },
+  });
+}
+
+// One trip per share token. Found or created on demand, so there is no separate
+// setup step and no trip id to configure anywhere.
+async function tripId(env) {
+  const token = encodeURIComponent(env.SHARE_TOKEN);
+  const found = await sb(env, `trips?access_token=eq.${token}&select=id&limit=1`);
+  if (found.ok) {
+    const rows = await found.json();
+    if (Array.isArray(rows) && rows.length) return rows[0].id;
+  }
+  const made = await sb(env, 'trips', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify({
+      name: TRIP_NAME,
+      destination: 'St Martin de Ribérac, Dordogne',
+      start_date: '2026-08-15',
+      end_date: '2026-08-30',
+      access_token: env.SHARE_TOKEN,
+    }),
+  });
+  if (!made.ok) return null;
+  const rows = await made.json();
+  return Array.isArray(rows) && rows.length ? rows[0].id : null;
 }
 
 async function signOne(env, name) {
@@ -75,52 +122,151 @@ async function signOne(env, name) {
   return `${env.SUPABASE_URL}/storage/v1${rel.startsWith('/') ? '' : '/'}${rel}`;
 }
 
+/* ------------------------------------------------- shapes on the wire
+   The database columns are deliberately more formal than the app's objects.
+   Translating in one place keeps the client simple and lets the schema evolve
+   without the phones caring. */
+
+const personOut = r => ({
+  id: r.id, name: r.name, icon: r.icon,
+  from: r.arrives_on, to: r.departs_on,
+  counts: r.counts_in_share !== false,
+});
+
+const personIn = (b, trip) => ({
+  id: UUID.test(b.id || '') ? b.id : undefined,
+  trip_id: trip,
+  name: String(b.name || '').slice(0, 60),
+  icon: String(b.icon || 'partridge').slice(0, 30),
+  colour: null,
+  counts_in_share: b.counts !== false,
+  arrives_on: b.from || null,
+  departs_on: b.to || null,
+});
+
+const expenseOut = r => ({
+  id: r.id, what: r.description, paidBy: r.paid_by_member_id,
+  spentOn: r.spent_on, phase: r.phase, currency: r.currency,
+  amountLocal: Number(r.amount_local), amountHome: Number(r.amount_home),
+  fxRateUsed: r.fx_rate_used == null ? null : Number(r.fx_rate_used),
+  beneficiaries: r.beneficiary_member_ids,
+  createdAt: r.created_at ? Date.parse(r.created_at) : Date.now(),
+});
+
+const expenseIn = (b, trip) => ({
+  id: UUID.test(b.id || '') ? b.id : undefined,
+  trip_id: trip,
+  description: String(b.what || '').slice(0, 120),
+  spent_on: b.spentOn,
+  phase: b.phase === 'pre_trip' ? 'pre_trip' : 'on_trip',
+  paid_by_member_id: UUID.test(b.paidBy || '') ? b.paidBy : null,
+  currency: String(b.currency || 'EUR').slice(0, 3),
+  amount_local: Number(b.amountLocal),
+  amount_home: Number(b.amountHome),
+  fx_rate_used: b.fxRateUsed == null ? null : Number(b.fxRateUsed),
+  beneficiaries_ok: undefined,
+  beneficiary_member_ids: Array.isArray(b.beneficiaries) && b.beneficiaries.length
+    ? b.beneficiaries.filter(x => UUID.test(x)) : null,
+  client_id: b.id || null,
+});
+
+function badAmount(e) {
+  return !isFinite(e.amount_local) || !isFinite(e.amount_home) ||
+         Math.abs(e.amount_local) > 1e7 || !e.spent_on;
+}
+
+/* ---------------------------------------------------------------- main */
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
     const cors = corsHeaders(origin);
     const json = { ...cors, 'Content-Type': 'application/json' };
+    const reply = (body, status) => new Response(JSON.stringify(body), { status: status || 200, headers: json });
 
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
-    if (request.method !== 'GET') {
-      return new Response(JSON.stringify({ error: 'method not allowed' }), { status: 405, headers: json });
-    }
 
     const url = new URL(request.url);
+    const path = url.pathname;
 
-    if (url.pathname === '/health') {
+    if (path === '/health' && request.method === 'GET') {
       // Reports whether the secrets are present, never what they are.
-      return new Response(JSON.stringify({
+      return reply({
         ok: true,
         configured: {
           SUPABASE_URL: Boolean(env.SUPABASE_URL),
           SUPABASE_SERVICE_ROLE_KEY: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
           SHARE_TOKEN: Boolean(env.SHARE_TOKEN),
         },
-      }), { headers: json });
+      });
     }
 
-    if (url.pathname === '/photos') {
-      if (!env.SHARE_TOKEN || !env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-        return new Response(JSON.stringify({ error: 'worker is not configured' }), { status: 500, headers: json });
-      }
-      if (!tokenMatches(url.searchParams.get('t') || '', env.SHARE_TOKEN)) {
-        return new Response(JSON.stringify({ error: 'bad token' }), { status: 401, headers: json });
-      }
+    // Everything past here needs the token and full configuration.
+    if (!env.SHARE_TOKEN || !env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+      return reply({ error: 'worker is not configured' }, 500);
+    }
+    if (!tokenMatches(url.searchParams.get('t') || '', env.SHARE_TOKEN)) {
+      return reply({ error: 'bad token' }, 401);
+    }
 
+    /* ------------------------------------------------------- photographs */
+    if (path === '/photos' && request.method === 'GET') {
       const signed = await Promise.all(PHOTOS.map(async name => [name, await signOne(env, name)]));
       const out = {};
       for (const [name, link] of signed) if (link) out[name] = link;
-
-      if (Object.keys(out).length === 0) {
-        return new Response(JSON.stringify({ error: 'no photographs could be signed' }), { status: 502, headers: json });
-      }
+      if (!Object.keys(out).length) return reply({ error: 'no photographs could be signed' }, 502);
       return new Response(JSON.stringify(out), {
         // Private: this response contains signed URLs for one person's session.
         headers: { ...json, 'Cache-Control': 'private, max-age=600' },
       });
     }
 
-    return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: json });
+    /* -------------------------------------------------------- shared data */
+    const trip = await tripId(env);
+    if (!trip) return reply({ error: 'could not reach the trip' }, 502);
+
+    if (path === '/data' && request.method === 'GET') {
+      const [pr, er] = await Promise.all([
+        sb(env, `members?trip_id=eq.${trip}&select=*&order=created_at.asc`),
+        sb(env, `expenses?trip_id=eq.${trip}&select=*&order=spent_on.desc`),
+      ]);
+      if (!pr.ok || !er.ok) return reply({ error: 'could not read the trip' }, 502);
+      return reply({
+        people: (await pr.json()).map(personOut),
+        expenses: (await er.json()).map(expenseOut),
+      });
+    }
+
+    if ((path === '/person' || path === '/expense') && request.method === 'POST') {
+      let body;
+      try { body = await request.json(); } catch { return reply({ error: 'bad body' }, 400); }
+      if (!body || typeof body !== 'object') return reply({ error: 'bad body' }, 400);
+
+      const isPerson = path === '/person';
+      const row = isPerson ? personIn(body, trip) : expenseIn(body, trip);
+      delete row.beneficiaries_ok;
+      if (isPerson ? !row.name : badAmount(row)) return reply({ error: 'incomplete' }, 400);
+
+      const res = await sb(env, `${isPerson ? 'members' : 'expenses'}?on_conflict=id`, {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+        body: JSON.stringify(row),
+      });
+      if (!res.ok) return reply({ error: 'could not save', detail: await res.text() }, 502);
+      const saved = await res.json();
+      const one = Array.isArray(saved) ? saved[0] : saved;
+      return reply(isPerson ? personOut(one) : expenseOut(one));
+    }
+
+    if ((path === '/person' || path === '/expense') && request.method === 'DELETE') {
+      const id = url.searchParams.get('id') || '';
+      if (!UUID.test(id)) return reply({ error: 'bad id' }, 400);
+      const table = path === '/person' ? 'members' : 'expenses';
+      const res = await sb(env, `${table}?id=eq.${id}&trip_id=eq.${trip}`, { method: 'DELETE' });
+      if (!res.ok) return reply({ error: 'could not delete' }, 502);
+      return reply({ ok: true });
+    }
+
+    return reply({ error: 'not found' }, 404);
   },
 };

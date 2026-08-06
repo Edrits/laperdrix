@@ -138,6 +138,7 @@
 </div>
 
 <script src="icons.js?v=1"></script>
+<script src="sync.js?v=1"></script>
 <script src="money.js?v=1"></script>
 <script>
 /* =========================================================================
@@ -191,7 +192,7 @@ function write(key, value){
 // People come from the landing page's records, so the two halves of the app
 // always agree about who is on the trip.
 function loadPeople(){
-  const raw = read(K_PEOPLE, []);
+  const raw = Sync.people();
   if (!Array.isArray(raw)) return [];
   return raw.filter(p => p && p.name).map((p, i) => ({
     id: p.id || String(i),
@@ -202,7 +203,7 @@ function loadPeople(){
 }
 
 let people   = loadPeople();
-let expenses = read(K_SPEND, []);
+let expenses = Sync.expenses();
 let conf     = Object.assign({ fxRate: 0.85, fxAt: null, fxSource: 'default', basis: 'per_person' }, read(K_CONF, {}));
 let me       = read(K_ME, null);
 let view     = 'spend';
@@ -481,7 +482,7 @@ $('fSave').addEventListener('click', () => {
   const spentOn = $('fWhen').value || todayISO();
 
   const rec = {
-    id: draft.id || (crypto.randomUUID ? crypto.randomUUID() : 'e' + Date.now()),
+    id: draft.id || Sync.newId(),
     what: $('fWhat').value.trim(),
     paidBy: $('fWho').value,
     spentOn,
@@ -493,16 +494,16 @@ $('fSave').addEventListener('click', () => {
     createdAt: draft.createdAt || Date.now(),
   };
 
-  const i = expenses.findIndex(e => e.id === rec.id);
-  if (i >= 0) expenses[i] = rec; else expenses.push(rec);
-  write(K_SPEND, expenses);
+  // Saved locally at once and queued for the server, so a dropped line in a
+  // supermarket car park never loses the number.
+  expenses = Sync.saveExpense(rec);
   closeForm();
   render();
 });
 
 $('fDelete').addEventListener('click', () => {
-  expenses = expenses.filter(e => e.id !== draft.id);
-  write(K_SPEND, expenses);
+  Sync.removeExpense(draft.id);
+  expenses = Sync.expenses();
   closeForm();
   render();
 });
@@ -578,6 +579,16 @@ $('changeMe').addEventListener('click', () => {
 })();
 
 route();
+
+/* Pick up whatever anyone else has added. What's already stored is on screen
+   by now, so a slow or failed pull costs nothing but freshness. */
+(async function refresh(){
+  const got = await Sync.pull();
+  if (!got) return;
+  people = loadPeople();
+  expenses = Sync.expenses();
+  route();
+})();
 </script>
 </body>
 </html>
