@@ -135,8 +135,14 @@ anything genuinely sensitive.
 - Confirm nothing leaked:
 
   ```bash
-  git grep -iE "service_role|eyJ[A-Za-z0-9_-]{20,}" -- . && echo "FOUND — do not push" || echo "clean"
+  git grep -nE "eyJ[A-Za-z0-9_-]{30,}|sb_secret_[A-Za-z0-9_-]{10,}|(SERVICE_ROLE_KEY|SHARE_TOKEN|API_KEY)[[:space:]]*[:=][[:space:]]*['\"][A-Za-z0-9_-]{12,}" -- . && echo "FOUND — do not push" || echo "clean"
   ```
+
+  This looks for secret **values** — the `eyJ…` shape of a Supabase key, the
+  newer `sb_secret_…` form, and any long string assigned to a secret-sounding
+  name. It deliberately does *not* grep for the word `service_role`, which
+  appears all over this file and `worker.js` as a variable name and would fire
+  every single time. A check that always cries wolf is one you stop reading.
 
 ---
 
