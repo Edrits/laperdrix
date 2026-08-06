@@ -47,7 +47,20 @@ the new value in Cloudflare.
 1. **Workers & Pages → Create → Worker.** Name it `laperdrix`. Deploy the
    default, then **Edit code**.
 2. Delete what's there, paste the whole of `worker/worker.js`, **Deploy**.
-3. **Settings → Variables and Secrets → Add secret**, three times:
+3. **Settings → Variables and Secrets → Add**, three times.
+
+   > **Set the Type to `Secret`, not `Text`.** The dialog offers both and Text is
+   > easy to pick by accident. Text stores the value in the clear and shows it
+   > back to you in the dashboard; Secret encrypts it and becomes write-only, so
+   > afterwards it reads `Value encrypted` and can only be overwritten, never
+   > read. Neither type is ever exposed to the browser — this is about who can
+   > see it in your Cloudflare account, not about a public leak.
+   >
+   > If you already added one as Text: delete it, re-add it as Secret, and
+   > rotate the Supabase key (Settings → API → Reset) since it has been sitting
+   > in the clear. Reset in Supabase *first*, then put the new value in
+   > Cloudflare, or the Worker briefly has a dead key.
+
 
    | Name | Value |
    |---|---|
