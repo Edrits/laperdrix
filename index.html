@@ -515,9 +515,9 @@ $('openKitty').addEventListener('click', () => { location.href = 'kitty.html'; }
    contain the token either. Hence custom properties, set here at runtime.
    Until then the blur stand-ins from photos.css are showing. */
 
-// Set once deployed, e.g. 'https://laperdrix.neddritchie.workers.dev'.
-// Empty means "not deployed yet", which is the normal state during development.
-const WORKER_URL = '';
+// Not a secret — it's a public address. The SHARE_TOKEN is what actually gates
+// access, and that never appears in this file.
+const WORKER_URL = 'https://laperdrix.neddritchie.workers.dev';
 
 const PHOTO_NAMES = ['group', 'lake', 'abbey', 'chair', 'mirror', 'heads', 'hens'];
 const TOKEN_KEY = 'laperdrix.token';
