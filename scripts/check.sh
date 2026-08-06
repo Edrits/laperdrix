@@ -72,14 +72,16 @@ CODE=$(curl -s -m 15 -o /dev/null -w '%{http_code}' "$BASE/data?t=definitely-wro
 OUT=$(curl -s -m 20 -w '\n%{http_code}' "$BASE/data?t=$TOKEN")
 CODE=$(echo "$OUT" | tail -1)
 BODY=$(echo "$OUT" | sed '$d')
+BAD_TOKEN=""
 case "$CODE" in
   200)
     PEOPLE=$(echo "$BODY" | grep -o '"id"' | wc -l | tr -d ' ')
     pass "Database is reachable and the tables exist"
     note "$PEOPLE record(s) stored so far."
     ;;
-  401) fail "Your token does not match the one in Cloudflare"
-       note "Compare secrets.txt with the SHARE_TOKEN secret in the dashboard." ;;
+  401) BAD_TOKEN=1
+       fail "Your token does not match the one in Cloudflare"
+       note "Paste the value in secrets.txt into the SHARE_TOKEN secret." ;;
   502) fail "Token is fine, but the database is not ready"
        note "Run schema.sql in the Supabase SQL editor." ;;
   *)   fail "Unexpected response $CODE"
@@ -87,6 +89,15 @@ case "$CODE" in
 esac
 
 # --------------------------------------------------------------- the photos
+# Pointless to ask, and actively misleading to report, while the token is wrong:
+# every route would return 401 and it would look like the photos were missing.
+if [ -n "$BAD_TOKEN" ]; then
+  echo
+  echo "Stopping here — fix the token first, then run this again."
+  echo "Everything else is blocked behind it and would only report false alarms."
+  exit 1
+fi
+
 OUT=$(curl -s -m 25 -w '\n%{http_code}' "$BASE/photos?t=$TOKEN")
 CODE=$(echo "$OUT" | tail -1)
 BODY=$(echo "$OUT" | sed '$d')
