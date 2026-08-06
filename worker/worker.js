@@ -75,11 +75,17 @@ function sb(env, path, init) {
   });
 }
 
-// One trip per share token. Found or created on demand, so there is no separate
-// setup step and no trip id to configure anywhere.
+// One trip, found or created on demand, so there is no separate setup step and
+// no trip id to configure anywhere.
+//
+// Looked up by NAME, deliberately not by access_token. Keying it on the token
+// would mean that changing SHARE_TOKEN — a thing you might reasonably do if the
+// link got forwarded too widely — silently created a second empty trip and
+// orphaned everyone's data. The token is stored on the row, but it is not the
+// identity of the row.
 async function tripId(env) {
-  const token = encodeURIComponent(env.SHARE_TOKEN);
-  const found = await sb(env, `trips?access_token=eq.${token}&select=id&limit=1`);
+  const name = encodeURIComponent(TRIP_NAME);
+  const found = await sb(env, `trips?name=eq.${name}&select=id&limit=1`);
   if (found.ok) {
     const rows = await found.json();
     if (Array.isArray(rows) && rows.length) return rows[0].id;

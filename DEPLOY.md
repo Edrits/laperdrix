@@ -106,6 +106,27 @@ the new value in Cloudflare.
 
 ---
 
+## Lost the share token?
+
+Cloudflare secrets are write-only: once saved you can never read the value back,
+only overwrite it. That is the point of them.
+
+**You do not need to "rotate" anything.** Unlike the `service_role` key, the
+share token is simply a password you invented. Nothing derives from it. If you
+have lost it, generate a new one and overwrite the secret:
+
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Then put the same value in `secrets.txt` so `./scripts/check.sh` can use it, and
+re-send the share link to anyone who already had the old one.
+
+Changing it is safe at any time: the Worker finds the trip by name, not by
+token, so existing dates and spending are not orphaned when the token changes.
+
+---
+
 ## 4 · The share link
 
 The token is the password. Send people:
