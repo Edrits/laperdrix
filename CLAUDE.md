@@ -23,7 +23,7 @@ Work is split to avoid clobbering. Check which side you're on before editing.
 | Side | Owns | Files |
 |---|---|---|
 | **Calendar** | Itinerary and attendance — data and logic | its own schema file, its own JS |
-| **App / landing** | Profiles, expenses, the kitty, and **all presentation** | `schema.sql`, `index.html`, `styles.css`, `worker/` |
+| **App / landing** | Profiles, expenses, the kitty, and **all presentation** | `schema.sql`, `index.html`, `kitty.html`, `styles.css`, `photos.css`, `icons.js`, `money.js`, `sync.js`, `worker/` |
 
 **The integration surface is two database views and nothing else:**
 
@@ -45,8 +45,9 @@ There is **no Node, npm, Homebrew or version manager on this Mac**, and that is 
 same pattern as `../Personal vocab app`. Don't introduce a toolchain. A no-build app also has no
 dependency tree to rot between holidays, which matters for something used once every few years.
 
-- **Local:** `./start.command`, or `python3 -m http.server 4173`. Must be served over HTTP, not
-  opened as `file://`.
+- **Local:** `python3 -m http.server 4173`, then <http://localhost:4173>. Must be served over HTTP,
+  not opened as `file://` — `fetch` and the localStorage origin both depend on it. Port 4173
+  specifically: it is in the Worker's `ALLOWED_ORIGINS`, so any other port fails CORS.
 - **Host:** GitHub Pages.
 - **API:** one Cloudflare Worker holding `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and
   `ANTHROPIC_API_KEY` as secrets. The browser never talks to Supabase directly.
@@ -55,6 +56,37 @@ dependency tree to rot between holidays, which matters for something used once e
 **Worker deploys are manual** — Ed pastes `worker.js` into the Cloudflare dashboard, as with
 `vocab-sync`. The repo copy is the source of truth, so **flag loudly if you change it** or the live
 version silently drifts.
+
+## How a number gets from a phone to the database
+
+Four files, and you need all four in your head before changing any of them.
+
+`index.html` / `kitty.html` → `sync.js` → `worker/worker.js` → Supabase REST.
+
+**`sync.js` is local-first, and the order is load-bearing.** Every write goes to `localStorage`
+first and the network second, because someone logging a shop in a supermarket car park must not
+lose the number when the line drops. A failed request joins a queue and is retried on the next
+write and on the `online` event.
+
+- **`flush()` before `pull()`, always.** A pull overwrites the local cache with the server's copy,
+  so pulling first would silently destroy writes that hadn't landed yet.
+- The queue **collapses by `(kind, id)`** — re-editing the same expense replaces its queued job
+  rather than stacking a fortnight of duplicates.
+- **Ids are generated on the client and must be real UUIDs** (`Sync.newId()`). The database columns
+  are `uuid` and reject anything else, so a made-up id fails at the far end, long after the user
+  saw it save.
+- **With no token, every function quietly no-ops** and the app runs device-only. That is deliberate,
+  not a bug — it is how local development and a tokenless visitor both work.
+
+**The Worker translates between two vocabularies, and this is the thing that catches you out.**
+The database is formal snake_case; the app's objects are terse camelCase. `personIn`/`personOut`
+and `expenseIn`/`expenseOut` in `worker.js` are the only place the two meet — `description ↔ what`,
+`paid_by_member_id ↔ paidBy`, `arrives_on ↔ from`, `counts_in_share ↔ counts`. **Adding a field
+means editing both directions**, or it round-trips to `undefined` and the loss is silent.
+
+**The trip is found by name (`TRIP_NAME`), never by token.** Keying it on `SHARE_TOKEN` would mean
+that changing the token — a reasonable thing to do if the link got forwarded too widely — created a
+second empty trip and orphaned everyone's data. Rotating the token is therefore safe at any time.
 
 ## Security
 
@@ -91,8 +123,28 @@ inline SVG sprite. Each icon carries its owner's colour through the whole app.
   without it a successful-but-retried request duplicates the expense.
 - Connectivity in rural Dordogne is poor. Expenses save **separately from** their photo, so a failed
   upload never loses the number.
+- **`money.js` stays pure** — no DOM, no storage, no `fetch`. Every function is a function of its
+  arguments, which is the only reason `tests.html` can check it. Put anything impure elsewhere.
+- **`parseAmount` returns `null` for what it cannot read**, never `0`. Callers must treat `null` as
+  "ask the human"; defaulting it to zero silently books a free lunch.
+- **Bump the `?v=` on changed assets** — `styles.css?v=10`, `sync.js?v=1`. Pages caches hard, and
+  phones that already have the app will otherwise keep the old file for days.
+- `Money.levellingTransfers()` exists and computes who-could-pay-whom, but **it is a suggestion and
+  must never be presented as a debt.** See Ed's framing at the top; the copy in `kitty.html` is
+  deliberately worded around it.
+- `split_basis` has a `per_household` value in the schema enum, but `summarise()` implements only
+  `per_person` and `none`. Picking it would silently behave as an even per-person split.
 
-## Testing
+## Testing and checking
 
-No Node, so no Vitest. `tests.html` runs assertions on `money.js` in the browser;
-`scripts/check_receipts.py` (stdlib only) measures receipt-extraction accuracy against real fixtures.
+No Node, so no Vitest.
+
+- **Unit tests:** open `tests.html` over the local server. It asserts against `money.js` and shows a
+  pass/fail summary; results are also on `window.__results` as `{pass, fail}`. There is no test
+  runner and no way to run a single test — edit or comment out the block you don't want.
+- **Deployment:** `./scripts/check.sh` checks the live Worker end to end — secrets present, data
+  routes deployed (i.e. the pasted copy isn't stale), a wrong token refused with 401, the database
+  reachable, all seven photographs signable. It reads the share token from `secrets.txt` or `.env`
+  (both gitignored) so it never has to be typed into a shell history or a chat window.
+- **`manifest.webmanifest` is generated**, not hand-edited — `python3 scripts/gen_manifest.py`.
+  Percent-encoding a data URI inside JSON by hand is how you get an icon that never renders.
