@@ -283,6 +283,33 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 .enter svg{width:17px;height:17px}
 .foot{border-top:1px solid var(--hair);padding:24px 0 40px;color:var(--mut);font-size:12.5px}
 
+/* The map link. The address is the tap target, not the pin — see the note in
+   index.html. Aligned to the top rather than centred because the address wraps
+   to two lines on a phone, and a pin floating in the middle of a wrapped block
+   looks like it came loose. */
+.mapl{
+  display:inline-flex;align-items:flex-start;gap:10px;
+  min-height:44px;box-sizing:border-box;
+  margin-left:-9px;padding:8px 12px 8px 9px;border-radius:11px;
+  color:var(--tx);text-decoration:none;
+  transition:background .16s ease;
+}
+.mapl svg{width:18px;height:18px;flex:none;margin-top:1px;color:var(--accent)}
+.mapl > span{display:flex;flex-direction:column;gap:2px;line-height:1.35}
+.mapl small{font-size:11px;letter-spacing:.05em;color:var(--mut);transition:color .16s ease}
+.mapl:hover,.mapl:focus-visible{background:var(--surface)}
+.mapl:hover small,.mapl:focus-visible small{color:var(--accent)}
+/* The owners' phone number was rendering in default-browser blue, which was
+   the only colour on the page not taken from the photographs. */
+.foot-line{margin:9px 0 0}
+.foot-line a{
+  color:var(--tx);text-decoration:none;
+  border-bottom:1px solid var(--hair);padding-bottom:1px;
+  transition:color .16s ease,border-color .16s ease;
+}
+.foot-line a:hover,.foot-line a:focus-visible{color:var(--accent);border-bottom-color:currentColor}
+@media (prefers-reduced-motion:reduce){.mapl,.mapl small{transition:none}}
+
 /* add-to-home-screen hint (iOS Safari only, dismissed for good once closed) */
 .a2hs{
   display:flex;gap:13px;align-items:flex-start;position:relative;
@@ -373,6 +400,14 @@ body.picking .bar{display:none}
 
 .kitty-page{background:var(--bg)}
 .kitty-page .sec{padding-inline:24px}
+
+/* The action bar is hidden by default and revealed by .show, because on the
+   landing page an observer keeps it out of the way over the hero. There is no
+   hero here and the Add button is the entire point of the page, so it is
+   visible from the first paint. In CSS rather than script deliberately: done
+   in JS it flashes in, and a script that failed would leave the page with no
+   way to add anything at all. */
+.kitty-page .bar{opacity:1;transform:none;visibility:visible}
 
 .ktop{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -540,3 +575,104 @@ body.picking .bar{display:none}
    on a 667px one it would run off the bottom with Save unreachable and no way
    to scroll. Cap it and let the inside scroll instead. */
 .sheet .in2{max-height:92svh;overflow-y:auto;overscroll-behavior:contain}
+
+/* ------------------------------------------------- who's spent what chart
+   The kitty's centrepiece, replacing the old Spending/Balance tabs. Same
+   bones as .brow/.btrack above, but louder — this is the thing you open the
+   page to see, so the bars are taller and the numbers are set in the serif.
+
+   Everything is scoped under .chart-sec on purpose. `.chart` is ALREADY
+   taken by the landing page's presence chart (see "presence chart" above),
+   and both pages share this stylesheet — unscoped rules here would rewrite
+   that one. The scope also lets us undo the bits of the presence chart's
+   .chart rule that leak in. */
+.chart-sec{padding-block:26px 0}
+.chart-h{
+  font:600 clamp(21px,5.2vw,27px)/1.15 var(--serif);
+  margin:0 0 18px;letter-spacing:-.015em;
+}
+.chart-sec .chart{margin-top:0;overflow:visible;padding-bottom:0}
+
+.crow{margin-bottom:18px}
+.crow:last-child{margin-bottom:0}
+.chead{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-bottom:7px;
+}
+.cname{
+  display:flex;align-items:center;gap:9px;min-width:0;overflow:hidden;
+  font-size:15px;white-space:nowrap;
+}
+.camt{text-align:right;flex:none;line-height:1.15}
+.camt b{
+  display:block;font:600 19px/1.1 var(--serif);
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em;
+}
+.camt i{display:block;font-style:normal;font-size:11.5px;color:var(--mut);margin-top:2px}
+
+/* The track has to read as a deliberate empty container, not as a missing
+   element — several people will legitimately have spent nothing. Hence the
+   hairline ring rather than a bare background. */
+.ctrack{
+  height:14px;border-radius:99px;background:var(--surface);
+  box-shadow:inset 0 0 0 1px var(--hair);overflow:hidden;
+}
+/* No background here: the person's colour arrives inline and must win.
+   min-width keeps a 1% bar from thinning to an invisible hairline... */
+.ctrack i{display:block;height:100%;min-width:10px;border-radius:99px}
+/* ...but a genuine zero must stay a genuine zero, so match the literal 0%
+   the JS writes and drop the minimum back off. With a space or without. */
+.ctrack i[style*="width:0%"],
+.ctrack i[style*="width: 0%"]{min-width:0}
+
+/* Bars grow from nothing on first paint: JS sets the widths, then adds
+   .ready on the next frame. Living inside no-preference is what disables
+   the whole effect for prefers-reduced-motion — and it means a browser that
+   never gets .ready added still shows full bars rather than empty tracks. */
+@media (prefers-reduced-motion:no-preference){
+  .ctrack i{transition:width .8s cubic-bezier(.2,.7,.3,1),min-width .8s cubic-bezier(.2,.7,.3,1)}
+  .chart:not(.ready) .ctrack i{width:0 !important;min-width:0}
+  .crow:nth-child(2) .ctrack i{transition-delay:.05s}
+  .crow:nth-child(3) .ctrack i{transition-delay:.1s}
+  .crow:nth-child(4) .ctrack i{transition-delay:.15s}
+  .crow:nth-child(5) .ctrack i{transition-delay:.2s}
+  .crow:nth-child(6) .ctrack i{transition-delay:.25s}
+  .crow:nth-child(n+7) .ctrack i{transition-delay:.3s}
+}
+
+/* ------------------------------------------------------ quiet disclosure
+   Levelling-up suggestions and the FX rate live in <details> now. They are
+   asides, not calls to action — nobody is ever told they owe anything — so
+   the summary is a muted row, not a button. 44px minimum tap target. */
+/* The gap goes on every .quiet and is then removed between adjacent ones, so
+   the group is spaced off whatever precedes it without depending on where the
+   first <details> happens to sit among its siblings. */
+.quiet{border-top:1px solid var(--hair);margin-top:34px}
+/* :not([hidden]) matters — the levelling block is hidden until there is
+   something to level, and a display:none element is still a sibling for `+`,
+   so without this the exchange-rate row loses its gap and crowds the copy
+   above it. */
+.quiet:not([hidden]) + .quiet{margin-top:0}
+.quiet > summary{
+  list-style:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:44px;padding:10px 2px;
+  font-size:13.5px;color:var(--mut);
+}
+.quiet > summary::-webkit-details-marker{display:none}
+.quiet > summary::marker{content:""}
+.quiet > summary:hover{color:var(--tx)}
+/* chevron drawn to the same recipe as the icons: 1.7px, round caps */
+.quiet > summary::after{
+  content:"";flex:none;width:7px;height:7px;margin-right:4px;
+  border-right:1.7px solid currentColor;border-bottom:1.7px solid currentColor;
+  border-radius:0 0 1.7px 0;
+  transform:translateY(-2px) rotate(45deg);
+  transition:transform .18s ease;
+}
+.quiet[open] > summary::after{transform:translateY(1px) rotate(-135deg)}
+.quiet-in{padding:0 0 18px}
+.quiet-in .level{margin-top:0;padding:13px 14px}
+@media (prefers-reduced-motion:reduce){
+  .quiet > summary::after{transition:none}
+}

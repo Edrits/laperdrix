@@ -172,6 +172,111 @@ group('levellingTransfers');
   deep(M.levellingTransfers(tiny), [], 'rounding dust does not generate a payment');
 }
 
+/* -------------------------------------------------------- spendByPerson */
+group('spendByPerson — everybody gets a row');
+{
+  const r = M.spendByPerson(people, [
+    { paidBy: 'a', amountLocal: 100, amountHome: 85 },
+  ]);
+  eq(r.length, 3,                          'three people in, three rows out');
+  deep(r.map(x => x.id), ['a', 'b', 'c'],  'including the two who spent nothing');
+  const sam = r.find(x => x.id === 'c');
+  deep([sam.paidLocal, sam.paidHome, sam.count, sam.fraction], [0, 0, 0, 0],
+       'a person who has spent nothing is all zeroes');
+  eq(r.find(x => x.id === 'a').count, 1,   'and the payer has one expense');
+}
+
+group('spendByPerson — a payer who is no longer on the trip');
+{
+  const r = M.spendByPerson(people, [
+    { paidBy: 'a', amountLocal: 20, amountHome: 17 },
+    { paidBy: 'ghost', amountLocal: 500, amountHome: 425 },
+  ]);
+  eq(r.length, 3,                                   'no phantom row for the ghost');
+  eq(r.some(x => x.id === 'ghost'), false,          'really not there');
+  eq(M.round2(r.reduce((t, x) => t + x.paidHome, 0)), 17, 'and their spend is ignored');
+}
+
+group('spendByPerson — rounding and junk amounts');
+{
+  const r = M.spendByPerson(people, [
+    { paidBy: 'a', amountLocal: 1.005, amountHome: 2.675 },
+    { paidBy: 'b', amountLocal: 0.1,   amountHome: 0.1 },
+    { paidBy: 'b', amountLocal: 0.2,   amountHome: 0.2 },
+  ]);
+  const ed = r.find(x => x.id === 'a'), kate = r.find(x => x.id === 'b');
+  eq(ed.paidLocal, 1.01,   'paidLocal is rounded with round2');
+  eq(ed.paidHome, 2.68,    'paidHome likewise');
+  eq(kate.paidHome, 0.3,   '0.1 + 0.2 is 0.3, not 0.30000000000000004');
+}
+{
+  const r = M.spendByPerson(people, [
+    { paidBy: 'a', amountLocal: 'x',      amountHome: undefined },
+    { paidBy: 'a', amountLocal: NaN,      amountHome: Infinity },
+    { paidBy: 'a', amountLocal: 10,       amountHome: 8 },
+  ]);
+  const ed = r.find(x => x.id === 'a');
+  eq(ed.paidLocal, 10,  'unreadable amounts count as 0, never NaN');
+  eq(ed.paidHome, 8,    'missing and non-finite amounts likewise');
+  eq(ed.count, 3,       'but they are still three expenses he logged');
+}
+
+group('spendByPerson — fraction drives the bar widths');
+{
+  const r = M.spendByPerson(people, [
+    { paidBy: 'a', amountLocal: 100, amountHome: 100 },
+    { paidBy: 'b', amountLocal: 25,  amountHome: 25 },
+  ]);
+  eq(r.find(x => x.id === 'a').fraction, 1,    'the top spender is exactly 1');
+  eq(r.find(x => x.id === 'b').fraction, 0.25, '25 against a top of 100 is 0.25');
+  eq(r.find(x => x.id === 'c').fraction, 0,    'and nothing spent is 0');
+}
+{
+  const r = M.spendByPerson(people, []);
+  eq(r.every(x => x.fraction === 0), true, 'nobody has spent anything: every fraction is 0');
+}
+
+group('spendByPerson — the order is deterministic');
+{
+  const r = M.spendByPerson(people, [
+    { paidBy: 'c', amountLocal: 10, amountHome: 10 },
+    { paidBy: 'a', amountLocal: 90, amountHome: 90 },
+    { paidBy: 'b', amountLocal: 50, amountHome: 50 },
+  ]);
+  deep(r.map(x => x.id), ['a', 'b', 'c'], 'biggest spender first');
+}
+{
+  // Level on money: the one with more expenses comes first.
+  const r = M.spendByPerson(people, [
+    { paidBy: 'c', amountLocal: 40, amountHome: 40 },
+    { paidBy: 'a', amountLocal: 20, amountHome: 20 },
+    { paidBy: 'a', amountLocal: 20, amountHome: 20 },
+  ]);
+  deep(r.map(x => x.id), ['a', 'c', 'b'], 'a tie on total breaks on the number of expenses');
+}
+{
+  // Level on money and on count: id decides, whatever order they arrived in.
+  const spend = [
+    { paidBy: 'c', amountLocal: 30, amountHome: 30 },
+    { paidBy: 'a', amountLocal: 30, amountHome: 30 },
+  ];
+  const r = M.spendByPerson(people, spend);
+  deep(r.map(x => x.id), ['a', 'c', 'b'], 'a full tie breaks on id');
+  const reversed = M.spendByPerson(people.slice().reverse(), spend.slice().reverse());
+  deep(reversed.map(x => x.id), ['a', 'c', 'b'], 'and does not flicker if the inputs are reordered');
+  deep(r.map(x => x.fraction), [1, 1, 0], 'two people level at the top are both 1');
+}
+
+group('spendByPerson — awkward inputs');
+{
+  const r = M.spendByPerson(people, []);
+  eq(r.length, 3, 'no expenses is not a crash');
+  deep(r.map(x => x.paidHome), [0, 0, 0], 'and everybody is on zero');
+  deep(r.map(x => x.id), ['a', 'b', 'c'], 'still in a stable order');
+}
+deep(M.spendByPerson([], evenly), [], 'no people is not a crash');
+deep(M.spendByPerson([], []), [],     'neither is nothing at all');
+
 /* ---------------------------------------------------------------- totals */
 group('total');
 eq(M.total([{ amountHome: 1.1 }, { amountHome: 2.2 }]), 3.3, '1.1 + 2.2 is 3.3, not 3.3000000000000003');

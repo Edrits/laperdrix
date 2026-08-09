@@ -193,6 +193,68 @@
     return out;
   }
 
+  /**
+   * What each person has spent, biggest first. This is the whole point of the
+   * kitty now: not who owes what, just who has put in what.
+   *
+   * people   — [{ id, ... }]; only `id` is read, and everybody gets a row, so
+   *            the chart shows the whole group rather than only the payers.
+   * expenses — [{ paidBy, amountLocal, amountHome }]. An expense whose paidBy
+   *            matches nobody is ignored: a person can be removed on the
+   *            landing page while their expenses remain, and a phantom row for
+   *            somebody no longer on the trip would be worse than nothing.
+   *
+   * Returns [{ id, paidLocal, paidHome, count, fraction }] sorted by paidHome
+   * descending, then count descending, then id — a total order, so two people
+   * who are level do not swap places between renders.
+   *
+   * `fraction` is paidHome as a proportion of the largest paidHome, 0..1, and
+   * is what the bars set their widths from. When nobody has spent anything it
+   * is 0 for everyone rather than a division by zero.
+   *
+   * `count` is how many expenses that person logged, whatever their amounts
+   * turned out to read as.
+   */
+  function spendByPerson(people, expenses) {
+    const amountOf = v => (typeof v === 'number' && isFinite(v) ? v : 0);
+
+    const local = new Map();
+    const home = new Map();
+    const count = new Map();
+    for (const p of people) {
+      local.set(p.id, 0);
+      home.set(p.id, 0);
+      count.set(p.id, 0);
+    }
+
+    for (const e of expenses || []) {
+      if (!count.has(e.paidBy)) continue;
+      local.set(e.paidBy, local.get(e.paidBy) + amountOf(e.amountLocal));
+      home.set(e.paidBy, home.get(e.paidBy) + amountOf(e.amountHome));
+      count.set(e.paidBy, count.get(e.paidBy) + 1);
+    }
+
+    const rows = people.map(p => ({
+      id: p.id,
+      paidLocal: round2(local.get(p.id) || 0),
+      paidHome: round2(home.get(p.id) || 0),
+      count: count.get(p.id) || 0,
+      fraction: 0,
+    }));
+
+    // Refunds can make a total negative; only a positive top gives a scale.
+    let top = 0;
+    for (const r of rows) if (r.paidHome > top) top = r.paidHome;
+    if (top > 0) for (const r of rows) r.fraction = r.paidHome / top;
+
+    rows.sort((a, b) =>
+      (b.paidHome - a.paidHome) ||
+      (b.count - a.count) ||
+      (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+
+    return rows;
+  }
+
   /* ------------------------------------------------------------- totals */
 
   function total(expenses, field) {
@@ -205,6 +267,6 @@
 
   global.Money = {
     round2, parseAmount, toHome, toLocal, formatMoney,
-    beneficiariesOf, summarise, levellingTransfers, total,
+    beneficiariesOf, summarise, levellingTransfers, spendByPerson, total,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

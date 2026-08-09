@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#171b14" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="styles.css?v=13">
+<link rel="stylesheet" href="styles.css?v=14">
 </head>
 <body class="kitty-page">
 
@@ -34,50 +34,54 @@
       <span class="pot-home" id="potHome"></span>
     </div>
     <p class="pot-cap" id="potCap"></p>
-
-    <div class="seg" role="tablist">
-      <button class="seg-b on" id="tabSpend" role="tab" aria-selected="true">Spending</button>
-      <button class="seg-b" id="tabBalance" role="tab" aria-selected="false">Balance</button>
-    </div>
   </section>
 
-  <!-- ---------------------------------------------------------- spending -->
-  <section class="sec view" id="viewSpend">
+  <!-- These filter the whole page below them — chart, entries and all. -->
+  <section class="sec view">
     <div class="filters" id="phaseFilters">
       <button class="pill on" data-phase="all">Whole trip</button>
       <button class="pill" data-phase="pre_trip">Before we go</button>
       <button class="pill" data-phase="on_trip">Out there</button>
     </div>
+  </section>
+
+  <!-- ------------------------------------------------------------- chart -->
+  <!-- Hidden until there is something to chart. A "Who's spent what" heading
+       over an empty box, above a second line also saying nothing is here, is
+       two apologies where the page needs one instruction. -->
+  <section class="sec chart-sec" id="chartSec" hidden>
+    <h2 class="chart-h">Who's spent what</h2>
+    <div class="chart" id="chart"></div>
+  </section>
+
+  <!-- ----------------------------------------------------------- entries -->
+  <section class="sec view">
     <div id="spendList"></div>
     <p class="empty-note" id="spendEmpty" hidden>Nothing in the kitty yet. Tap <b>Add spend</b> and say who paid for what.</p>
   </section>
 
-  <!-- ----------------------------------------------------------- balance -->
-  <section class="sec view" id="viewBalance" hidden>
-    <div id="balanceList"></div>
-    <p class="empty-note" id="balanceEmpty" hidden>Nothing to balance yet.</p>
-
-    <div class="level" id="levelBox" hidden>
-      <h3>If you wanted to level up</h3>
-      <div id="levelList"></div>
-      <p class="level-note">Only a suggestion. Nothing here is owed, and the trip doesn't need to balance.</p>
-    </div>
-
-    <div class="settings">
-      <h3>Settings</h3>
-      <div class="set-row">
-        <label for="basis">Work out shares</label>
-        <select id="basis">
-          <option value="per_person">Evenly, per person</option>
-          <option value="none">Don't — just show who paid</option>
-        </select>
+  <!-- ------------------------------------------------------- the asides -->
+  <section class="sec">
+    <details class="quiet" id="levelBox" hidden>
+      <summary>If you wanted to level things up</summary>
+      <div class="quiet-in">
+        <div class="level">
+          <div id="levelList"></div>
+          <p class="level-note">Only a suggestion. Nothing here is owed, and the trip doesn't need to balance.</p>
+        </div>
       </div>
-      <div class="set-row">
-        <label for="rate">£ per €</label>
-        <input id="rate" type="text" inputmode="decimal" size="8">
+    </details>
+
+    <details class="quiet" id="rateBox">
+      <summary>Exchange rate</summary>
+      <div class="quiet-in">
+        <div class="set-row">
+          <label for="rate">£ per €</label>
+          <input id="rate" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" size="8">
+        </div>
+        <p class="set-note" id="rateNote"></p>
       </div>
-      <p class="set-note" id="rateNote"></p>
-    </div>
+    </details>
   </section>
 </main>
 
@@ -90,7 +94,7 @@
 
     <label for="fAmount">How much</label>
     <div class="amount-row">
-      <input id="fAmount" type="text" inputmode="decimal" enterkeyhint="next" placeholder="0,00" autocomplete="off">
+      <input id="fAmount" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" enterkeyhint="next" placeholder="0,00" autocomplete="off">
       <div class="ccy" id="fCcy">
         <button type="button" class="ccy-b on" data-ccy="EUR">€</button>
         <button type="button" class="ccy-b" data-ccy="GBP">£</button>
@@ -110,13 +114,6 @@
     <input id="fWhen" type="date">
     <p class="conv" id="fPhase"></p>
 
-    <label id="forLabel">Who it was for</label>
-    <div class="forwho" role="group" aria-labelledby="forLabel">
-      <button type="button" class="pill on" id="forAll">Everyone</button>
-      <button type="button" class="pill" id="forSome">Just some of us</button>
-    </div>
-    <div class="somePick" id="somePick" hidden></div>
-
     <div class="row">
       <button class="btn ghost" id="fCancel">Cancel</button>
       <button class="btn" id="fSave" disabled>Save</button>
@@ -127,7 +124,7 @@
 
 <script src="icons.js?v=5"></script>
 <script src="sync.js?v=2"></script>
-<script src="money.js?v=1"></script>
+<script src="money.js?v=2"></script>
 <script>
 /* =========================================================================
    The kitty.
@@ -137,14 +134,24 @@
       accounting tool which helps settle"
 
    So: it shows what people have put in. It never tells anyone they owe anyone
-   money. The levelling suggestions exist but are framed as optional and carry
-   an explicit line saying nothing is owed.
+   money.
+
+   THE CHART IS THE POINT. One page, top to bottom: the pot, the phase
+   filters, then "Who's spent what" as bars — that is what people open this
+   for. The old Spending/Balance tabs are gone; so is the splitting UI. You no
+   longer say who a spend was *for*, because the app was never going to divide
+   the holiday up, and asking the question implied it might. Entries still
+   carry a `beneficiaries` field (always null now) so anything logged under
+   the old form still loads and still shows its "2 of 9" tag in the list.
+
+   The levelling suggestions and the exchange rate survive, demoted into two
+   closed <details> at the very bottom. Levelling is always worked out per
+   person — the old "work out shares" setting is gone — and still carries the
+   line saying nothing is owed.
 
    NO SETUP. The whole of logging a spend is: how much, who paid, what for.
-   An earlier version hid the Add button until somebody had made a profile on
-   the landing page AND this device had said which person it was — two hoops
-   before you could record that Ed paid 150 for the food shop. Now an unknown
-   payer is just a name you type, and the person is created behind the scenes.
+   An unknown payer is just a name you type, and the person is created behind
+   the scenes.
    ========================================================================= */
 
 const TRIP = Sync.TRIP;
@@ -192,8 +199,7 @@ function loadPeople(){
 
 let people   = loadPeople();
 let expenses = Sync.expenses();
-let conf     = Object.assign({ fxRate: 0.85, fxAt: null, fxSource: 'default', basis: 'per_person' }, read(K_CONF, {}));
-let view     = 'spend';
+let conf     = Object.assign({ fxRate: 0.85, fxAt: null, fxSource: 'default' }, read(K_CONF, {}));
 let phase    = 'all';
 let draft    = null;
 
@@ -222,6 +228,48 @@ function renderPot(){
   $('potCap').textContent = list.length
     ? `${list.length} ${list.length === 1 ? 'entry' : 'entries'} · ${payers} ${payers === 1 ? 'person' : 'people'} chipping in`
     : 'Nothing in it yet';
+}
+
+/* The centrepiece. Everyone with a profile gets a row, including people who
+   have spent nothing — an empty track is a fact worth showing, and it stops
+   the chart reading as a leaderboard of the only three who have paid so far. */
+function renderChart(){
+  const shown = visible();
+  const rows = Money.spendByPerson(people, shown);
+  const el = $('chart');
+
+  /* Keyed on spending, not on people. Somebody who has only put their dates in
+     on the front page shouldn't summon a chart of nothing but empty tracks —
+     and this way a filter that selects no spending hides it too. */
+  $('chartSec').hidden = shown.length === 0;
+  if (shown.length === 0) { el.innerHTML = ''; return; }
+
+  /* Widths are written inline, then .ready is added a frame later — that is
+     what the CSS grows the bars off. Taking it away first makes a re-render
+     (a new spend, a change of filter) animate again rather than snap. */
+  el.classList.remove('ready');
+  el.innerHTML = rows.map(r => {
+    const p = personById(r.id);
+    if (!p) return '';
+    const colour = colourOf(p.icon);
+    const note = r.count === 0 ? 'nothing yet'
+               : r.count === 1 ? '1 entry'
+               : r.count + ' entries';
+    const width = r.fraction === 0 ? '0%' : (r.fraction * 100).toFixed(1) + '%';
+    return `<div class="crow">
+  <div class="chead">
+    <span class="cname"><span class="av sm" style="background:${colour}">${iconOf(p.icon)}</span>${esc(p.name)}</span>
+    <span class="camt"><b>${fmtL(r.paidLocal)}</b><i>${note}</i></span>
+  </div>
+  <div class="ctrack"><i style="width:${width};background:${colour}"></i></div>
+</div>`;
+  }).join('');
+  /* A frame, or 80ms, whichever comes first. requestAnimationFrame does not
+     fire in a background tab, and a kitty opened in one would otherwise sit
+     at nought-width bars until you looked at it. Adding the class twice is
+     harmless. */
+  requestAnimationFrame(() => el.classList.add('ready'));
+  setTimeout(() => el.classList.add('ready'), 80);
 }
 
 function renderSpend(){
@@ -260,38 +308,20 @@ function renderSpend(){
   }).join('');
 }
 
-function renderBalance(){
-  const summary = Money.summarise(people, expenses, conf.basis);
-  $('balanceEmpty').hidden = expenses.length > 0;
-  const most = Math.max(1, ...summary.map(s => s.paid));
-
-  $('balanceList').innerHTML = summary
-    .slice().sort((a, b) => b.paid - a.paid)
-    .map(s => {
-      const p = personById(s.id);
-      if (!p) return '';
-      const diff = conf.basis === 'none' ? '' :
-        (Math.abs(s.balance) < 0.01
-          ? '<span class="bal level">level</span>'
-          : `<span class="bal ${s.balance > 0 ? 'up' : 'down'}">${s.balance > 0 ? '+' : '−'}${fmtH(Math.abs(s.balance))}</span>`);
-      return `<div class="brow">
-        <div class="bhead">
-          <span class="bname"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</span>
-          <span class="bnums">${fmtH(s.paid)} ${diff}</span>
-        </div>
-        <div class="btrack"><i style="width:${Math.max(1.5,(s.paid/most)*100)}%;background:${colourOf(p.icon)}"></i></div>
-      </div>`;
-    }).join('');
-
-  const transfers = conf.basis === 'none' ? [] : Money.levellingTransfers(summary);
+/* Always per person: there is no setting for it any more. Worked out on the
+   filtered list so it agrees with the chart above rather than quietly
+   answering a different question. */
+function renderLevel(){
+  const transfers = Money.levellingTransfers(Money.summarise(people, visible(), 'per_person'));
   $('levelBox').hidden = transfers.length === 0;
   $('levelList').innerHTML = transfers.map(t => {
     const from = personById(t.from), to = personById(t.to);
     return from && to
       ? `<div class="lrow"><span>${esc(from.name)} → ${esc(to.name)}</span><span>${fmtH(t.amount)}</span></div>` : '';
   }).join('');
+}
 
-  $('basis').value = conf.basis;
+function renderRate(){
   $('rate').value = String(conf.fxRate);
   const when = conf.fxAt ? new Date(conf.fxAt).toLocaleDateString('en-GB') : null;
   $('rateNote').textContent = conf.fxSource === 'manual' ? 'Set by hand.'
@@ -300,17 +330,11 @@ function renderBalance(){
 
 function render(){
   renderPot();
-  if (view === 'spend') renderSpend(); else renderBalance();
-  $('viewSpend').hidden = view !== 'spend';
-  $('viewBalance').hidden = view !== 'balance';
-  $('tabSpend').classList.toggle('on', view === 'spend');
-  $('tabBalance').classList.toggle('on', view === 'balance');
-  $('tabSpend').setAttribute('aria-selected', String(view === 'spend'));
-  $('tabBalance').setAttribute('aria-selected', String(view === 'balance'));
+  renderChart();
+  renderSpend();
+  renderLevel();
+  renderRate();
 }
-
-$('tabSpend').addEventListener('click', () => { view = 'spend'; render(); });
-$('tabBalance').addEventListener('click', () => { view = 'balance'; render(); });
 
 $('phaseFilters').addEventListener('click', e => {
   const b = e.target.closest('.pill');
@@ -339,22 +363,6 @@ function renderTags(){
     `<button type="button" class="pill${draft.category === t ? ' on' : ''}" data-tag="${esc(t)}">${esc(t)}</button>`).join('');
 }
 
-function renderSomePick(){
-  const chosen = new Set(draft.beneficiaries || []);
-  $('somePick').innerHTML = people.filter(p => p.counts).map(p =>
-    `<button type="button" class="who-chip${chosen.has(p.id) ? ' on' : ''}" data-id="${esc(p.id)}">
-       <span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}
-     </button>`).join('') || '<p class="set-note">Nobody to choose from yet.</p>';
-}
-
-function setForWho(some){
-  $('forAll').classList.toggle('on', !some);
-  $('forSome').classList.toggle('on', some);
-  $('somePick').hidden = !some;
-  if (!some) draft.beneficiaries = null;
-  else if (!draft.beneficiaries) draft.beneficiaries = [];
-}
-
 function updateForm(){
   const parsed = Money.parseAmount($('fAmount').value);
   const rate = Number(conf.fxRate);
@@ -372,18 +380,19 @@ function updateForm(){
   $('fPhase').textContent = phaseOf(when) === 'pre_trip' ? 'Counted as before we go.' : 'Counted as out there.';
 
   const payerOk = draft.paidBy === '__new' ? $('fNewName').value.trim().length > 0 : Boolean(draft.paidBy);
-  const someButNobody = $('forSome').classList.contains('on') &&
-                        (!draft.beneficiaries || draft.beneficiaries.length === 0);
-  $('fSave').disabled = parsed === null || parsed === 0 || !payerOk || !draft.category || someButNobody;
+  $('fSave').disabled = parsed === null || parsed === 0 || !payerOk || !draft.category;
 }
 
+/* Nothing in here may await or defer: the Add button focuses the amount field
+   the instant this returns, and iOS only raises the keypad for a focus() that
+   happens inside the tap's own task. */
 function openForm(existing){
   people = loadPeople();
   const lastPayer = read(K_ME, null);
   draft = existing ? Object.assign({}, existing) : {
     id: null, category: null, what: '', currency: 'EUR',
     paidBy: personById(lastPayer) ? lastPayer : (people[0] ? people[0].id : '__new'),
-    spentOn: todayISO(), beneficiaries: null,
+    spentOn: todayISO(),
   };
 
   $('fTitle').textContent = existing ? 'Edit spend' : 'Add spend';
@@ -394,8 +403,6 @@ function openForm(existing){
   $('fNewName').value = '';
   [...$('fCcy').children].forEach(b => b.classList.toggle('on', b.dataset.ccy === draft.currency));
   renderPayers(); renderTags();
-  setForWho(Boolean(draft.beneficiaries && draft.beneficiaries.length));
-  renderSomePick();
   updateForm();
 
   $('sheet').classList.add('open');
@@ -410,7 +417,12 @@ function closeForm(){
   draft = null;
 }
 
-$('addBtn').addEventListener('click', () => openForm(null));
+$('addBtn').addEventListener('click', () => {
+  openForm(null);
+  /* Synchronous, in the gesture's own task, and after the sheet is open —
+     defer it by so much as a rAF and the field focuses with no keypad. */
+  $('fAmount').focus();
+});
 $('fCancel').addEventListener('click', closeForm);
 $('fAmount').addEventListener('input', updateForm);
 $('fDetail').addEventListener('input', () => { draft.what = $('fDetail').value; });
@@ -439,19 +451,6 @@ $('fTags').addEventListener('click', e => {
   if (!b) return;
   draft.category = b.dataset.tag;
   renderTags();
-  updateForm();
-});
-
-$('forAll').addEventListener('click', () => { setForWho(false); updateForm(); });
-$('forSome').addEventListener('click', () => { setForWho(true); renderSomePick(); updateForm(); });
-
-$('somePick').addEventListener('click', e => {
-  const b = e.target.closest('.who-chip');
-  if (!b) return;
-  const list = new Set(draft.beneficiaries || []);
-  list.has(b.dataset.id) ? list.delete(b.dataset.id) : list.add(b.dataset.id);
-  draft.beneficiaries = [...list];
-  renderSomePick();
   updateForm();
 });
 
@@ -493,7 +492,7 @@ $('fSave').addEventListener('click', () => {
     amountLocal: currency === 'EUR' ? typed : Money.toLocal(typed, rate),
     amountHome:  currency === 'EUR' ? Money.toHome(typed, rate) : typed,
     fxRateUsed: rate,
-    beneficiaries: draft.beneficiaries && draft.beneficiaries.length ? draft.beneficiaries : null,
+    beneficiaries: null,   // nothing is split any more; the field stays for old entries
     createdAt: draft.createdAt || Date.now(),
   };
 
@@ -521,9 +520,8 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && $('sheet').classList.contains('open')) closeForm();
 });
 
-/* ---------------------------------------------------------- settings */
+/* ---------------------------------------------------------- the rate */
 
-$('basis').addEventListener('change', () => { conf.basis = $('basis').value; write(K_CONF, conf); render(); });
 $('rate').addEventListener('change', () => {
   const v = Money.parseAmount($('rate').value);
   if (v !== null && v > 0) { conf.fxRate = v; conf.fxSource = 'manual'; conf.fxAt = Date.now(); write(K_CONF, conf); }

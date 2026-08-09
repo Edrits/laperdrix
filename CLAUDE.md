@@ -134,11 +134,30 @@ sprite; a mismatch renders an empty circle with no error.
   "ask the human"; defaulting it to zero silently books a free lunch.
 - **Bump the `?v=` on changed assets** — `styles.css?v=10`, `sync.js?v=1`. Pages caches hard, and
   phones that already have the app will otherwise keep the old file for days.
+- **The kitty is led by its bar chart, and the splitting UI was taken out on purpose.** Ed:
+  *"this tool should really just be a place where people can list what they spend… it's not to
+  eventually split everything, it's just a good way to track who spent what so if large amounts
+  need settling they can."* So the page is one scroll — total, filter, **who's spent what**, the
+  entries — and the form is only **how much → who paid → what for → when**. There is no
+  per-expense beneficiary picker and no share-basis setting any more. Old expenses that already
+  carry `beneficiaries` still load and still render; nothing new can create them. Don't reintroduce
+  either without Ed asking: each was removed because it was friction in a form that has to work
+  one-handed in a supermarket.
+- `Money.spendByPerson()` is what the chart draws from. Everyone with a profile gets a row,
+  including people who have spent nothing — an empty track is a fact worth showing, and it stops
+  the chart reading as a leaderboard. A negative total gets a zero-width bar rather than a negative
+  one, or a refund would invert the whole ordering.
 - `Money.levellingTransfers()` exists and computes who-could-pay-whom, but **it is a suggestion and
-  must never be presented as a debt.** See Ed's framing at the top; the copy in `kitty.html` is
-  deliberately worded around it.
+  must never be presented as a debt.** See Ed's framing at the top. It now lives in a closed
+  `<details>` at the foot of `kitty.html`, still carrying the line saying nothing is owed —
+  findable if someone goes looking, invisible otherwise.
 - `split_basis` has a `per_household` value in the schema enum, but `summarise()` implements only
-  `per_person` and `none`. Picking it would silently behave as an even per-person split.
+  `per_person` and `none`, and the app now always passes `per_person`. Picking `per_household`
+  would silently behave as an even per-person split.
+- **Amount fields must stay `type="text"` with `inputmode="decimal"`.** `type="number"` rejects
+  `12,50` outright in some locales, which loses French receipts at the keyboard rather than in the
+  parser. The phone keypad comes from `inputmode`, and the keyboard only *appears* if `focus()` is
+  called synchronously inside the tap's own task — iOS ignores a deferred one.
 
 ## Testing and checking
 
