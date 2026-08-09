@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#171b14" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="styles.css?v=11">
+<link rel="stylesheet" href="styles.css?v=13">
 </head>
 <body class="kitty-page">
 
@@ -26,21 +26,7 @@
   </div>
 </header>
 
-<!-- Shown when nobody has made a profile yet on the front page. -->
-<section class="sec gate" id="gateNobody" hidden>
-  <h1 class="big">The kitty</h1>
-  <p class="lede">Nobody's put themselves on the trip yet, and the kitty needs to know who's who before it can track anything.</p>
-  <a class="btn" href="index.html">Add your dates first</a>
-</section>
-
-<!-- Shown until this device knows which of those people it belongs to. -->
-<section class="sec gate" id="gateWho" hidden>
-  <h1 class="big">Which one are you?</h1>
-  <p class="muted">Only so the app can fill in "who paid" for you. You can change it later.</p>
-  <div class="whoList" id="whoList"></div>
-</section>
-
-<main id="main" hidden>
+<main>
   <section class="sec pot-sec">
     <p class="eyebrow">The kitty</p>
     <div class="pot-big">
@@ -63,12 +49,13 @@
       <button class="pill" data-phase="on_trip">Out there</button>
     </div>
     <div id="spendList"></div>
-    <p class="empty-note" id="spendEmpty" hidden>Nothing in the kitty yet. Add the first thing somebody paid for.</p>
+    <p class="empty-note" id="spendEmpty" hidden>Nothing in the kitty yet. Tap <b>Add spend</b> and say who paid for what.</p>
   </section>
 
   <!-- ----------------------------------------------------------- balance -->
   <section class="sec view" id="viewBalance" hidden>
     <div id="balanceList"></div>
+    <p class="empty-note" id="balanceEmpty" hidden>Nothing to balance yet.</p>
 
     <div class="level" id="levelBox" hidden>
       <h3>If you wanted to level up</h3>
@@ -90,12 +77,11 @@
         <input id="rate" type="text" inputmode="decimal" size="8">
       </div>
       <p class="set-note" id="rateNote"></p>
-      <button class="linkish" id="changeMe">Not <span id="meName">you</span>?</button>
     </div>
   </section>
 </main>
 
-<div class="bar" id="addBar" hidden><button class="btn" id="addBtn">＋ Add spend</button></div>
+<div class="bar"><button class="btn" id="addBtn">＋ Add spend</button></div>
 
 <!-- ------------------------------------------------------------ the form -->
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="fTitle">
@@ -104,7 +90,7 @@
 
     <label for="fAmount">How much</label>
     <div class="amount-row">
-      <input id="fAmount" type="text" inputmode="decimal" enterkeyhint="done" placeholder="0,00" autocomplete="off">
+      <input id="fAmount" type="text" inputmode="decimal" enterkeyhint="next" placeholder="0,00" autocomplete="off">
       <div class="ccy" id="fCcy">
         <button type="button" class="ccy-b on" data-ccy="EUR">€</button>
         <button type="button" class="ccy-b" data-ccy="GBP">£</button>
@@ -112,18 +98,20 @@
     </div>
     <p class="conv" id="fConv"></p>
 
-    <label for="fWhat">What for</label>
-    <input id="fWhat" type="text" maxlength="60" placeholder="Big shop, dinner, tolls…" autocomplete="off">
+    <label id="payLabel">Who paid</label>
+    <div class="payers" id="fPayers" role="group" aria-labelledby="payLabel"></div>
+    <input id="fNewName" type="text" maxlength="40" placeholder="Their name" autocomplete="off" hidden>
 
-    <label for="fWho">Who paid</label>
-    <select id="fWho"></select>
+    <label id="tagLabel">What for</label>
+    <div class="tags" id="fTags" role="group" aria-labelledby="tagLabel"></div>
+    <input id="fDetail" type="text" maxlength="60" placeholder="Anything worth adding (optional)" autocomplete="off">
 
     <label for="fWhen">When</label>
     <input id="fWhen" type="date">
     <p class="conv" id="fPhase"></p>
 
-    <label>Who it was for</label>
-    <div class="forwho">
+    <label id="forLabel">Who it was for</label>
+    <div class="forwho" role="group" aria-labelledby="forLabel">
       <button type="button" class="pill on" id="forAll">Everyone</button>
       <button type="button" class="pill" id="forSome">Just some of us</button>
     </div>
@@ -148,21 +136,27 @@
      "a spending tracker so we can keep an eye on the balance, not a direct
       accounting tool which helps settle"
 
-   So: it shows what people have put in. It never tells anyone they owe
-   anyone money. The levelling suggestions exist but are framed as optional
-   and carry an explicit line saying nothing is owed.
+   So: it shows what people have put in. It never tells anyone they owe anyone
+   money. The levelling suggestions exist but are framed as optional and carry
+   an explicit line saying nothing is owed.
 
-   Storage is localStorage for now — each phone keeps its own copy. Making it
-   shared is the next piece of work and needs the Supabase tables that
-   schema.sql already creates.
+   NO SETUP. The whole of logging a spend is: how much, who paid, what for.
+   An earlier version hid the Add button until somebody had made a profile on
+   the landing page AND this device had said which person it was — two hoops
+   before you could record that Ed paid 150 for the food shop. Now an unknown
+   payer is just a name you type, and the person is created behind the scenes.
    ========================================================================= */
 
-const TRIP = Sync.TRIP;   // single source of truth, in sync.js
+const TRIP = Sync.TRIP;
 
-const K_PEOPLE = 'laperdrix.stays.v1';     // written by the landing page
-const K_ME     = 'laperdrix.me';
-const K_SPEND  = 'laperdrix.expenses.v1';
-const K_CONF   = 'laperdrix.kitty.v1';
+const K_ME   = 'laperdrix.me';        // last payer on this device, used as a default
+const K_CONF = 'laperdrix.kitty.v1';
+
+/* Tags rather than free text: a list you can tap is faster than typing on a
+   phone, and it makes the spending groupable later. The detail field is always
+   there for anything a tag doesn't cover. */
+const TAGS = ['Food shop', 'Restaurant', 'Drinks', 'Market', 'Fuel', 'Tolls',
+              'Activities', 'The house', 'Travel', 'Other'];
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -170,12 +164,11 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const DOWL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const D = s => new Date(s + 'T12:00:00Z');
-const todayISO = () => {
-  const n = new Date(), p = v => String(v).padStart(2, '0');
-  return n.getFullYear() + '-' + p(n.getMonth() + 1) + '-' + p(n.getDate());
-};
+const pad = v => String(v).padStart(2, '0');
+const todayISO = () => { const n = new Date(); return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate()); };
 function dayLabel(iso){
   const d = D(iso);
+  if (isNaN(d)) return String(iso);
   return DOWL[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()];
 }
 
@@ -183,20 +176,15 @@ function read(key, fallback){
   try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; }
   catch { return fallback; }
 }
-function write(key, value){
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-}
+function write(key, value){ try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
 
 /* ------------------------------------------------------------- the data */
 
-// People come from the landing page's records, so the two halves of the app
-// always agree about who is on the trip.
 function loadPeople(){
   const raw = Sync.people();
   if (!Array.isArray(raw)) return [];
   return raw.filter(p => p && p.name).map((p, i) => ({
-    id: p.id || String(i),
-    name: p.name,
+    id: p.id, name: p.name,
     icon: p.icon || window.ICONS[i % window.ICONS.length][0],
     counts: p.counts !== false,
   }));
@@ -205,62 +193,32 @@ function loadPeople(){
 let people   = loadPeople();
 let expenses = Sync.expenses();
 let conf     = Object.assign({ fxRate: 0.85, fxAt: null, fxSource: 'default', basis: 'per_person' }, read(K_CONF, {}));
-let me       = read(K_ME, null);
 let view     = 'spend';
 let phase    = 'all';
 let draft    = null;
 
 const personById = id => people.find(p => p.id === id);
 const phaseOf = iso => (iso < TRIP.start ? 'pre_trip' : 'on_trip');
-
-/* --------------------------------------------------------------- gating */
-
-function route(){
-  people = loadPeople();
-  const nobody = people.length === 0;
-  const unknownMe = !nobody && !personById(me);
-
-  $('gateNobody').hidden = !nobody;
-  $('gateWho').hidden = !unknownMe;
-  $('main').hidden = nobody || unknownMe;
-  $('addBar').hidden = nobody || unknownMe;
-
-  if (unknownMe) renderWhoList();
-  if (!nobody && !unknownMe) render();
-}
-
-function renderWhoList(){
-  $('whoList').innerHTML = people.map(p =>
-    `<button class="whoBtn" data-id="${esc(p.id)}">
-       <span class="av" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>
-       <span>${esc(p.name)}</span>
-     </button>`).join('');
-}
-
-$('whoList').addEventListener('click', e => {
-  const b = e.target.closest('.whoBtn');
-  if (!b) return;
-  me = b.dataset.id;
-  write(K_ME, me);
-  route();
-});
-
-/* ------------------------------------------------------------ rendering */
-
 const fmtL = v => Money.formatMoney(v, 'EUR');
 const fmtH = v => Money.formatMoney(v, 'GBP');
 
-function visible(){
-  return expenses.filter(e => phase === 'all' || e.phase === phase);
+/* Give a new person the first icon nobody has taken, so two people don't end up
+   as the same partridge without having chosen to. */
+function freeIcon(){
+  const taken = new Set(people.map(p => p.icon));
+  const spare = window.ICONS.find(i => !taken.has(i[0]));
+  return (spare || window.ICONS[people.length % window.ICONS.length])[0];
 }
+
+/* ------------------------------------------------------------ rendering */
+
+const visible = () => expenses.filter(e => phase === 'all' || e.phase === phase);
 
 function renderPot(){
   const list = visible();
-  const local = Money.total(list, 'amountLocal');
-  const home  = Money.total(list, 'amountHome');
   const payers = new Set(list.map(e => e.paidBy).filter(id => personById(id))).size;
-  $('potLocal').textContent = fmtL(local);
-  $('potHome').textContent = list.length ? '≈ ' + fmtH(home) : '';
+  $('potLocal').textContent = fmtL(Money.total(list, 'amountLocal'));
+  $('potHome').textContent = list.length ? '≈ ' + fmtH(Money.total(list, 'amountHome')) : '';
   $('potCap').textContent = list.length
     ? `${list.length} ${list.length === 1 ? 'entry' : 'entries'} · ${payers} ${payers === 1 ? 'person' : 'people'} chipping in`
     : 'Nothing in it yet';
@@ -268,7 +226,7 @@ function renderPot(){
 
 function renderSpend(){
   const list = visible().slice().sort((a, b) =>
-    b.spentOn.localeCompare(a.spentOn) || b.createdAt - a.createdAt);
+    String(b.spentOn).localeCompare(String(a.spentOn)) || (b.createdAt || 0) - (a.createdAt || 0));
   $('spendEmpty').hidden = list.length > 0;
 
   const byDay = new Map();
@@ -278,16 +236,16 @@ function renderSpend(){
   }
 
   $('spendList').innerHTML = [...byDay.entries()].map(([day, items]) => {
-    const dayTotal = Money.total(items, 'amountLocal');
     const rows = items.map(e => {
       const payer = personById(e.paidBy);
       const some = e.beneficiaries && e.beneficiaries.length
         ? `<span class="tag">${e.beneficiaries.length} of ${people.filter(p=>p.counts).length}</span>` : '';
+      const detail = e.what ? esc(e.what) + ' · ' : '';
       return `<button class="erow" data-id="${esc(e.id)}">
         <span class="eav" style="background:${payer ? colourOf(payer.icon) : 'var(--mut)'}">${payer ? iconOf(payer.icon) : ''}</span>
         <span class="emain">
-          <span class="edesc">${esc(e.what || 'Spending')} ${some}</span>
-          <span class="emeta">${payer ? esc(payer.name) : 'someone who has left'}</span>
+          <span class="edesc">${esc(e.category || e.what || 'Spending')} ${some}</span>
+          <span class="emeta">${detail}${payer ? esc(payer.name) : 'someone who has left'}</span>
         </span>
         <span class="eamt">
           <span class="eloc">${fmtL(e.amountLocal)}</span>
@@ -296,7 +254,7 @@ function renderSpend(){
       </button>`;
     }).join('');
     return `<section class="day-group">
-      <div class="day-head"><span class="day-name">${dayLabel(day)}</span><span class="day-sum">${fmtL(dayTotal)}</span></div>
+      <div class="day-head"><span class="day-name">${dayLabel(day)}</span><span class="day-sum">${fmtL(Money.total(items,'amountLocal'))}</span></div>
       ${rows}
     </section>`;
   }).join('');
@@ -304,6 +262,7 @@ function renderSpend(){
 
 function renderBalance(){
   const summary = Money.summarise(people, expenses, conf.basis);
+  $('balanceEmpty').hidden = expenses.length > 0;
   const most = Math.max(1, ...summary.map(s => s.paid));
 
   $('balanceList').innerHTML = summary
@@ -311,17 +270,16 @@ function renderBalance(){
     .map(s => {
       const p = personById(s.id);
       if (!p) return '';
-      const pct = Math.max(1.5, (s.paid / most) * 100);
       const diff = conf.basis === 'none' ? '' :
         (Math.abs(s.balance) < 0.01
           ? '<span class="bal level">level</span>'
-          : `<span class="bal ${s.balance > 0 ? 'up' : 'down'}">${s.balance > 0 ? '+' : '−'}${fmtH(Math.abs(s.balance)).replace('£','£')}</span>`);
+          : `<span class="bal ${s.balance > 0 ? 'up' : 'down'}">${s.balance > 0 ? '+' : '−'}${fmtH(Math.abs(s.balance))}</span>`);
       return `<div class="brow">
         <div class="bhead">
           <span class="bname"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</span>
           <span class="bnums">${fmtH(s.paid)} ${diff}</span>
         </div>
-        <div class="btrack"><i style="width:${pct}%;background:${colourOf(p.icon)}"></i></div>
+        <div class="btrack"><i style="width:${Math.max(1.5,(s.paid/most)*100)}%;background:${colourOf(p.icon)}"></i></div>
       </div>`;
     }).join('');
 
@@ -329,18 +287,15 @@ function renderBalance(){
   $('levelBox').hidden = transfers.length === 0;
   $('levelList').innerHTML = transfers.map(t => {
     const from = personById(t.from), to = personById(t.to);
-    if (!from || !to) return '';
-    return `<div class="lrow"><span>${esc(from.name)} → ${esc(to.name)}</span><span>${fmtH(t.amount)}</span></div>`;
+    return from && to
+      ? `<div class="lrow"><span>${esc(from.name)} → ${esc(to.name)}</span><span>${fmtH(t.amount)}</span></div>` : '';
   }).join('');
 
   $('basis').value = conf.basis;
   $('rate').value = String(conf.fxRate);
   const when = conf.fxAt ? new Date(conf.fxAt).toLocaleDateString('en-GB') : null;
-  $('rateNote').textContent = conf.fxSource === 'manual'
-    ? 'Set by hand.'
+  $('rateNote').textContent = conf.fxSource === 'manual' ? 'Set by hand.'
     : when ? `From the European Central Bank, ${when}.` : 'Using a rough default until a rate can be fetched.';
-  const meP = personById(me);
-  $('meName').textContent = meP ? meP.name : 'you';
 }
 
 function render(){
@@ -354,8 +309,6 @@ function render(){
   $('tabBalance').setAttribute('aria-selected', String(view === 'balance'));
 }
 
-/* ---------------------------------------------------------------- tabs */
-
 $('tabSpend').addEventListener('click', () => { view = 'spend'; render(); });
 $('tabBalance').addEventListener('click', () => { view = 'balance'; render(); });
 
@@ -367,55 +320,39 @@ $('phaseFilters').addEventListener('click', e => {
   render();
 });
 
-/* ------------------------------------------------------------ the form */
+/* ------------------------------------------------------------- the form */
 
-function openForm(existing){
-  draft = existing ? Object.assign({}, existing) : {
-    id: null, what: '', amountInput: '', currency: 'EUR',
-    paidBy: me, spentOn: todayISO(), beneficiaries: null,
-  };
-  if (existing) {
-    draft.amountInput = String(existing.currency === 'GBP' ? existing.amountHome : existing.amountLocal);
-  }
-
-  $('fTitle').textContent = existing ? 'Edit spend' : 'Add spend';
-  $('fDelete').hidden = !existing;
-  $('fAmount').value = draft.amountInput;
-  $('fWhat').value = draft.what || '';
-  $('fWhen').value = draft.spentOn;
-  $('fWho').innerHTML = people.map(p =>
-    `<option value="${esc(p.id)}"${p.id === draft.paidBy ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
-  [...$('fCcy').children].forEach(b => b.classList.toggle('on', b.dataset.ccy === draft.currency));
-  setForWho(Boolean(draft.beneficiaries && draft.beneficiaries.length));
-  renderSomePick();
-  updateForm();
-
-  $('sheet').classList.add('open');
-  document.body.classList.add('picking');
-  $('addBar').hidden = true;
+function renderPayers(){
+  const chips = people.map(p =>
+    `<button type="button" class="who-chip${draft.paidBy === p.id ? ' on' : ''}" data-id="${esc(p.id)}">
+       <span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}
+     </button>`).join('');
+  $('fPayers').innerHTML = chips +
+    `<button type="button" class="who-chip newp${draft.paidBy === '__new' ? ' on' : ''}" data-id="__new">
+       <span class="plus">＋</span>${people.length ? 'Someone else' : 'Add the first person'}
+     </button>`;
+  $('fNewName').hidden = draft.paidBy !== '__new';
 }
 
-function closeForm(){
-  $('sheet').classList.remove('open');
-  document.body.classList.remove('picking');
-  $('addBar').hidden = false;
-  draft = null;
+function renderTags(){
+  $('fTags').innerHTML = TAGS.map(t =>
+    `<button type="button" class="pill${draft.category === t ? ' on' : ''}" data-tag="${esc(t)}">${esc(t)}</button>`).join('');
+}
+
+function renderSomePick(){
+  const chosen = new Set(draft.beneficiaries || []);
+  $('somePick').innerHTML = people.filter(p => p.counts).map(p =>
+    `<button type="button" class="who-chip${chosen.has(p.id) ? ' on' : ''}" data-id="${esc(p.id)}">
+       <span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}
+     </button>`).join('') || '<p class="set-note">Nobody to choose from yet.</p>';
 }
 
 function setForWho(some){
   $('forAll').classList.toggle('on', !some);
   $('forSome').classList.toggle('on', some);
   $('somePick').hidden = !some;
-  if (!some && draft) draft.beneficiaries = null;
-  if (some && draft && !draft.beneficiaries) draft.beneficiaries = [];
-}
-
-function renderSomePick(){
-  const chosen = new Set(draft && draft.beneficiaries ? draft.beneficiaries : []);
-  $('somePick').innerHTML = people.filter(p => p.counts).map(p =>
-    `<button type="button" class="who-chip${chosen.has(p.id) ? ' on' : ''}" data-id="${esc(p.id)}">
-       <span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}
-     </button>`).join('');
+  if (!some) draft.beneficiaries = null;
+  else if (!draft.beneficiaries) draft.beneficiaries = [];
 }
 
 function updateForm(){
@@ -432,20 +369,53 @@ function updateForm(){
   $('fConv').textContent = conv;
 
   const when = $('fWhen').value || todayISO();
-  $('fPhase').textContent = phaseOf(when) === 'pre_trip'
-    ? 'Counted as before we go.' : 'Counted as out there.';
+  $('fPhase').textContent = phaseOf(when) === 'pre_trip' ? 'Counted as before we go.' : 'Counted as out there.';
 
+  const payerOk = draft.paidBy === '__new' ? $('fNewName').value.trim().length > 0 : Boolean(draft.paidBy);
   const someButNobody = $('forSome').classList.contains('on') &&
                         (!draft.beneficiaries || draft.beneficiaries.length === 0);
-  $('fSave').disabled = parsed === null || parsed === 0 || someButNobody;
+  $('fSave').disabled = parsed === null || parsed === 0 || !payerOk || !draft.category || someButNobody;
+}
+
+function openForm(existing){
+  people = loadPeople();
+  const lastPayer = read(K_ME, null);
+  draft = existing ? Object.assign({}, existing) : {
+    id: null, category: null, what: '', currency: 'EUR',
+    paidBy: personById(lastPayer) ? lastPayer : (people[0] ? people[0].id : '__new'),
+    spentOn: todayISO(), beneficiaries: null,
+  };
+
+  $('fTitle').textContent = existing ? 'Edit spend' : 'Add spend';
+  $('fDelete').hidden = !existing;
+  $('fAmount').value = existing ? String(existing.currency === 'GBP' ? existing.amountHome : existing.amountLocal) : '';
+  $('fDetail').value = draft.what || '';
+  $('fWhen').value = draft.spentOn;
+  $('fNewName').value = '';
+  [...$('fCcy').children].forEach(b => b.classList.toggle('on', b.dataset.ccy === draft.currency));
+  renderPayers(); renderTags();
+  setForWho(Boolean(draft.beneficiaries && draft.beneficiaries.length));
+  renderSomePick();
+  updateForm();
+
+  $('sheet').classList.add('open');
+  document.body.classList.add('picking');
+  document.querySelector('.bar').hidden = true;
+}
+
+function closeForm(){
+  $('sheet').classList.remove('open');
+  document.body.classList.remove('picking');
+  document.querySelector('.bar').hidden = false;
+  draft = null;
 }
 
 $('addBtn').addEventListener('click', () => openForm(null));
 $('fCancel').addEventListener('click', closeForm);
 $('fAmount').addEventListener('input', updateForm);
+$('fDetail').addEventListener('input', () => { draft.what = $('fDetail').value; });
+$('fNewName').addEventListener('input', updateForm);
 $('fWhen').addEventListener('change', updateForm);
-$('fWhat').addEventListener('input', updateForm);
-$('fWho').addEventListener('change', () => { draft.paidBy = $('fWho').value; });
 
 $('fCcy').addEventListener('click', e => {
   const b = e.target.closest('.ccy-b');
@@ -455,15 +425,31 @@ $('fCcy').addEventListener('click', e => {
   updateForm();
 });
 
+$('fPayers').addEventListener('click', e => {
+  const b = e.target.closest('.who-chip');
+  if (!b) return;
+  draft.paidBy = b.dataset.id;
+  renderPayers();
+  if (draft.paidBy === '__new') $('fNewName').focus();
+  updateForm();
+});
+
+$('fTags').addEventListener('click', e => {
+  const b = e.target.closest('.pill');
+  if (!b) return;
+  draft.category = b.dataset.tag;
+  renderTags();
+  updateForm();
+});
+
 $('forAll').addEventListener('click', () => { setForWho(false); updateForm(); });
 $('forSome').addEventListener('click', () => { setForWho(true); renderSomePick(); updateForm(); });
 
 $('somePick').addEventListener('click', e => {
   const b = e.target.closest('.who-chip');
   if (!b) return;
-  const id = b.dataset.id;
   const list = new Set(draft.beneficiaries || []);
-  list.has(id) ? list.delete(id) : list.add(id);
+  list.has(b.dataset.id) ? list.delete(b.dataset.id) : list.add(b.dataset.id);
   draft.beneficiaries = [...list];
   renderSomePick();
   updateForm();
@@ -471,32 +457,48 @@ $('somePick').addEventListener('click', e => {
 
 $('fSave').addEventListener('click', () => {
   const typed = Money.parseAmount($('fAmount').value);
-  if (typed === null || typed === 0) return;
+  if (typed === null || typed === 0 || !draft.category) return;
+
+  // An unknown payer is just a name. Create the person here rather than sending
+  // anyone off to make a profile first — they land on the calendar spanning the
+  // whole fortnight and can narrow their dates on the front page later.
+  let payer = draft.paidBy;
+  if (payer === '__new') {
+    const name = $('fNewName').value.trim();
+    if (!name) return;
+    const already = people.find(p => p.name.toLowerCase() === name.toLowerCase());
+    if (already) payer = already.id;
+    else {
+      const rec = { id: Sync.newId(), name, icon: freeIcon(), from: TRIP.start, to: TRIP.end };
+      Sync.savePerson(rec);
+      people = loadPeople();
+      payer = rec.id;
+    }
+  }
+
   const rate = Number(conf.fxRate);
   const currency = draft.currency;
-
-  // Both figures are computed and stored now, so a later change to the rate
-  // never silently rewrites what an old entry cost.
-  const amountLocal = currency === 'EUR' ? typed : Money.toLocal(typed, rate);
-  const amountHome  = currency === 'EUR' ? Money.toHome(typed, rate) : typed;
   const spentOn = $('fWhen').value || todayISO();
 
+  // Both figures are computed and stored now, so a later change to the rate
+  // never rewrites what an old entry cost.
   const rec = {
     id: draft.id || Sync.newId(),
-    what: $('fWhat').value.trim(),
-    paidBy: $('fWho').value,
+    category: draft.category,
+    what: $('fDetail').value.trim(),
+    paidBy: payer,
     spentOn,
     phase: phaseOf(spentOn),
     currency,
-    amountLocal, amountHome,
+    amountLocal: currency === 'EUR' ? typed : Money.toLocal(typed, rate),
+    amountHome:  currency === 'EUR' ? Money.toHome(typed, rate) : typed,
     fxRateUsed: rate,
     beneficiaries: draft.beneficiaries && draft.beneficiaries.length ? draft.beneficiaries : null,
     createdAt: draft.createdAt || Date.now(),
   };
 
-  // Saved locally at once and queued for the server, so a dropped line in a
-  // supermarket car park never loses the number.
   expenses = Sync.saveExpense(rec);
+  write(K_ME, payer);          // remembered as next time's default
   closeForm();
   render();
 });
@@ -519,46 +521,30 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && $('sheet').classList.contains('open')) closeForm();
 });
 
-/* --------------------------------------------------------- settings */
+/* ---------------------------------------------------------- settings */
 
-$('basis').addEventListener('change', () => {
-  conf.basis = $('basis').value;
-  write(K_CONF, conf);
-  render();
-});
-
+$('basis').addEventListener('change', () => { conf.basis = $('basis').value; write(K_CONF, conf); render(); });
 $('rate').addEventListener('change', () => {
   const v = Money.parseAmount($('rate').value);
-  if (v !== null && v > 0) {
-    conf.fxRate = v; conf.fxSource = 'manual'; conf.fxAt = Date.now();
-    write(K_CONF, conf);
-  }
+  if (v !== null && v > 0) { conf.fxRate = v; conf.fxSource = 'manual'; conf.fxAt = Date.now(); write(K_CONF, conf); }
   render();
 });
 
-$('changeMe').addEventListener('click', () => {
-  me = null;
-  write(K_ME, null);
-  route();
-});
-
-/* Fetch a real rate if ours is missing or more than a day old. Keyless, and
-   entirely optional — a failure just leaves the stored rate in place. */
+/* A real rate if ours is missing or a day old. Keyless, and entirely optional —
+   a failure just leaves the stored rate alone. */
 (async function refreshRate(){
   if (conf.fxSource === 'manual') return;
-  const dayOld = !conf.fxAt || (Date.now() - conf.fxAt) > 86400000;
-  if (!dayOld) return;
+  if (conf.fxAt && (Date.now() - conf.fxAt) < 86400000) return;
   try {
     const res = await fetch('https://api.frankfurter.app/latest?from=EUR&to=GBP');
     if (!res.ok) return;
     const body = await res.json();
     const rate = body && body.rates && body.rates.GBP;
     if (typeof rate === 'number' && rate > 0) {
-      conf.fxRate = Money.round2(rate * 10000) / 10000;
-      conf.fxAt = Date.now();
-      conf.fxSource = 'ecb';
+      conf.fxRate = Math.round(rate * 10000) / 10000;
+      conf.fxAt = Date.now(); conf.fxSource = 'ecb';
       write(K_CONF, conf);
-      if (!$('main').hidden) render();
+      render();
     }
   } catch {}
 })();
@@ -578,16 +564,15 @@ $('changeMe').addEventListener('click', () => {
   set(saved);
 })();
 
-route();
+render();
 
-/* Pick up whatever anyone else has added. What's already stored is on screen
-   by now, so a slow or failed pull costs nothing but freshness. */
+/* Pick up whatever anyone else has added. What's stored is already on screen. */
 (async function refresh(){
   const got = await Sync.pull();
   if (!got) return;
   people = loadPeople();
   expenses = Sync.expenses();
-  route();
+  render();
 })();
 </script>
 </body>

@@ -524,3 +524,19 @@ body.picking .bar{display:none}
   font:inherit;font-size:13px;cursor:pointer;
 }
 .who-chip.on{border-color:transparent;background:var(--accent);color:var(--bg);font-weight:600}
+
+/* ---------------------------------------------------- the add-spend form
+   Payer chips and tag chips. Both are tap-lists rather than <select> or free
+   text: on a phone, tapping a name beats typing one, and it means the kitty
+   works from a cold start with nobody set up. */
+.payers,.tags{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.who-chip.newp{border-style:dashed;color:var(--mut)}
+.who-chip.newp.on{border-style:solid}
+.who-chip .plus{font-size:15px;line-height:1;width:21px;text-align:center;flex:none}
+#fNewName{margin-top:-6px}
+#fDetail{margin-bottom:16px}
+
+/* The add-spend sheet grew a payer row and ten tags. On a tall phone it fits;
+   on a 667px one it would run off the bottom with Save unreachable and no way
+   to scroll. Cap it and let the inside scroll instead. */
+.sheet .in2{max-height:92svh;overflow-y:auto;overscroll-behavior:contain}
