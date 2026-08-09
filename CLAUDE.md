@@ -5,7 +5,7 @@ Guidance for Claude Code (claude.ai/code) working in this repository.
 ## What this is
 
 A private web app for a group holiday at **La Perdrix**, St Martin de Ribérac, Dordogne —
-15–30 August 2026, around 27 people across several households. Two halves:
+31 July – 14 August 2027, around 27 people across several households. Two halves:
 
 1. **The landing page** — atmosphere first. A cinematic hero, the shape of the fortnight, and a
    presence chart showing who's there on which days. You go here to *enjoy the feeling of the

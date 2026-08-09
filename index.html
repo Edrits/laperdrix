@@ -8,7 +8,7 @@
 <!-- iOS ignores the manifest's icons for Add to Home Screen and uses this instead,
      and Safari will not accept an SVG here — hence the one PNG in the repo. -->
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="description" content="La Perdrix, St Martin de Ribérac — 15–30 August 2026.">
+<meta name="description" content="La Perdrix, St Martin de Ribérac — 31 July to 14 August 2027.">
 <meta name="theme-color" content="#e9e4d7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#171b14" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -153,13 +153,13 @@
 <!-- the icon sprite is injected by icons.js, shared with kitty.html -->
 
 <script src="icons.js?v=1"></script>
-<script src="sync.js?v=1"></script>
+<script src="sync.js?v=2"></script>
 <script>
 /* ======================================================================= trip
    The only thing to change when the dates move. Everything on the page is
    derived from these two days — nothing can show a date outside them.
    (Inherited from the calendar work, along with the noon-UTC handling below.) */
-const TRIP = { start:'2026-08-15', end:'2026-08-30' };
+const TRIP = Sync.TRIP;   // single source of truth, in sync.js
 
 /* ---------------------------------------------------------------- dates
    Noon UTC throughout, so no summer-time shift can ever move a day. */

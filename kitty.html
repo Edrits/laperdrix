@@ -138,7 +138,7 @@
 </div>
 
 <script src="icons.js?v=1"></script>
-<script src="sync.js?v=1"></script>
+<script src="sync.js?v=2"></script>
 <script src="money.js?v=1"></script>
 <script>
 /* =========================================================================
@@ -157,7 +157,7 @@
    schema.sql already creates.
    ========================================================================= */
 
-const TRIP = { start: '2026-08-15', end: '2026-08-30' };
+const TRIP = Sync.TRIP;   // single source of truth, in sync.js
 
 const K_PEOPLE = 'laperdrix.stays.v1';     // written by the landing page
 const K_ME     = 'laperdrix.me';

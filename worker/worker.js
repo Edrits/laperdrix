@@ -40,6 +40,9 @@ const PHOTOS = ['group', 'lake', 'abbey', 'chair', 'mirror', 'heads', 'hens'];
 const BUCKET = 'trip-photos';
 const EXPIRES_IN = 60 * 60 * 12;   // 12 hours; a page load always gets fresh ones
 const TRIP_NAME = 'La Perdrix';
+// Must match TRIP in sync.js. Two places is one too many, but the Worker cannot
+// import from the site — so if you change one, change the other.
+const TRIP_DATES = { start: '2027-07-31', end: '2027-08-14' };
 
 function corsHeaders(origin) {
   return {
@@ -85,10 +88,22 @@ function sb(env, path, init) {
 // identity of the row.
 async function tripId(env) {
   const name = encodeURIComponent(TRIP_NAME);
-  const found = await sb(env, `trips?name=eq.${name}&select=id&limit=1`);
+  const found = await sb(env, `trips?name=eq.${name}&select=id,start_date,end_date&limit=1`);
   if (found.ok) {
     const rows = await found.json();
-    if (Array.isArray(rows) && rows.length) return rows[0].id;
+    if (Array.isArray(rows) && rows.length) {
+      const row = rows[0];
+      // Dates move. Keep the stored row in step with TRIP_DATES rather than
+      // leaving whatever was true when the row was first created — otherwise
+      // the database quietly disagrees with the app.
+      if (row.start_date !== TRIP_DATES.start || row.end_date !== TRIP_DATES.end) {
+        await sb(env, `trips?id=eq.${row.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ start_date: TRIP_DATES.start, end_date: TRIP_DATES.end }),
+        });
+      }
+      return row.id;
+    }
   }
   const made = await sb(env, 'trips', {
     method: 'POST',
@@ -96,8 +111,8 @@ async function tripId(env) {
     body: JSON.stringify({
       name: TRIP_NAME,
       destination: 'St Martin de Ribérac, Dordogne',
-      start_date: '2026-08-15',
-      end_date: '2026-08-30',
+      start_date: TRIP_DATES.start,
+      end_date: TRIP_DATES.end,
       access_token: env.SHARE_TOKEN,
     }),
   });

@@ -23,6 +23,12 @@
   // appears in any file — it arrives on the share link as #t=…
   const WORKER_URL = 'https://laperdrix.neddritchie.workers.dev';
 
+  /* THE DATES. Change them here and nowhere else.
+     They used to be declared separately in index.html and kitty.html, which is
+     one edit away from the calendar and the kitty disagreeing about when the
+     holiday is. Saturday to Saturday, fourteen nights. */
+  const TRIP = { start: '2027-07-31', end: '2027-08-14' };
+
   const K_TOKEN  = 'laperdrix.token';
   const K_PEOPLE = 'laperdrix.stays.v1';
   const K_SPEND  = 'laperdrix.expenses.v1';
@@ -163,7 +169,7 @@
   global.addEventListener('online', () => { flush(); });
 
   global.Sync = {
-    WORKER_URL, K_TOKEN, K_PEOPLE, K_SPEND,
+    WORKER_URL, TRIP, K_TOKEN, K_PEOPLE, K_SPEND,
     configured, token, newId,
     people: () => read(K_PEOPLE, []),
     expenses: () => read(K_SPEND, []),
