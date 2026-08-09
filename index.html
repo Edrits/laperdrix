@@ -19,7 +19,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=1">
-<link rel="stylesheet" href="styles.css?v=10">
+<link rel="stylesheet" href="styles.css?v=11">
 </head>
 <body>
 
@@ -152,7 +152,7 @@
 
 <!-- the icon sprite is injected by icons.js, shared with kitty.html -->
 
-<script src="icons.js?v=1"></script>
+<script src="icons.js?v=5"></script>
 <script src="sync.js?v=2"></script>
 <script>
 /* ======================================================================= trip
@@ -307,6 +307,10 @@ function renderWho(){
 
 function spanLabel(p){
   const f = D(p.from), t = D(p.to);
+  // Otherwise a malformed date renders as "NaN undefined" on the chip. Real
+  // input cannot produce one — <input type="date"> and iso() are both
+  // zero-padded — but records arriving from the server are not ours to trust.
+  if (isNaN(f) || isNaN(t)) return 'dates unclear';
   return f.getUTCMonth() === t.getUTCMonth()
     ? f.getUTCDate() + '–' + t.getUTCDate() + ' ' + MON[t.getUTCMonth()]
     : f.getUTCDate() + ' ' + MON[f.getUTCMonth()] + ' – ' + t.getUTCDate() + ' ' + MON[t.getUTCMonth()];
@@ -356,8 +360,19 @@ function renderChart(){
   ).join('');
 
   $('bars').innerHTML = people.map(p => {
-    const from = Math.max(0, DAY_KEYS.indexOf(p.from));
-    const to   = Math.max(from, DAY_KEYS.indexOf(p.to));
+    /* Clamp to the fortnight rather than dropping out of it. A date outside the
+       trip gives indexOf === -1, and the old Math.max(from, -1) collapsed a
+       stay that ran past the last day into a single-day stub at the start.
+       People really do book a night either side, and the trip dates can move
+       under records that were entered before they did. */
+    const last = DAYS.length - 1;
+    const at = (iso, fallbackEarly) => {
+      const i = DAY_KEYS.indexOf(iso);
+      if (i >= 0) return i;
+      return iso < DAY_KEYS[0] ? 0 : (fallbackEarly ? 0 : last);
+    };
+    const from = at(p.from, true);
+    const to   = Math.max(from, at(p.to, false));
     const c    = colourOf(p.icon);
     return '<div class="prow" style="--days:'+DAYS.length+'">' +
       '<span class="nm"><i style="background:'+c+'">'+iconOf(p.icon)+'</i><span>'+esc(p.name)+'</span></span>' +

@@ -340,7 +340,15 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 /* Six across, not nine. On a 375px phone nine columns gave ~35px cells — below
    the 44px minimum for a comfortable tap, and far too small to tell a walnut
    from a fig. */
-.picker{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:18px}
+/* Thirty-six icons is six rows, which would push Save off a small screen. Cap
+   the height and let it scroll, with a fade at the bottom so it's obvious there
+   is more below rather than looking like the set simply ends. */
+.picker{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:18px;
+  max-height:min(34vh,214px);overflow-y:auto;padding-bottom:2px;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  mask-image:linear-gradient(to bottom,#000 calc(100% - 22px),transparent);
+}
 .ic-btn{
   aspect-ratio:1;display:grid;place-items:center;border-radius:12px;cursor:pointer;
   border:1px solid var(--hair);background:var(--bg);color:var(--mut);padding:0;

@@ -106,9 +106,14 @@ terracotta `#b0552f` (the heads, roof tiles), limestone `#e9e4d7`, lichen `#7e8a
 interiors lit by one warm lamp, and that's the evening-on-the-terrace mood. Accent shifts from
 terracotta in light to lamp amber in dark.
 
-People pick an **icon** as their profile — partridge, chicken, cheese, wine, dog, fig, walnut,
-olive, bread, tomato, sunflower, straw hat, boules, swimming, hammock, steeple, snail, goat. One
-inline SVG sprite. Each icon carries its owner's colour through the whole app.
+People pick an **icon** as their profile. **Thirty-six of them**, in one inline SVG sprite in
+`icons.js` — there are 27 people, and 18 would have forced strangers to share a partridge. Each icon
+carries its own colour, so picking one is a single decision rather than two.
+
+Drawn to one recipe: `24x24`, `fill="none"`, `stroke="currentColor"`, `stroke-width="1.7"`, round
+caps and joins. Anything new must match, and must come from the same well — the garden, the kitchen,
+the river, the evenings. Add the slug **and** its colour to `ICONS`, and the `<g id="i-slug">` to the
+sprite; a mismatch renders an empty circle with no error.
 
 **Every inline `<svg><use>` needs `viewBox="0 0 24 24"`** or it crops instead of scaling.
 
