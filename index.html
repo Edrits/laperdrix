@@ -19,7 +19,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=1">
-<link rel="stylesheet" href="styles.css?v=16">
+<link rel="stylesheet" href="styles.css?v=17">
 </head>
 <body>
 
@@ -29,6 +29,13 @@
     <span></span><span></span><span></span><span></span>
   </div>
   <span class="wash"></span>
+  <!-- Straight to the two things you actually come back for, without scrolling
+       the whole page. Mirrors the theme switcher opposite so the hero stays
+       symmetrical. -->
+  <nav class="hero-nav" aria-label="Go to">
+    <a href="kitty.html">Kitty</a>
+    <a href="rota.html">Rota</a>
+  </nav>
   <div class="themes">
     <button id="t-light" aria-pressed="false">Light</button>
     <button id="t-dark" aria-pressed="false">Dark</button>
