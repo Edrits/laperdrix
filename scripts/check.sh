@@ -75,9 +75,24 @@ BODY=$(echo "$OUT" | sed '$d')
 BAD_TOKEN=""
 case "$CODE" in
   200)
-    PEOPLE=$(echo "$BODY" | grep -o '"id"' | wc -l | tr -d ' ')
     pass "Database is reachable and the tables exist"
-    note "$PEOPLE record(s) stored so far."
+    # Counted properly rather than by grepping for '"id"', which conflated
+    # people with expenses into one figure called "records" and disagreed with
+    # the real number. A status line nobody can trust is worse than none.
+    note "$(printf '%s' "$BODY" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print("could not read the response"); raise SystemExit
+ppl, exp = d.get("people", []), d.get("expenses", [])
+fam = sorted({(p.get("household") or "").strip() for p in ppl} - {""})
+bits = ["%d %s" % (len(ppl), "person" if len(ppl) == 1 else "people"),
+        "%d %s" % (len(exp), "expense" if len(exp) == 1 else "expenses")]
+if fam:
+    bits.append("%d %s (%s)" % (len(fam), "family" if len(fam) == 1 else "families", ", ".join(fam)))
+print(", ".join(bits) + " stored.")
+')"
     ;;
   401) BAD_TOKEN=1
        fail "Your token does not match the one in Cloudflare"
