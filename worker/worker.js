@@ -82,6 +82,45 @@ function sb(env, path, init) {
   });
 }
 
+/* Save a row, surviving a column the database hasn't got yet.
+
+   PostgREST names the column it can't find:
+     PGRST204 "Could not find the 'household' column of 'members' in the schema cache"
+   so we drop that one field and try again instead of failing the whole write.
+
+   This exists because deploying a new field is two manual steps in two
+   different dashboards — this file is pasted into Cloudflare by hand, and the
+   migration is run separately in Supabase — and they can never be simultaneous.
+   Without this, pasting the Worker first turned EVERY person write into a 502,
+   not merely the ones setting the new field, so nothing synced at all until
+   somebody noticed. With it, the new field simply doesn't persist until the
+   migration lands, which is the failure everyone already expects and which
+   costs nothing: the client is local-first and keeps its own copy regardless.
+
+   Terminates by construction — each pass removes one field that is present in
+   the row, and a row has finitely many. The counter is belt and braces against
+   a message we've misread. */
+const UNKNOWN_COLUMN = /Could not find the '([^']+)' column/;
+
+async function postRow(env, table, row, dropped = []) {
+  const res = await sb(env, `${table}?on_conflict=id`, {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify(row),
+  });
+  if (res.ok || dropped.length >= 8) return { res, dropped };
+
+  // Reading the body consumes it, so anything handed back has to be rebuilt.
+  const text = await res.text();
+  const missing = (UNKNOWN_COLUMN.exec(text) || [])[1];
+  if (!missing || !(missing in row)) {
+    return { res: new Response(text, { status: res.status }), dropped };
+  }
+
+  const { [missing]: _absent, ...rest } = row;
+  return postRow(env, table, rest, [...dropped, missing]);
+}
+
 // One trip, found or created on demand, so there is no separate setup step and
 // no trip id to configure anywhere.
 //
@@ -281,15 +320,16 @@ export default {
       delete row.beneficiaries_ok;
       if (isPerson ? !row.name : badAmount(row)) return reply({ error: 'incomplete' }, 400);
 
-      const res = await sb(env, `${isPerson ? 'members' : 'expenses'}?on_conflict=id`, {
-        method: 'POST',
-        headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
-        body: JSON.stringify(row),
-      });
+      const { res, dropped } = await postRow(env, isPerson ? 'members' : 'expenses', row);
       if (!res.ok) return reply({ error: 'could not save', detail: await res.text() }, 502);
       const saved = await res.json();
       const one = Array.isArray(saved) ? saved[0] : saved;
-      return reply(isPerson ? personOut(one) : expenseOut(one));
+      const out = isPerson ? personOut(one) : expenseOut(one);
+      // Say so rather than pretending everything landed. Nothing reads this
+      // yet; it is there so the next person debugging a half-deployed field
+      // finds the answer in the response instead of guessing.
+      if (dropped.length) out.dropped = dropped;
+      return reply(out);
     }
 
     if ((path === '/person' || path === '/expense') && request.method === 'DELETE') {
