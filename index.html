@@ -169,6 +169,24 @@
   </div>
 </div>
 
+<!-- --------------------------------------------------------- are you sure?
+     "Remove me" sits right under Save and is easy to hit by mistake. The
+     message has to be accurate about what actually happens: expenses are
+     `on delete set null`, so the money stays in the kitty and only the name
+     comes off it. Saying "this deletes your spending" would be a lie that
+     stops people leaving; saying nothing lets them think it happened. -->
+<div class="scrim" id="rmScrim"></div>
+<div class="sheet confirm" id="rmSheet" role="dialog" aria-modal="true" aria-labelledby="rmTitle">
+  <div class="in2">
+    <h2 id="rmTitle">Take yourself off?</h2>
+    <p class="cf-body" id="rmBody"></p>
+    <div class="row">
+      <button class="btn" id="rmCancel">Stay</button>
+      <button class="btn danger" id="rmGo">Remove me</button>
+    </div>
+  </div>
+</div>
+
 <!-- the icon sprite is injected by icons.js, shared with kitty.html -->
 
 <script src="icons.js?v=5"></script>
@@ -482,7 +500,7 @@ function renderHouses(){
   const chip = (val, text, extra) =>
     `<button type="button" class="who-chip${extra || ''}${chosen === val ? ' on' : ''}" data-hh="${esc(val)}">${text}</button>`;
   $('fHouse').innerHTML =
-    chip('', 'On my own') +
+    chip('', 'Just me') +
     familyNames().map(h => chip(h, esc(h))).join('') +
     chip('__new', '<span class="plus">＋</span>New family', ' newp');
   $('fHouseName').hidden = chosen !== '__new';
@@ -546,15 +564,47 @@ $('save').addEventListener('click', () => {
   render();
 });
 
-$('remove').addEventListener('click', () => {
+/* Removing someone is `on delete set null` on the expense, so their spending
+   survives — the kitty already renders an orphaned payer as "someone who has
+   left". What is genuinely lost is the link between the two, and there is no
+   undo, so the wording names the money rather than hiding it. */
+function openRemove(){
+  if (!draft || !draft.id) return;
+  const mine = Sync.expenses().filter(e => e.paidBy === draft.id);
+  const spent = mine.reduce((sum, e) => sum + (typeof e.amountLocal === 'number' ? e.amountLocal : 0), 0);
+  const who = draft.name.trim() || 'you';
+  $('rmBody').innerHTML = mine.length
+    ? `Takes <b>${esc(who)}</b> off the calendar. The <b>${mine.length} ${mine.length === 1 ? 'spend' : 'spends'}</b> ` +
+      `logged against ${esc(who)}, <b>€${spent.toFixed(2)}</b>, stay in the kitty — but they'll stop showing a name. ` +
+      `There's no undo.`
+    : `Takes <b>${esc(who)}</b> off the calendar. Nothing is in the kitty under that name, so nothing else changes. ` +
+      `You can always add yourself again.`;
+  $('rmSheet').classList.add('open');
+  $('rmScrim').classList.add('open');
+}
+function closeRemove(){
+  $('rmSheet').classList.remove('open');
+  $('rmScrim').classList.remove('open');
+}
+
+$('remove').addEventListener('click', openRemove);
+$('rmCancel').addEventListener('click', closeRemove);
+$('rmScrim').addEventListener('click', closeRemove);   // tapping away is a cancel
+
+$('rmGo').addEventListener('click', () => {
   Sync.removePerson(draft.id);
   people = Sync.people();
+  closeRemove();
   mode='idle'; draft=null; hover=null; focus=null;
   render();
 });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && mode === 'picking') $('cancel').click();
+  if (e.key !== 'Escape') return;
+  // The confirm is on top, so it takes Escape first. Any ambiguous dismissal
+  // of a destructive question has to mean cancel.
+  if ($('rmSheet').classList.contains('open')) closeRemove();
+  else if (mode === 'picking') $('cancel').click();
 });
 
 /* ------------------------------------------------- the kitty, behind a click */
