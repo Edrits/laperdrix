@@ -188,5 +188,16 @@ No Node, so no Vitest.
   routes deployed (i.e. the pasted copy isn't stale), a wrong token refused with 401, the database
   reachable, all seven photographs signable. It reads the share token from `secrets.txt` or `.env`
   (both gitignored) so it never has to be typed into a shell history or a chat window.
+- **After adding a column in Supabase, reload the schema cache** — PostgREST keeps its own copy and
+  a new column stays invisible to the API until it does:
+  ```sql
+  notify pgrst, 'reload schema';
+  ```
+  The symptom is a `502` from the Worker wrapping `PGRST204: Could not find the 'x' column of 'y' in
+  the schema cache`. Read that carefully: *"in the schema cache"* means the SQL **did** run and the
+  API hasn't noticed. It is not the same error as the column being absent, and chasing it as a failed
+  migration wastes an evening. Worse, because `personIn` sends every field unconditionally, one
+  unknown column fails **every** person write, not just writes that set it — so the blast radius is
+  much bigger than the feature being added.
 - **`manifest.webmanifest` is generated**, not hand-edited — `python3 scripts/gen_manifest.py`.
   Percent-encoding a data URI inside JSON by hand is how you get an icon that never renders.
