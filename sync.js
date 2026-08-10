@@ -32,6 +32,7 @@
   const K_TOKEN  = 'laperdrix.token';
   const K_PEOPLE = 'laperdrix.stays.v1';
   const K_SPEND  = 'laperdrix.expenses.v1';
+  const K_SET    = 'laperdrix.settings.v1';
   const K_QUEUE  = 'laperdrix.queue.v1';
 
   const read = (k, fb) => {
@@ -147,6 +148,18 @@
     flush();
   }
 
+  /* Shared app state — the cooking rota, and whatever small shared setting
+     comes next. One row for the whole trip, so the queue id is a constant and
+     repeated saves collapse to the last one. Last write wins, which is right
+     for something one person regenerates on purpose. */
+  function saveSettings(patch) {
+    const next = Object.assign({}, read(K_SET, {}), patch || {});
+    write(K_SET, next);
+    enqueue({ kind: 'settings', op: 'put', id: 'settings', payload: next });
+    flush();
+    return next;
+  }
+
   /* --------------------------------------------------------------- read */
 
   // Flush first, then pull. The other way round would overwrite writes that
@@ -161,6 +174,10 @@
       if (!body || !Array.isArray(body.people)) return null;
       write(K_PEOPLE, body.people);
       write(K_SPEND, Array.isArray(body.expenses) ? body.expenses : []);
+      // Only overwrite settings when the server actually sent some. Before the
+      // migration lands the field is absent, and clobbering a locally-built
+      // rota with {} would delete it on every refresh.
+      if (body.settings && typeof body.settings === 'object') write(K_SET, body.settings);
       return body;
     } catch { return null; }
   }
@@ -169,11 +186,12 @@
   global.addEventListener('online', () => { flush(); });
 
   global.Sync = {
-    WORKER_URL, TRIP, K_TOKEN, K_PEOPLE, K_SPEND,
+    WORKER_URL, TRIP, K_TOKEN, K_PEOPLE, K_SPEND, K_SET,
     configured, token, newId,
     people: () => read(K_PEOPLE, []),
     expenses: () => read(K_SPEND, []),
-    savePerson, removePerson, saveExpense, removeExpense,
+    settings: () => read(K_SET, {}),
+    savePerson, removePerson, saveExpense, removeExpense, saveSettings,
     pull, flush,
     pending: () => queue().length,
   };

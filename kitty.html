@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#171b14" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="styles.css?v=15">
+<link rel="stylesheet" href="styles.css?v=16">
 </head>
 <body class="kitty-page">
 
@@ -164,7 +164,7 @@
 </div>
 
 <script src="icons.js?v=5"></script>
-<script src="sync.js?v=2"></script>
+<script src="sync.js?v=3"></script>
 <script src="money.js?v=3"></script>
 <script>
 /* =========================================================================
@@ -490,9 +490,10 @@ function renderPayers(){
   if (isNew) renderHouses();
 }
 
-/* Family chips, only ever shown while inventing a person. Defaults to "On
-   their own" — nobody's family should be guessed at, and a wrong one is quiet
-   enough that it would go unnoticed for a fortnight. */
+/* Family chips, only ever shown while inventing a person. Defaults to "Just
+   them" — nobody's family should be guessed at, and a wrong one is quiet
+   enough that it would go unnoticed for a fortnight. The wording is a choice
+   about grouping, not a description of somebody being alone. */
 function renderHouses(){
   const chosen = draft.household === undefined ? '' : draft.household;
   const chip = (val, text, extra) =>

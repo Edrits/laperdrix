@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aux fourneaux · La Perdrix</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#e9e4d7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171b14" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="styles.css?v=16">
+</head>
+<body class="kitty-page rota-page">
+
+<header class="ktop">
+  <a class="back" href="index.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H6"/><path d="M12 5l-7 7 7 7"/></svg>
+    La Perdrix
+  </a>
+  <div class="themes ktheme">
+    <button id="t-light" aria-pressed="false">Light</button>
+    <button id="t-dark" aria-pressed="false">Dark</button>
+    <button id="t-auto" aria-pressed="true">Auto</button>
+  </div>
+</header>
+
+<main>
+  <!-- Tonight, or the next night still to come. -->
+  <section class="sec hero-cook" id="heroSec" hidden>
+    <p class="eyebrow">Aux fourneaux</p>
+    <h1 class="cook-when" id="heroWhen"></h1>
+    <div class="lineup" id="heroTeam"></div>
+    <p class="cook-note" id="heroNote"></p>
+  </section>
+
+  <section class="sec">
+    <h2 class="chart-h" id="allHead" hidden>The fortnight</h2>
+    <div id="nights"></div>
+    <p class="empty-note" id="noRota">
+      No rota yet. Tap <b>Scramble the teams</b> and one gets built from everybody's dates —
+      nothing happens until you ask, so people can keep adding themselves without it churning.
+    </p>
+  </section>
+
+  <section class="sec">
+    <details class="quiet" id="loadBox" hidden>
+      <summary>Who cooks how often</summary>
+      <div class="quiet-in">
+        <div id="loadList"></div>
+        <p class="set-note">
+          Counted as a share of the nights each person is actually here, so somebody
+          staying three nights isn't asked to cook as often as somebody staying fourteen.
+        </p>
+      </div>
+    </details>
+
+    <details class="quiet" id="sizeBox" hidden>
+      <summary>Team size</summary>
+      <div class="quiet-in">
+        <div class="set-row">
+          <label for="perCook">One cook per</label>
+          <input id="perCook" type="text" inputmode="numeric" pattern="[0-9]*" size="4">
+          <span class="set-unit">people eating</span>
+        </div>
+        <p class="set-note" id="sizeNote"></p>
+      </div>
+    </details>
+  </section>
+</main>
+
+<div class="bar"><button class="btn" id="scramble">Scramble the teams</button></div>
+
+<!-- Adding somebody to a night: only the people actually there that evening. -->
+<div class="sheet" id="addSheet" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+  <div class="in2">
+    <h2 id="addTitle">Add a cook</h2>
+    <p class="cf-body" id="addWhen"></p>
+    <div class="payers" id="addWho"></div>
+    <div class="row"><button class="btn ghost" id="addCancel">Done</button></div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet confirm" id="confirmSheet" role="dialog" aria-modal="true" aria-labelledby="cfTitle">
+  <div class="in2">
+    <h2 id="cfTitle">Rebuild the rota?</h2>
+    <p class="cf-body" id="cfBody"></p>
+    <div class="row">
+      <button class="btn" id="cfCancel">Leave it</button>
+      <button class="btn danger" id="cfGo">Scramble</button>
+    </div>
+  </div>
+</div>
+
+<script src="icons.js?v=5"></script>
+<script src="sync.js?v=3"></script>
+<script src="rota.js?v=1"></script>
+<script>
+/* =========================================================================
+   The cooking rota.
+
+   Ed's brief: teams sized by how many people are actually there, nobody
+   cooking too much, drag people around when the algorithm gets it wrong, and
+   — the important bit — it only rebuilds WHEN ASKED. People add their dates
+   over weeks; a rota that regenerated itself would never settle, and everyone
+   would stop trusting the one on the front page.
+
+   So the stored state is tiny: a seed, the nights somebody has arranged by
+   hand, and the team size. Everything else is derived by rota.js, which is
+   pure and tested. Nothing here recomputes unless you press the button.
+   ========================================================================= */
+
+const TRIP = Sync.TRIP;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const MON  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOW  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DOWL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const D = s => new Date(s + 'T12:00:00Z');
+const pad = v => String(v).padStart(2, '0');
+const todayISO = () => { const n = new Date(); return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate()); };
+const shortDay = iso => { const d = D(iso); return DOW[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()]; };
+const longDay  = iso => { const d = D(iso); return DOWL[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()]; };
+
+const NIGHTS = Rota.cookNights(TRIP.start, TRIP.end);
+
+/* People, with the same defensive mapping the other pages use. Anyone without
+   dates can't be rostered — rota.js drops them — but they still load. */
+function loadPeople(){
+  const raw = Sync.people();
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(p => p && p.name && p.from && p.to).map((p, i) => ({
+    id: p.id, name: p.name,
+    icon: p.icon || window.ICONS[i % window.ICONS.length][0],
+    from: p.from, to: p.to,
+  }));
+}
+
+let people = loadPeople();
+let conf   = Sync.settings().rota || null;    // null means: never asked for one
+let rota   = [];
+let lifted = null;                            // { id, day } — the chip being moved
+let addingTo = null;
+
+const personById = id => people.find(p => p.id === id);
+
+function rebuildView(){
+  rota = conf ? Rota.buildRota(people, NIGHTS, {
+    seed: conf.seed, pins: conf.pins || {}, perCook: conf.perCook || 6,
+  }) : [];
+}
+
+/* ------------------------------------------------------------- rendering */
+
+function chip(id, day, removable){
+  const p = personById(id);
+  if (!p) return '';
+  return `<button class="cook${lifted && lifted.id === id && lifted.day === day ? ' lifted' : ''}"
+     data-id="${esc(id)}" data-day="${esc(day)}" draggable="false">
+    <span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}
+    ${removable ? '<span class="x" aria-hidden="true">×</span>' : ''}
+  </button>`;
+}
+
+function renderHero(){
+  const night = rota.length ? Rota.nightFor(rota, todayISO()) : null;
+  $('heroSec').hidden = !night || night.team.length === 0;
+  if (!night || !night.team.length) return;
+
+  const today = todayISO();
+  const when = night.day === today ? 'Tonight' : longDay(night.day);
+  $('heroWhen').textContent = when;
+  $('heroTeam').innerHTML = night.team.map(id => chip(id, night.day, false)).join('');
+  const n = night.present.length;
+  $('heroNote').textContent = night.day === today
+    ? `Cooking for ${n}.`
+    : `The next one on. Cooking for ${n}.`;
+}
+
+function renderNights(){
+  const has = rota.length > 0;
+  $('noRota').hidden = has;
+  $('allHead').hidden = !has;
+  $('loadBox').hidden = !has;
+  $('sizeBox').hidden = !has;
+  if (!has) { $('nights').innerHTML = ''; return; }
+
+  const today = todayISO();
+  $('nights').innerHTML = rota.map(n => {
+    const short = n.team.length < n.size;
+    return `<div class="night${n.day === today ? ' tonight' : ''}${n.pinned ? ' pinned' : ''}" data-day="${esc(n.day)}">
+      <div class="nhead">
+        <span class="nday">${shortDay(n.day)}${n.day === today ? ' · tonight' : ''}</span>
+        <span class="nmeta">${n.present.length} here${n.pinned ? ' · arranged by hand' : ''}</span>
+      </div>
+      <div class="cooks">
+        ${n.team.map(id => chip(id, n.day, true)).join('')}
+        <button class="cook add" data-add="${esc(n.day)}"><span class="plus">＋</span></button>
+      </div>
+      ${short ? `<p class="nshort">${n.team.length} of a suggested ${n.size}</p>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderLoad(){
+  if (!rota.length) return;
+  const rows = Rota.load(rota, people)
+    .filter(l => l.nights > 0)
+    .sort((a, b) => b.times - a.times || a.id.localeCompare(b.id));
+  const most = Math.max(1, ...rows.map(r => r.times));
+  $('loadList').innerHTML = rows.map(r => {
+    const p = personById(r.id);
+    if (!p) return '';
+    return `<div class="crow">
+      <div class="chead">
+        <span class="cname"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</span>
+        <span class="camt"><b>${r.times}</b><i>of ${r.nights} night${r.nights === 1 ? '' : 's'} here</i></span>
+      </div>
+      <div class="ctrack"><i style="width:${(r.times / most * 100).toFixed(1)}%;background:${colourOf(p.icon)}"></i></div>
+    </div>`;
+  }).join('');
+}
+
+function renderSize(){
+  if (!conf) return;
+  $('perCook').value = String(conf.perCook || 6);
+  const busiest = Math.max(0, ...rota.map(n => n.present.length));
+  $('sizeNote').textContent = busiest
+    ? `On the fullest night that's ${Rota.teamSizeFor(busiest, { perCook: conf.perCook || 6 })} cooks for ${busiest} people. Scramble again to apply.`
+    : 'Nobody has put dates in yet.';
+}
+
+function render(){ rebuildView(); renderHero(); renderNights(); renderLoad(); renderSize(); }
+
+/* ---------------------------------------------------------- editing state
+
+   Any hand-edit pins that night: rota.js then leaves it alone on the next
+   scramble, so arranging one evening carefully isn't undone by pressing the
+   button again. The night still counts towards everyone's load. */
+
+function pinsOf(){ return Object.assign({}, (conf && conf.pins) || {}); }
+
+function setNight(day, ids){
+  const pins = pinsOf();
+  pins[day] = ids;
+  conf = Object.assign({}, conf, { pins });
+  Sync.saveSettings({ rota: conf });
+  render();
+}
+
+const teamOn = day => { const n = rota.find(x => x.day === day); return n ? n.team.slice() : []; };
+const presentOn = day => { const n = rota.find(x => x.day === day); return n ? n.present : []; };
+
+function removeCook(id, day){ setNight(day, teamOn(day).filter(x => x !== id)); }
+
+/* Move somebody from one night to another. Refused when they aren't there —
+   a rota that rosters an absent person is worse than one that's uneven. */
+function moveCook(id, fromDay, toDay){
+  if (fromDay === toDay) return true;
+  if (!presentOn(toDay).includes(id)) return false;
+  const pins = pinsOf();
+  pins[fromDay] = teamOn(fromDay).filter(x => x !== id);
+  const to = teamOn(toDay);
+  if (!to.includes(id)) to.push(id);
+  pins[toDay] = to;
+  conf = Object.assign({}, conf, { pins });
+  Sync.saveSettings({ rota: conf });
+  render();
+  return true;
+}
+
+function flashRefusal(day){
+  const el = document.querySelector(`.night[data-day="${day}"]`);
+  if (!el) return;
+  el.classList.remove('refuse');
+  void el.offsetWidth;                       // restart the animation
+  el.classList.add('refuse');
+}
+
+/* ------------------------------------------------- lift, drag, and place
+
+   Two ways to move somebody, because one of them always fails somewhere:
+   drag with a pointer (fine on a laptop, fiddly on a phone), or tap to lift
+   and tap a night to drop (reliable everywhere, and the only thing that works
+   with a keyboard or a screen reader). */
+
+function clearLift(){ lifted = null; render(); }
+
+let press = null;                            // pointer-drag bookkeeping
+let ghost = null;
+
+function beginDrag(e, el, id, day){
+  press = null;
+  lifted = { id, day };
+  document.body.classList.add('dragging');
+  /* Mark the chip directly rather than re-rendering. A render() here would
+     replace the whole list's innerHTML and destroy this very node — the one
+     holding the pointer capture — and the drag would die on the first move. */
+  el.classList.add('lifted');
+  const p = personById(id);
+  ghost = document.createElement('div');
+  ghost.className = 'drag-chip';
+  ghost.innerHTML = `<span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}`;
+  document.body.appendChild(ghost);
+  moveGhost(e);
+}
+
+function moveGhost(e){
+  if (!ghost) return;
+  ghost.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const night = el && el.closest ? el.closest('.night') : null;
+  document.querySelectorAll('.night.over').forEach(n => n.classList.remove('over'));
+  if (night && night.dataset.day !== (lifted && lifted.day)) night.classList.add('over');
+}
+
+function endDrag(e){
+  if (ghost) { ghost.remove(); ghost = null; }
+  document.body.classList.remove('dragging');
+  document.querySelectorAll('.night.over').forEach(n => n.classList.remove('over'));
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const night = el && el.closest ? el.closest('.night') : null;
+  const held = lifted;
+  lifted = null;
+  if (held && night && night.dataset.day !== held.day) {
+    if (!moveCook(held.id, held.day, night.dataset.day)) { render(); flashRefusal(night.dataset.day); }   // render first — it rebuilds the node
+  } else {
+    render();
+  }
+}
+
+$('nights').addEventListener('pointerdown', e => {
+  const chipEl = e.target.closest('.cook');
+  if (!chipEl || chipEl.classList.contains('add')) return;
+  if (e.target.closest('.x')) return;                    // the × is a button, not a handle
+  press = { id: chipEl.dataset.id, day: chipEl.dataset.day, x: e.clientX, y: e.clientY,
+            pointerId: e.pointerId, el: chipEl };
+  // Capture keeps the move events coming even when the finger slides off the
+  // chip. Not fatal if the browser refuses — the drag just works without it.
+  try { chipEl.setPointerCapture(e.pointerId); } catch {}
+});
+
+/* Move and release listen on the window, not the list. Once a drag is under
+   way the finger is usually somewhere else entirely, and the chip it started
+   on may no longer exist. */
+window.addEventListener('pointermove', e => {
+  if (press && !lifted) {
+    // Only start dragging once the finger has actually travelled — otherwise
+    // every tap on a chip becomes a drag and the × is impossible to hit.
+    if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > 8) {
+      beginDrag(e, press.el, press.id, press.day);
+    }
+  } else if (lifted && ghost) {
+    e.preventDefault();
+    moveGhost(e);
+  }
+}, { passive: false });
+
+window.addEventListener('pointerup', e => {
+  if (lifted && ghost) { endDrag(e); press = null; return; }
+  press = null;
+});
+window.addEventListener('pointercancel', () => {
+  if (ghost) { ghost.remove(); ghost = null; }
+  document.body.classList.remove('dragging');
+  document.querySelectorAll('.night.over').forEach(n => n.classList.remove('over'));
+  press = null; lifted = null; render();
+});
+
+/* Taps: the fallback that always works. Tap a cook to lift them, tap a night
+   to drop them there, tap them again to put them down. */
+$('nights').addEventListener('click', e => {
+  const addBtn = e.target.closest('.cook.add');
+  if (addBtn) { openAdd(addBtn.dataset.add); return; }
+
+  const x = e.target.closest('.x');
+  if (x) {
+    const c = x.closest('.cook');
+    removeCook(c.dataset.id, c.dataset.day);
+    return;
+  }
+
+  const chipEl = e.target.closest('.cook');
+  if (chipEl) {
+    const { id, day } = chipEl.dataset;
+    if (lifted && lifted.id === id && lifted.day === day) clearLift();
+    else { lifted = { id, day }; render(); }
+    return;
+  }
+
+  const night = e.target.closest('.night');
+  if (night && lifted) {
+    const to = night.dataset.day;
+    if (to === lifted.day) { clearLift(); return; }
+    const held = lifted;
+    lifted = null;
+    // render() before flashRefusal(), never after: it replaces the whole list's
+    // innerHTML, so a class added first is thrown away before it can animate.
+    if (!moveCook(held.id, held.day, to)) { render(); flashRefusal(to); }
+  }
+});
+
+/* ------------------------------------------------------------ adding */
+
+function openAdd(day){
+  addingTo = day;
+  const on = teamOn(day);
+  const spare = presentOn(day).filter(id => !on.includes(id));
+  $('addWhen').textContent = spare.length
+    ? `${longDay(day)} — anyone here that evening.`
+    : `${longDay(day)} — everybody here is already cooking.`;
+  $('addWho').innerHTML = spare.map(id => {
+    const p = personById(id);
+    return p ? `<button type="button" class="who-chip" data-id="${esc(id)}">
+      <span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</button>` : '';
+  }).join('');
+  $('addSheet').classList.add('open');
+  document.body.classList.add('picking');
+}
+function closeAdd(){
+  $('addSheet').classList.remove('open');
+  document.body.classList.remove('picking');
+  addingTo = null;
+}
+$('addCancel').addEventListener('click', closeAdd);
+$('addWho').addEventListener('click', e => {
+  const b = e.target.closest('.who-chip');
+  if (!b || !addingTo) return;
+  const day = addingTo;
+  setNight(day, teamOn(day).concat([b.dataset.id]));
+  openAdd(day);                              // stay open — usually you add two
+});
+
+/* ----------------------------------------------------------- scrambling */
+
+function scramble(){
+  const pins = pinsOf();
+  conf = {
+    seed: Sync.newId(),                      // a fresh seed IS the scramble
+    pins,
+    perCook: (conf && conf.perCook) || 6,
+    generatedAt: Date.now(),
+  };
+  Sync.saveSettings({ rota: conf });
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function openConfirm(){
+  const pinned = Object.keys(pinsOf()).length;
+  $('cfBody').innerHTML = `Everyone's teams change, on every device. ` +
+    (pinned
+      ? `The <b>${pinned} night${pinned === 1 ? '' : 's'}</b> you've arranged by hand stay exactly as they are.`
+      : `Nothing has been arranged by hand, so the whole fortnight is redrawn.`);
+  $('confirmSheet').classList.add('open');
+  $('scrim').classList.add('open');
+}
+function closeConfirm(){
+  $('confirmSheet').classList.remove('open');
+  $('scrim').classList.remove('open');
+}
+
+$('scramble').addEventListener('click', () => {
+  if (!people.length) return;
+  if (!conf) scramble();                     // first one: no ceremony
+  else openConfirm();
+});
+$('cfCancel').addEventListener('click', closeConfirm);
+$('scrim').addEventListener('click', closeConfirm);
+$('cfGo').addEventListener('click', () => { closeConfirm(); scramble(); });
+
+$('perCook').addEventListener('change', () => {
+  const v = parseInt($('perCook').value, 10);
+  if (!isFinite(v) || v < 1 || v > 30) { renderSize(); return; }
+  conf = Object.assign({}, conf, { perCook: v });
+  Sync.saveSettings({ rota: conf });
+  render();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('confirmSheet').classList.contains('open')) closeConfirm();
+  else if ($('addSheet').classList.contains('open')) closeAdd();
+  else if (lifted) clearLift();
+});
+
+/* ------------------------------------------------------------- theme */
+(function(){
+  const root = document.documentElement;
+  const b = { light: $('t-light'), dark: $('t-dark'), auto: $('t-auto') };
+  const set = m => {
+    if (m === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', m);
+    try { localStorage.setItem('laperdrix.theme', m); } catch {}
+    for (const k in b) b[k].setAttribute('aria-pressed', String(k === m));
+  };
+  for (const k in b) b[k].addEventListener('click', () => set(k));
+  let saved = 'auto';
+  try { saved = localStorage.getItem('laperdrix.theme') || 'auto'; } catch {}
+  set(saved);
+})();
+
+render();
+
+/* Pick up anyone else's changes. Note this does NOT rebuild the rota — it
+   re-reads the stored seed and pins, so a new arrival appears in the presence
+   counts without silently rewriting tonight's team. */
+(async function refresh(){
+  const got = await Sync.pull();
+  if (!got) return;
+  people = loadPeople();
+  conf = Sync.settings().rota || conf;
+  render();
+})();
+</script>
+</body>
+</html>

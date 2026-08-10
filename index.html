@@ -19,7 +19,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=1">
-<link rel="stylesheet" href="styles.css?v=15">
+<link rel="stylesheet" href="styles.css?v=16">
 </head>
 <body>
 
@@ -100,6 +100,21 @@
 <div class="band chair reveal">
   <div class="cap"><small>And then</small><p>The evenings, which are the actual point of the whole thing.</p></div>
 </div>
+
+<!-- ============================================================ tonight's cooks -->
+<!-- Read-only here. The rota is only ever built or changed on rota.html, and
+     only when somebody presses the button — people add their dates over weeks,
+     and a rota that rebuilt itself would never settle. -->
+<section class="sec cook-sec reveal" id="cookSec" hidden>
+  <p class="eyebrow">Aux fourneaux</p>
+  <h2 class="cook-when" id="cookWhen"></h2>
+  <div class="lineup" id="cookTeam"></div>
+  <p class="cook-note" id="cookNote"></p>
+  <a class="cook-link" href="rota.html" id="openRota">
+    <span id="rotaLinkText">The whole fortnight</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="M12 5l7 7-7 7"/></svg>
+  </a>
+</section>
 
 <!-- ============================================================ the kitty, behind a click -->
 <section class="sec door">
@@ -190,7 +205,8 @@
 <!-- the icon sprite is injected by icons.js, shared with kitty.html -->
 
 <script src="icons.js?v=5"></script>
-<script src="sync.js?v=2"></script>
+<script src="sync.js?v=3"></script>
+<script src="rota.js?v=1"></script>
 <script>
 /* ======================================================================= trip
    The only thing to change when the dates move. Everything on the page is
@@ -449,7 +465,63 @@ function renderSheet(){
   $('save').disabled = !(draft.name.trim() && draft.from && draft.to);
 }
 
-function render(){ renderGrid(); renderWho(); renderFolk(); renderChart(); renderSheet(); }
+/* ------------------------------------------------------- tonight's cooks
+
+   Read-only. This never builds or changes a rota — it renders the one that is
+   stored, using the same pure functions rota.html uses, so the two pages can't
+   disagree about who is on. If nobody has asked for a rota yet, the band still
+   appears (once there are people to roster) as the way in to make one. */
+/* Deliberately NOT the page's iso() — that goes via toISOString() and is UTC,
+   so between midnight and 1am BST it returns yesterday. This is the one place
+   that matters: a band whose whole job is to say who is cooking *tonight*. */
+function todayLocal(){
+  const n = new Date(), p = v => String(v).padStart(2, '0');
+  return n.getFullYear() + '-' + p(n.getMonth() + 1) + '-' + p(n.getDate());
+}
+/* DOWL here is Monday-first (the calendar grid needs it that way), so it must
+   be indexed through dowIdx, never with getUTCDay(). */
+const longNight = day => DOWL[dowIdx(D(day))] + ' ' + D(day).getUTCDate() + ' ' + MON[D(day).getUTCMonth()];
+
+function renderCooks(){
+  const roster = people.filter(p => p.from && p.to);
+  $('cookSec').hidden = roster.length === 0;
+  if (!roster.length) return;
+
+  const conf = (Sync.settings() || {}).rota;
+  if (!conf) {
+    $('cookWhen').textContent = 'No cooking rota yet';
+    $('cookTeam').innerHTML = '';
+    $('cookNote').textContent =
+      'Teams get built from everybody’s dates — evenly, and never two nights running.';
+    $('rotaLinkText').textContent = 'Make one';
+    return;
+  }
+
+  const nights = Rota.cookNights(TRIP.start, TRIP.end);
+  const rota = Rota.buildRota(roster, nights, {
+    seed: conf.seed, pins: conf.pins || {}, perCook: conf.perCook || 6,
+  });
+  const today = todayLocal();
+  const night = Rota.nightFor(rota, today);
+  $('rotaLinkText').textContent = 'The whole fortnight';
+
+  if (!night || !night.team.length) {
+    $('cookWhen').textContent = 'Nobody on tonight';
+    $('cookTeam').innerHTML = '';
+    $('cookNote').textContent = 'Either the fortnight is over, or nobody has dates covering it.';
+    return;
+  }
+
+  $('cookWhen').textContent = night.day === today ? 'Tonight' : longNight(night.day);
+  $('cookTeam').innerHTML = night.team.map(id => {
+    const p = roster.find(x => x.id === id);
+    return p ? `<span class="cook"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</span>` : '';
+  }).join('');
+  $('cookNote').textContent = (night.day === today ? 'Cooking for ' : 'Next one on. Cooking for ')
+    + night.present.length + '.';
+}
+
+function render(){ renderGrid(); renderWho(); renderFolk(); renderChart(); renderSheet(); renderCooks(); }
 
 /* ---------------------------------------------------------------- events */
 $('grid').addEventListener('click', e => {

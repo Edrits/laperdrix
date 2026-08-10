@@ -172,6 +172,31 @@ sprite; a mismatch renders an empty circle with no error.
   the ids rather than the live array. Clearing only `localStorage` would look like it worked and then
   have the next `pull()` put everything back. The confirm names the real count and total — a dialog
   that only says "are you sure?" is a speed bump, not a decision.
+- **The cooking rota only rebuilds when somebody presses the button.** Ed:
+  *"Only do it once asked (not as we go as people will slowly add dates in and then we'll have to
+  keep adding people if it does it too soon)."* Nothing on any page calls `Rota.buildRota()` to
+  *create* state — the stored state is only `{seed, pins, perCook}`, and the teams are derived from
+  it on every render. A new arrival changes the presence counts immediately but never silently
+  reshuffles tonight's team.
+- **Fairness is a share of your own nights, and it is urgency-weighted.** `rota.js` scores people by
+  turns still owed divided by nights they have left. The obvious version — rank by the share you've
+  cooked so far — shipped first and was wrong: a four-night guest cooked **zero** times while
+  everyone else cooked three, because nothing knew their stay was running out. There is a test
+  across 25 seeds pinning this. Don't "simplify" it back.
+- **A hand-edited night is pinned and survives a scramble.** Any drag, add or remove writes that
+  night into `pins`, and `buildRota` leaves pinned nights alone while still counting them towards
+  everyone's load. Pins that name somebody who has since changed their dates are dropped — rostering
+  an absent person is worse than an uneven rota.
+- **`settings` on the trip row is the generic bag for shared app state**, holding the rota. Put the
+  next small shared setting in the JSON rather than adding another column: every new column costs a
+  migration *and* a manual Worker paste, and they have to land in the right order.
+- **Two classes are already taken and will bite you**: `.chart` (the landing page's presence chart)
+  and `.ghost` (`.btn.ghost`, the secondary button). The rota's drag follower had to be renamed
+  `.drag-chip` after `.ghost` made every secondary button on the page `position:fixed`. All three
+  pages share one stylesheet — grep before naming.
+- **`index.html`'s `DOWL` is Monday-first and its `iso()` is UTC.** Index it through `dowIdx()`, and
+  never use `iso(new Date())` for "today" — between midnight and 1am BST it returns yesterday, which
+  is exactly when a "who's cooking tonight" band is being looked at.
 - **Amount fields must stay `type="text"` with `inputmode="decimal"`.** `type="number"` rejects
   `12,50` outright in some locales, which loses French receipts at the keyboard rather than in the
   parser. The phone keypad comes from `inputmode`, and the keyboard only *appears* if `focus()` is

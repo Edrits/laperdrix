@@ -707,3 +707,120 @@ body.picking .bar{display:none}
 @media (prefers-reduced-motion:reduce){
   .quiet > summary::after{transition:none}
 }
+
+/* =========================================================================
+   The cooking rota — "Aux fourneaux".
+   ========================================================================= */
+
+/* Tonight's team, at the top of the page and again on the landing page. */
+.hero-cook{padding-block:18px 4px}
+.cook-when{font:600 27px/1.15 var(--serif);margin:2px 0 14px;letter-spacing:-.01em}
+.cook-note{margin:13px 0 0;font-size:12.5px;color:var(--mut)}
+.lineup{display:flex;flex-wrap:wrap;gap:8px}
+/* The lineup is a read-out, not a control — no press states, no × */
+.lineup .cook{pointer-events:none;background:var(--surface);border-color:var(--hair)}
+
+/* ------------------------------------------------------------ the nights */
+
+.night{
+  padding:13px 0 15px;border-bottom:1px solid var(--hair);
+  transition:background .15s ease,box-shadow .15s ease;
+  border-radius:10px;
+}
+.night:last-of-type{border-bottom:0}
+.nhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:9px}
+.nday{font:600 14.5px/1.2 var(--sans)}
+.nmeta{font-size:11.5px;color:var(--mut);text-align:right;flex:none}
+.nshort{margin:8px 0 0;font-size:11.5px;color:var(--mut)}
+.cooks{display:flex;flex-wrap:wrap;gap:7px}
+
+/* Tonight gets the accent; a hand-arranged night gets a quiet left mark so you
+   can see at a glance which ones the algorithm will leave alone. */
+.night.tonight .nday{color:var(--accent)}
+.night.pinned{box-shadow:inset 2px 0 0 var(--lichen);padding-left:11px}
+
+/* ------------------------------------------------------------- the chips */
+
+.cook{
+  display:inline-flex;align-items:center;gap:8px;
+  min-height:38px;padding:5px 11px 5px 6px;border-radius:99px;
+  border:1px solid var(--hair);background:var(--bg);color:var(--tx);
+  font:500 13.5px/1 var(--sans);cursor:grab;
+  touch-action:none;               /* we handle the drag ourselves */
+  user-select:none;-webkit-user-select:none;
+  transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease;
+}
+.cook .x{
+  margin-left:1px;width:20px;height:20px;border-radius:99px;flex:none;
+  display:grid;place-items:center;font-size:15px;line-height:1;
+  color:var(--mut);background:var(--surface);
+}
+.cook .x:hover{color:var(--danger)}
+.cook.lifted{
+  border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);
+  transform:translateY(-2px);cursor:grabbing;
+}
+.cook.add{
+  border-style:dashed;color:var(--mut);padding:5px 13px;cursor:pointer;
+}
+.cook.add .plus{font-size:15px;line-height:1}
+.cook.add:hover{color:var(--tx);border-color:var(--mut)}
+
+/* Drop target while something is in the air. */
+body.dragging{cursor:grabbing}
+body.dragging .cook{cursor:grabbing}
+.night.over{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+
+/* The chip that follows your finger. Offset so it sits above the fingertip
+   rather than underneath it, where you couldn't see it. */
+/* NOT ".ghost" — that is already the secondary-button modifier (.btn.ghost), and
+   sharing the name made every ghost button on the page position:fixed at
+   z-index 80. Same trap as .chart on the landing page. */
+.drag-chip{
+  position:fixed;top:0;left:0;z-index:80;pointer-events:none;
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 13px 6px 7px;border-radius:99px;
+  background:var(--surface);border:1px solid var(--accent);
+  font:500 13.5px/1 var(--sans);color:var(--tx);
+  box-shadow:0 10px 24px -10px rgba(10,13,8,.6);
+  margin:-46px 0 0 -28px;
+}
+
+/* Refusing a drop: somebody isn't there that night. A shake says "no" faster
+   than a sentence, and doesn't need dismissing. */
+@keyframes refuse{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-5px)} 40%{transform:translateX(5px)}
+  60%{transform:translateX(-3px)} 80%{transform:translateX(3px)}
+}
+.night.refuse{animation:refuse .3s ease}
+.night.refuse .nmeta::after{content:" · not here that night";color:var(--danger)}
+
+.set-unit{font-size:12.5px;color:var(--mut)}
+.rota-page .set-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rota-page .set-row input{width:70px;margin-bottom:0}
+
+@media (prefers-reduced-motion:reduce){
+  .night,.cook{transition:none}
+  .night.refuse{animation:none;outline:2px solid var(--danger)}
+}
+
+/* The way through to the rota from the landing page. Deliberately quieter than
+   the kitty's amber pill — two big calls to action stacked would compete, and
+   the kitty is the one that matters more. */
+.cook-sec{padding-block:70px 0}
+.cook-sec .cook-when{font:600 clamp(26px,5vw,38px)/1.1 var(--serif);margin:0 0 18px}
+.cook-link{
+  display:inline-flex;align-items:center;gap:9px;margin-top:22px;
+  min-height:44px;padding:9px 4px;
+  font:600 14.5px/1 var(--sans);color:var(--accent);text-decoration:none;
+  border-bottom:1px solid transparent;transition:border-color .16s ease;
+}
+.cook-link svg{width:17px;height:17px;transition:transform .16s ease}
+.cook-link:hover{border-bottom-color:currentColor}
+.cook-link:hover svg{transform:translateX(3px)}
+@media (prefers-reduced-motion:reduce){.cook-link,.cook-link svg{transition:none}}
+
+/* The fortnight list sits under the hero, which already has its own rhythm —
+   without this the heading crowds "Cooking for 9." */
+.rota-page .chart-h{margin-top:34px}

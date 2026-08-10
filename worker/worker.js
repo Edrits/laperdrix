@@ -299,15 +299,45 @@ export default {
     if (!trip) return reply({ error: 'could not reach the trip' }, 502);
 
     if (path === '/data' && request.method === 'GET') {
-      const [pr, er] = await Promise.all([
+      const [pr, er, sr] = await Promise.all([
         sb(env, `members?trip_id=eq.${trip}&select=*&order=created_at.asc`),
         sb(env, `expenses?trip_id=eq.${trip}&select=*&order=spent_on.desc`),
+        sb(env, `trips?id=eq.${trip}&select=settings&limit=1`),
       ]);
       if (!pr.ok || !er.ok) return reply({ error: 'could not read the trip' }, 502);
+      // Settings are the newest column and the most likely to be missing on a
+      // database that hasn't had the migration run yet. A failure here must not
+      // take the whole payload down with it — people and spending still work.
+      let settings = {};
+      if (sr.ok) {
+        const rows = await sr.json();
+        if (Array.isArray(rows) && rows[0] && rows[0].settings) settings = rows[0].settings;
+      }
       return reply({
         people: (await pr.json()).map(personOut),
         expenses: (await er.json()).map(expenseOut),
+        settings,
       });
+    }
+
+    /* Shared app state — currently just the cooking rota. Last write wins,
+       which is right for something one person regenerates deliberately rather
+       than a field many people edit at once. */
+    if (path === '/settings' && request.method === 'POST') {
+      let body;
+      try { body = await request.json(); } catch { return reply({ error: 'bad body' }, 400); }
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        return reply({ error: 'bad body' }, 400);
+      }
+      const res = await sb(env, `trips?id=eq.${trip}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ settings: body }),
+      });
+      if (!res.ok) return reply({ error: 'could not save', detail: await res.text() }, 502);
+      const saved = await res.json();
+      const one = Array.isArray(saved) ? saved[0] : saved;
+      return reply({ settings: (one && one.settings) || {} });
     }
 
     if ((path === '/person' || path === '/expense') && request.method === 'POST') {

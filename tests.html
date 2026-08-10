@@ -26,6 +26,7 @@
 <div id="out"></div>
 
 <script src="money.js"></script>
+<script src="rota.js"></script>
 <script>
 const out = document.getElementById('out');
 let pass = 0, fail = 0;
@@ -487,6 +488,165 @@ eq(M.total([{ amountHome: 1.1 }, { amountHome: 2.2 }]), 3.3, '1.1 + 2.2 is 3.3, 
 eq(M.total([]), 0, 'empty');
 eq(M.total([{ amountHome: 'x' }, { amountHome: 5 }]), 5, 'junk entries are skipped');
 eq(M.total([{ amountLocal: 4 }], 'amountLocal'), 4, 'can total a different field');
+
+/* =========================================================================
+   rota.js — the cooking rota
+   ========================================================================= */
+
+const R = window.Rota;
+
+/* The whole trip, and a cast that comes and goes. */
+const NIGHTS = R.cookNights('2027-07-31', '2027-08-14');
+const ALL = (n, from, to) => Array.from({length: n}, (_, i) => ({ id: 'p' + i, name: 'P' + i, from, to }));
+
+group('cookNights — the last morning is not a dinner');
+eq(NIGHTS.length, 14,             '31 Jul – 14 Aug is fourteen dinners, not fifteen');
+eq(NIGHTS[0], '2027-07-31',       'first night is arrival day');
+eq(NIGHTS[13], '2027-08-13',      'last night is the eve of departure');
+eq(R.cookNights('2027-07-31', '2027-08-01').length, 1, 'a one-night stay is one dinner');
+
+group('isHere — you cook on the night, not the morning you leave');
+{
+  const p = { id: 'a', from: '2027-08-02', to: '2027-08-05' };
+  eq(R.isHere(p, '2027-08-01'), false, 'not before arriving');
+  eq(R.isHere(p, '2027-08-02'), true,  'the night you arrive');
+  eq(R.isHere(p, '2027-08-04'), true,  'the night before you go');
+  eq(R.isHere(p, '2027-08-05'), false, 'NOT the morning you drive home');
+  eq(R.isHere({ id: 'b' }, '2027-08-02'), false, 'no dates means not here');
+}
+
+group('teamSizeFor — the team grows with the table');
+eq(R.teamSizeFor(27), 5,  '27 for dinner needs five cooks');
+eq(R.teamSizeFor(20), 3,  '20 needs three');
+eq(R.teamSizeFor(12), 2,  '12 needs two');
+eq(R.teamSizeFor(3),  2,  'never a lone cook when there is company');
+eq(R.teamSizeFor(1),  1,  'unless there is genuinely only one person here');
+eq(R.teamSizeFor(0),  0,  'nobody here, nobody cooks');
+eq(R.teamSizeFor(90), 6,  'capped — past six they are in each other\'s way');
+
+group('buildRota — fairness is a share of your own nights');
+{
+  const people = ALL(12, '2027-07-31', '2027-08-14');
+  const rota = R.buildRota(people, NIGHTS, { seed: 'x' });
+  eq(rota.length, 14, 'a team for every night');
+  show(rota.every(n => n.team.length === n.size), 'every night is fully crewed');
+  show(rota.every(n => new Set(n.team).size === n.team.length), 'nobody is on the same team twice');
+  show(rota.every(n => n.team.every(id => n.present.includes(id))),
+       'nobody is rostered on a night they are not here');
+
+  const spread = R.load(rota, people).map(l => l.times);
+  show(Math.max(...spread) - Math.min(...spread) <= 1,
+       'with everyone here all fortnight, the load differs by at most one night');
+}
+
+{
+  // The property that matters most: a three-night guest and a fortnight-long
+  // one should cook the same SHARE, not the same number of times.
+  const people = [
+    ...ALL(8, '2027-07-31', '2027-08-14'),
+    { id: 'short', name: 'Short', from: '2027-08-05', to: '2027-08-08' },
+  ];
+  const rota = R.buildRota(people, NIGHTS, { seed: 'y' });
+  const l = R.load(rota, people);
+  const short = l.find(x => x.id === 'short');
+  const long = l.find(x => x.id === 'p0');
+  eq(short.nights, 3, 'the short stay is three cook-nights');
+  show(short.times < long.times, 'so they cook fewer times in absolute terms');
+  show(Math.abs(short.share - long.share) < 0.34,
+       'but a comparable share of the nights they were actually here');
+}
+
+group('buildRota — a short stay still gets its turn');
+{
+  /* This is a real bug that shipped in the first draft: scoring people by the
+     share they had cooked so far couldn't tell that somebody leaving on
+     Wednesday had run out of chances, so a four-night guest cooked ZERO times
+     while everyone else did three. Their last evening has to become urgent. */
+  const people = [
+    ...ALL(8, '2027-07-31', '2027-08-14'),
+    { id: 'early', name: 'Leaves early', from: '2027-07-31', to: '2027-08-04' }, // 4 nights
+    { id: 'late',  name: 'Arrives late', from: '2027-08-10', to: '2027-08-14' }, // 4 nights
+  ];
+  const l = R.load(R.buildRota(people, NIGHTS, { seed: 'sam' }), people);
+  show(l.find(x => x.id === 'early').times >= 1, 'somebody there four nights at the start cooks at least once');
+  show(l.find(x => x.id === 'late').times  >= 1, 'and somebody there four nights at the end does too');
+
+  // And it must hold whatever the seed, not just a lucky one.
+  let missed = 0;
+  for (let s = 0; s < 25; s++) {
+    const r = R.load(R.buildRota(people, NIGHTS, { seed: 'seed' + s }), people);
+    if (r.find(x => x.id === 'early').times === 0) missed++;
+    if (r.find(x => x.id === 'late').times === 0) missed++;
+  }
+  eq(missed, 0, 'across 25 different seeds, never once skipped');
+}
+
+group('buildRota — nobody cooks two nights running when there is a choice');
+{
+  const people = ALL(14, '2027-07-31', '2027-08-14');
+  const rota = R.buildRota(people, NIGHTS, { seed: 'z' });
+  let backToBack = 0;
+  for (let i = 1; i < rota.length; i++)
+    for (const id of rota[i].team) if (rota[i - 1].team.includes(id)) backToBack++;
+  eq(backToBack, 0, 'no repeats on consecutive nights with fourteen people to choose from');
+}
+{
+  // ...but it must still produce a team when there is nobody else left.
+  const people = ALL(2, '2027-07-31', '2027-08-14');
+  const rota = R.buildRota(people, NIGHTS, { seed: 'z' });
+  show(rota.every(n => n.team.length === 2),
+       'with only two people it rosters them every night rather than giving up');
+}
+
+group('buildRota — deterministic, so "scramble" means something');
+{
+  const people = ALL(10, '2027-07-31', '2027-08-14');
+  const a = R.buildRota(people, NIGHTS, { seed: 'same' });
+  const b = R.buildRota(people, NIGHTS, { seed: 'same' });
+  const c = R.buildRota(people, NIGHTS, { seed: 'different' });
+  deep(a.map(n => n.team), b.map(n => n.team), 'the same seed gives the same rota every time');
+  show(JSON.stringify(a.map(n => n.team)) !== JSON.stringify(c.map(n => n.team)),
+       'a new seed gives a different one');
+}
+
+group('buildRota — a hand-moved night is left alone');
+{
+  const people = ALL(10, '2027-07-31', '2027-08-14');
+  const pins = { '2027-08-03': ['p7', 'p8'] };
+  const rota = R.buildRota(people, NIGHTS, { seed: 'q', pins });
+  const night = rota.find(n => n.day === '2027-08-03');
+  deep(night.team, ['p7', 'p8'], 'the pinned team survives a rebuild');
+  eq(night.pinned, true,          'and is marked as pinned');
+  const l = R.load(rota, people);
+  show(l.find(x => x.id === 'p7').times >= 1,
+       'and still counts towards that person\'s load, so the rest stays fair');
+}
+{
+  // A pin naming somebody who has since changed their dates must not roster a
+  // person who isn't there — that would be worse than being wrong.
+  const people = [{ id: 'a', from: '2027-07-31', to: '2027-08-14' },
+                  { id: 'gone', from: '2027-07-31', to: '2027-08-01' }];
+  const rota = R.buildRota(people, NIGHTS, { seed: 'q', pins: { '2027-08-03': ['a', 'gone'] } });
+  deep(rota.find(n => n.day === '2027-08-03').team, ['a'],
+       'a pinned person who has left is dropped from the night');
+}
+
+group('buildRota — the empty and awkward cases');
+{
+  deep(R.buildRota([], NIGHTS, {}).map(n => n.team), NIGHTS.map(() => []), 'no people, no teams');
+  deep(R.buildRota(ALL(4, '2027-07-31', '2027-08-14'), [], {}), [], 'no nights, no rota');
+  const noDates = [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }];
+  show(R.buildRota(noDates, NIGHTS, {}).every(n => n.team.length === 0),
+       'people who have not put their dates in are never rostered');
+}
+
+group('nightFor — what the front page asks');
+{
+  const rota = R.buildRota(ALL(6, '2027-07-31', '2027-08-14'), NIGHTS, { seed: 'n' });
+  eq(R.nightFor(rota, '2027-08-03').day, '2027-08-03', 'tonight, when the trip is on');
+  eq(R.nightFor(rota, '2026-01-01').day, '2027-07-31', 'the first night, when it has not started');
+  eq(R.nightFor(rota, '2030-01-01'), null,             'nothing, once it is over');
+}
 
 /* ------------------------------------------------------------------ done */
 const s = document.getElementById('summary');
