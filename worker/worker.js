@@ -5,6 +5,10 @@
 //     loudly — otherwise the live version silently drifts from the repo.
 //     THIS FILE HAS CHANGED: it now does data sync as well as photographs, so
 //     it must be re-pasted or the app will keep working device-by-device.
+//     IT HAS CHANGED AGAIN SINCE THAT NOTE WAS WRITTEN: people now carry an
+//     optional `household` label. Until this file is re-pasted, a household
+//     typed on a phone is stored locally and then silently dropped on the way
+//     to the database. Run schema.sql's household migration BEFORE pasting.
 //
 // Two jobs:
 //   1. Hand out short-lived signed URLs for the photographs, which live in a
@@ -152,6 +156,10 @@ const personOut = r => ({
   id: r.id, name: r.name, icon: r.icon,
   from: r.arrives_on, to: r.departs_on,
   counts: r.counts_in_share !== false,
+  // Empty string, never null — the app treats '' as "no household given", and a
+  // literal null would render as the word "null" the moment anything joins it
+  // to a string.
+  household: r.household || '',
 });
 
 const personIn = (b, trip) => ({
@@ -163,6 +171,11 @@ const personIn = (b, trip) => ({
   counts_in_share: b.counts !== false,
   arrives_on: b.from || null,
   departs_on: b.to || null,
+  // Optional family label — "Ritchie" — used only to group totals. Trimmed, so
+  // "Ritchie " and "Ritchie" are the same family; NULL when empty, so an absent
+  // household is absent in the database rather than an empty-string third state.
+  // The second trim is for the case where the 40-char cap lands mid-space.
+  household: String(b.household || '').trim().slice(0, 40).trim() || null,
 });
 
 const expenseOut = r => ({

@@ -63,6 +63,20 @@ create table if not exists trips (
 
 -- ---------------------------------------------------------------- households (optional)
 
+-- ⚠️  NOT THE LIVE MECHANISM. This table and members.household_id below are from
+-- an earlier design and are kept only so an already-deployed database doesn't
+-- need anything dropped. Both are unused: nothing writes them, and the Worker
+-- never selects them.
+--
+-- What the app actually uses is the plain `members.household` TEXT column —
+-- see the members table. A household here is a label, not an entity: for a group
+-- of 27 a join table buys nothing, and the FK version would mean creating and
+-- reconciling household rows from a phone with no connectivity, which is exactly
+-- the situation this app is built around. Two people typing "Ritchie" agreeing
+-- is worth more than two people racing to create the Ritchie row.
+--
+-- If you are grouping totals by family, group by members.household.
+
 -- Purely a grouping label — "the Marshes", "Cluny Cottage". A person need not
 -- belong to one, and nothing breaks if nobody uses them.
 create table if not exists households (
@@ -80,8 +94,14 @@ create index if not exists households_trip_idx on households (trip_id, sort_orde
 create table if not exists members (
   id            uuid primary key default gen_random_uuid(),
   trip_id       uuid not null references trips(id) on delete cascade,
+  -- Unused; see the note above the households table. The live grouping is the
+  -- `household` text column below.
   household_id  uuid references households(id) on delete set null,
   name          text not null,
+  -- Optional family name — "Ritchie". A label for grouping totals, nothing more:
+  -- it is never the unit anything is split by, and it need not match anyone
+  -- else's spelling for the app to work. NULL or absent when not given.
+  household     text,
   -- Icon slug from the app's icon set: 'partridge', 'chicken', 'cheese',
   -- 'wine', 'dog', 'fig', 'walnut', 'olive', 'bread', 'tomato', 'sunflower',
   -- 'hat', 'boules', 'swim', 'hammock', 'steeple', 'snail', 'goat'.
@@ -107,6 +127,20 @@ create index if not exists members_trip_idx on members (trip_id, sort_order);
 -- same name AND icon twice is almost certainly a double-tap on the create button.
 create unique index if not exists members_trip_name_icon_uniq
   on members (trip_id, lower(name), icon);
+
+-- >>> MIGRATION, not part of the original definition. <<<
+--
+-- `household` was added after the database was first deployed. The create table
+-- above is `if not exists`, so on an existing installation it does nothing and
+-- the new column would never appear — re-running this file is not enough on its
+-- own. Hence this statement, at the top level where a re-run reaches it.
+--
+-- `add column if not exists` makes it safe to run twice, and safe on a fresh
+-- database where the create table above already included the column.
+--
+-- Added 2026-08: optional family label. Needs the matching worker.js, which is
+-- pasted into Cloudflare by hand — run this first.
+alter table members add column if not exists household text;
 
 -- ---------------------------------------------------------------- expenses
 

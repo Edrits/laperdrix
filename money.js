@@ -255,6 +255,158 @@
     return rows;
   }
 
+  /* --------------------------------------------------------- households */
+
+  /*
+     Families. A person record may carry an optional `household` string — a
+     family name like "Ritchie". Matching is on the trimmed name, compared
+     case-insensitively, so "ritchie" and " Ritchie " are one family; the label
+     shown is the first spelling encountered. An empty, whitespace-only or
+     missing household means the person is not in one.
+
+     Somebody with no household stands alone as their own group of one. That is
+     what keeps every caller on a single code path: a chart or a summary never
+     has to ask whether a row is a family or a person.
+  */
+
+  // The household a person belongs to, trimmed. '' means they are not in one.
+  function householdNameOf(person) {
+    const h = person && person.household;
+    return typeof h === 'string' ? h.trim() : '';
+  }
+
+  /**
+   * The households present in a people list, in a stable order — first
+   * appearance in `people`, so the groups do not reshuffle between renders.
+   *
+   * Returns [{ key, label, ids }]:
+   *   key   — 'hh:<lowercased trimmed household>', or 'me:<person id>' for
+   *           somebody who is not in a family
+   *   label — the household name as first spelled, or the person's name
+   *   ids   — the member ids in that group, in people order
+   */
+  function householdsOf(people) {
+    const byKey = new Map();
+    for (const p of people || []) {
+      if (!p) continue;
+      const name = householdNameOf(p);
+      // Prefixed, so a household called "a" can never collide with a person
+      // whose id is "a".
+      const key = name ? 'hh:' + name.toLowerCase() : 'me:' + p.id;
+      let g = byKey.get(key);
+      if (!g) {
+        g = { key: key, label: name || p.name || String(p.id), ids: [] };
+        byKey.set(key, g);
+      }
+      g.ids.push(p.id);
+    }
+    return Array.from(byKey.values());
+  }
+
+  /**
+   * spendByPerson, folded onto households. The field names are deliberately
+   * identical so the chart can render either from one code path.
+   *
+   * Returns [{ key, label, ids, paidLocal, paidHome, count, fraction }] sorted
+   * biggest paidHome first, then count descending, then key — the same total
+   * order discipline as spendByPerson, so groups level on money do not swap
+   * places between renders.
+   *
+   * Totals are summed from the raw expenses and rounded once at the group, not
+   * summed from already-rounded per-person figures, so a family's bar is the
+   * true total rather than the accumulated rounding of its members.
+   */
+  function spendByHousehold(people, expenses) {
+    const amountOf = v => (typeof v === 'number' && isFinite(v) ? v : 0);
+
+    const groups = householdsOf(people);
+    const keyOfMember = new Map();
+    for (const g of groups) for (const id of g.ids) keyOfMember.set(id, g.key);
+
+    const local = new Map();
+    const home = new Map();
+    const count = new Map();
+    for (const g of groups) {
+      local.set(g.key, 0);
+      home.set(g.key, 0);
+      count.set(g.key, 0);
+    }
+
+    for (const e of expenses || []) {
+      // A payer who is no longer on the trip belongs to no group and is
+      // ignored, exactly as in spendByPerson.
+      if (!keyOfMember.has(e.paidBy)) continue;
+      const key = keyOfMember.get(e.paidBy);
+      local.set(key, local.get(key) + amountOf(e.amountLocal));
+      home.set(key, home.get(key) + amountOf(e.amountHome));
+      count.set(key, count.get(key) + 1);
+    }
+
+    const rows = groups.map(g => ({
+      key: g.key,
+      label: g.label,
+      ids: g.ids.slice(),
+      paidLocal: round2(local.get(g.key) || 0),
+      paidHome: round2(home.get(g.key) || 0),
+      count: count.get(g.key) || 0,
+      fraction: 0,
+    }));
+
+    // Refunds can make a total negative; only a positive top gives a scale.
+    let top = 0;
+    for (const r of rows) if (r.paidHome > top) top = r.paidHome;
+    if (top > 0) for (const r of rows) r.fraction = r.paidHome / top;
+
+    rows.sort((a, b) =>
+      (b.paidHome - a.paidHome) ||
+      (b.count - a.count) ||
+      (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+
+    return rows;
+  }
+
+  /**
+   * summarise(), folded onto households.
+   *
+   * IMPORTANT — shares stay PER PERSON. A family of five carries five shares,
+   * not one. Households only aggregate what has already been computed per
+   * head; they never change the denominator. Treating a household as a single
+   * share would mean a couple with three children paid the same as a lone
+   * adult, which is the exact unfairness the person-as-atom model avoids.
+   * People with counts === false still contribute no share, as in summarise().
+   *
+   * basis is optional and defaults to 'per_person'; 'none' is passed straight
+   * through, so a trip computing no shares folds to no shares.
+   *
+   * Returns [{ id, paid, share, balance }] where `id` is the GROUP KEY, so
+   * levellingTransfers() consumes the result unchanged and suggests
+   * family-to-family transfers instead of person-to-person. It remains a
+   * suggestion and must never be presented as a debt.
+   */
+  function summariseHouseholds(people, expenses, basis) {
+    const how = basis || 'per_person';
+    const rows = summarise(people || [], expenses || [], how);
+    const byId = new Map(rows.map(r => [r.id, r]));
+
+    return householdsOf(people).map(g => {
+      let paid = 0, share = 0;
+      for (const id of g.ids) {
+        const r = byId.get(id);
+        if (!r) continue;
+        paid += r.paid;
+        share += r.share;
+      }
+      paid = round2(paid);
+      share = round2(share);
+      return {
+        id: g.key,
+        paid: paid,
+        share: share,
+        balance: how === 'none' ? 0 : round2(paid - share),
+      };
+    });
+  }
+
   /* ------------------------------------------------------------- totals */
 
   function total(expenses, field) {
@@ -268,5 +420,6 @@
   global.Money = {
     round2, parseAmount, toHome, toLocal, formatMoney,
     beneficiariesOf, summarise, levellingTransfers, spendByPerson, total,
+    householdsOf, spendByHousehold, summariseHouseholds,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

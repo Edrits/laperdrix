@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#171b14" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="styles.css?v=14">
+<link rel="stylesheet" href="styles.css?v=15">
 </head>
 <body class="kitty-page">
 
@@ -51,6 +51,12 @@
        two apologies where the page needs one instruction. -->
   <section class="sec chart-sec" id="chartSec" hidden>
     <h2 class="chart-h">Who's spent what</h2>
+    <!-- Only shown once somebody is in a family: with nobody grouped it is a
+         switch with one meaningful position. -->
+    <div class="seg" role="tablist" id="groupSeg" hidden>
+      <button class="seg-b on" id="byPeople" role="tab" aria-selected="true">People</button>
+      <button class="seg-b" id="byFamily" role="tab" aria-selected="false">Families</button>
+    </div>
     <div class="chart" id="chart"></div>
   </section>
 
@@ -82,6 +88,16 @@
         <p class="set-note" id="rateNote"></p>
       </div>
     </details>
+
+    <!-- Rare and destructive, so it lives down here behind a disclosure rather
+         than anywhere a thumb could find it by accident. -->
+    <details class="quiet" id="resetBox" hidden>
+      <summary>Start again</summary>
+      <div class="quiet-in">
+        <p class="set-note">Clears the spending and leaves everybody's name and icon alone.</p>
+        <button class="btn danger wide" id="resetBtn">Clear every spend</button>
+      </div>
+    </details>
   </section>
 </main>
 
@@ -106,6 +122,14 @@
     <div class="payers" id="fPayers" role="group" aria-labelledby="payLabel"></div>
     <input id="fNewName" type="text" maxlength="40" placeholder="Their name" autocomplete="off" hidden>
 
+    <!-- Only when the payer is somebody new. Asking an existing payer's family
+         on every single spend would be three taps of nothing. -->
+    <div id="fHouseWrap" hidden>
+      <label id="hhLabel">Family</label>
+      <div class="payers" id="fHouse" role="group" aria-labelledby="hhLabel"></div>
+      <input id="fHouseName" type="text" maxlength="30" placeholder="Family name" autocomplete="off" hidden>
+    </div>
+
     <label id="tagLabel">What for</label>
     <div class="tags" id="fTags" role="group" aria-labelledby="tagLabel"></div>
     <input id="fDetail" type="text" maxlength="60" placeholder="Anything worth adding (optional)" autocomplete="off">
@@ -122,9 +146,26 @@
   </div>
 </div>
 
+<!-- --------------------------------------------------------- are you sure?
+     One confirm, no typing a word to unlock it — Ed asked for "an ARE YOU SURE
+     type message but not locked down". What makes it mean something is that it
+     names the real count and the real total, so it can't be dismissed on
+     autopilot. "Keep them" is the solid button; clearing is the outlined one. -->
+<div class="scrim" id="scrim"></div>
+<div class="sheet confirm" id="confirmSheet" role="dialog" aria-modal="true" aria-labelledby="cfTitle">
+  <div class="in2">
+    <h2 id="cfTitle">Clear every spend?</h2>
+    <p class="cf-body" id="cfBody"></p>
+    <div class="row">
+      <button class="btn" id="cfCancel">Keep them</button>
+      <button class="btn danger" id="cfGo">Clear the lot</button>
+    </div>
+  </div>
+</div>
+
 <script src="icons.js?v=5"></script>
 <script src="sync.js?v=2"></script>
-<script src="money.js?v=2"></script>
+<script src="money.js?v=3"></script>
 <script>
 /* =========================================================================
    The kitty.
@@ -194,12 +235,24 @@ function loadPeople(){
     id: p.id, name: p.name,
     icon: p.icon || window.ICONS[i % window.ICONS.length][0],
     counts: p.counts !== false,
+    household: (p.household || '').trim(),
   }));
+}
+
+/* The families in use, first spelling wins. Trimmed and folded on case so
+   "Ritchie" and "ritchie " don't become two families that never add up. */
+function familyNames(){
+  const seen = new Map();
+  for (const p of people) {
+    const h = (p.household || '').trim();
+    if (h && !seen.has(h.toLowerCase())) seen.set(h.toLowerCase(), h);
+  }
+  return [...seen.values()];
 }
 
 let people   = loadPeople();
 let expenses = Sync.expenses();
-let conf     = Object.assign({ fxRate: 0.85, fxAt: null, fxSource: 'default' }, read(K_CONF, {}));
+let conf     = Object.assign({ fxRate: 0.85, fxAt: null, fxSource: 'default', groupBy: 'people' }, read(K_CONF, {}));
 let phase    = 'all';
 let draft    = null;
 
@@ -235,7 +288,6 @@ function renderPot(){
    the chart reading as a leaderboard of the only three who have paid so far. */
 function renderChart(){
   const shown = visible();
-  const rows = Money.spendByPerson(people, shown);
   const el = $('chart');
 
   /* Keyed on spending, not on people. Somebody who has only put their dates in
@@ -244,21 +296,43 @@ function renderChart(){
   $('chartSec').hidden = shown.length === 0;
   if (shown.length === 0) { el.innerHTML = ''; return; }
 
+  /* The toggle only earns its place once somebody is in a family. */
+  const families = familyNames();
+  $('groupSeg').hidden = families.length === 0;
+  const byFamily = families.length > 0 && conf.groupBy === 'family';
+  $('byPeople').classList.toggle('on', !byFamily);
+  $('byFamily').classList.toggle('on', byFamily);
+  $('byPeople').setAttribute('aria-selected', String(!byFamily));
+  $('byFamily').setAttribute('aria-selected', String(byFamily));
+
+  /* Both shapes carry the same field names, so there is one rendering path.
+     A family has no icon of its own — inventing one would be a second decision
+     for whoever typed the name — so it borrows its first member's. */
+  const rows = byFamily
+    ? Money.spendByHousehold(people, shown).map(r => {
+        const first = personById(r.ids[0]);
+        return { label: r.label, icon: first ? first.icon : 'partridge',
+                 paidLocal: r.paidLocal, count: r.count, fraction: r.fraction };
+      })
+    : Money.spendByPerson(people, shown).map(r => {
+        const p = personById(r.id);
+        return p ? { label: p.name, icon: p.icon,
+                     paidLocal: r.paidLocal, count: r.count, fraction: r.fraction } : null;
+      }).filter(Boolean);
+
   /* Widths are written inline, then .ready is added a frame later — that is
      what the CSS grows the bars off. Taking it away first makes a re-render
      (a new spend, a change of filter) animate again rather than snap. */
   el.classList.remove('ready');
   el.innerHTML = rows.map(r => {
-    const p = personById(r.id);
-    if (!p) return '';
-    const colour = colourOf(p.icon);
+    const colour = colourOf(r.icon);
     const note = r.count === 0 ? 'nothing yet'
                : r.count === 1 ? '1 entry'
                : r.count + ' entries';
     const width = r.fraction === 0 ? '0%' : (r.fraction * 100).toFixed(1) + '%';
     return `<div class="crow">
   <div class="chead">
-    <span class="cname"><span class="av sm" style="background:${colour}">${iconOf(p.icon)}</span>${esc(p.name)}</span>
+    <span class="cname"><span class="av sm" style="background:${colour}">${iconOf(r.icon)}</span>${esc(r.label)}</span>
     <span class="camt"><b>${fmtL(r.paidLocal)}</b><i>${note}</i></span>
   </div>
   <div class="ctrack"><i style="width:${width};background:${colour}"></i></div>
@@ -312,12 +386,23 @@ function renderSpend(){
    filtered list so it agrees with the chart above rather than quietly
    answering a different question. */
 function renderLevel(){
-  const transfers = Money.levellingTransfers(Money.summarise(people, visible(), 'per_person'));
+  /* Follows the chart's grouping, so the suggestion is between the same things
+     the bars are. Shares stay per person either way — a family of five carries
+     five shares, not one; the household only adds them up. */
+  const byFamily = familyNames().length > 0 && conf.groupBy === 'family';
+  const label = byFamily
+    ? new Map(Money.householdsOf(people).map(g => [g.key, g.label]))
+    : new Map(people.map(p => [p.id, p.name]));
+  const summary = byFamily
+    ? Money.summariseHouseholds(people, visible())
+    : Money.summarise(people, visible(), 'per_person');
+
+  const transfers = Money.levellingTransfers(summary);
   $('levelBox').hidden = transfers.length === 0;
   $('levelList').innerHTML = transfers.map(t => {
-    const from = personById(t.from), to = personById(t.to);
+    const from = label.get(t.from), to = label.get(t.to);
     return from && to
-      ? `<div class="lrow"><span>${esc(from.name)} → ${esc(to.name)}</span><span>${fmtH(t.amount)}</span></div>` : '';
+      ? `<div class="lrow"><span>${esc(from)} → ${esc(to)}</span><span>${fmtH(t.amount)}</span></div>` : '';
   }).join('');
 }
 
@@ -334,7 +419,51 @@ function render(){
   renderSpend();
   renderLevel();
   renderRate();
+  $('resetBox').hidden = expenses.length === 0;
 }
+
+/* ------------------------------------------------------------ start again
+
+   One confirm, no typing a word to unlock it. What stops it being dismissed on
+   autopilot is that it names the real count and the real total — a dialog that
+   says "are you sure?" and nothing else is just a speed bump.
+
+   It deletes through Sync so the rows go on the server too. Clearing only
+   localStorage would look like it had worked and then have the next pull()
+   quietly put every entry back. */
+function openConfirm(){
+  const n = expenses.length;
+  if (!n) return;
+  $('cfBody').innerHTML =
+    `This removes <b>${n} ${n === 1 ? 'entry' : 'entries'}</b>, <b>${fmtL(Money.total(expenses, 'amountLocal'))}</b> ` +
+    `in total, for everyone on every device. The people and their icons stay.`;
+  $('confirmSheet').classList.add('open');
+  $('scrim').classList.add('open');
+}
+function closeConfirm(){
+  $('confirmSheet').classList.remove('open');
+  $('scrim').classList.remove('open');
+}
+
+$('resetBtn').addEventListener('click', openConfirm);
+$('cfCancel').addEventListener('click', closeConfirm);
+$('scrim').addEventListener('click', closeConfirm);   // tapping away is a cancel
+$('cfGo').addEventListener('click', () => {
+  // Snapshot the ids first: removeExpense rewrites the stored list each time,
+  // so iterating the live array would skip every other entry.
+  for (const id of expenses.map(e => e.id)) Sync.removeExpense(id);
+  expenses = Sync.expenses();
+  closeConfirm();
+  render();
+});
+
+function setGrouping(mode){
+  conf.groupBy = mode;
+  write(K_CONF, conf);
+  render();
+}
+$('byPeople').addEventListener('click', () => setGrouping('people'));
+$('byFamily').addEventListener('click', () => setGrouping('family'));
 
 $('phaseFilters').addEventListener('click', e => {
   const b = e.target.closest('.pill');
@@ -355,7 +484,24 @@ function renderPayers(){
     `<button type="button" class="who-chip newp${draft.paidBy === '__new' ? ' on' : ''}" data-id="__new">
        <span class="plus">＋</span>${people.length ? 'Someone else' : 'Add the first person'}
      </button>`;
-  $('fNewName').hidden = draft.paidBy !== '__new';
+  const isNew = draft.paidBy === '__new';
+  $('fNewName').hidden = !isNew;
+  $('fHouseWrap').hidden = !isNew;
+  if (isNew) renderHouses();
+}
+
+/* Family chips, only ever shown while inventing a person. Defaults to "On
+   their own" — nobody's family should be guessed at, and a wrong one is quiet
+   enough that it would go unnoticed for a fortnight. */
+function renderHouses(){
+  const chosen = draft.household === undefined ? '' : draft.household;
+  const chip = (val, text, extra) =>
+    `<button type="button" class="who-chip${extra || ''}${chosen === val ? ' on' : ''}" data-hh="${esc(val)}">${text}</button>`;
+  $('fHouse').innerHTML =
+    chip('', 'On their own') +
+    familyNames().map(h => chip(h, esc(h))).join('') +
+    chip('__new', '<span class="plus">＋</span>New family', ' newp');
+  $('fHouseName').hidden = chosen !== '__new';
 }
 
 function renderTags(){
@@ -393,6 +539,7 @@ function openForm(existing){
     id: null, category: null, what: '', currency: 'EUR',
     paidBy: personById(lastPayer) ? lastPayer : (people[0] ? people[0].id : '__new'),
     spentOn: todayISO(),
+    household: '',
   };
 
   $('fTitle').textContent = existing ? 'Edit spend' : 'Add spend';
@@ -446,6 +593,16 @@ $('fPayers').addEventListener('click', e => {
   updateForm();
 });
 
+$('fHouse').addEventListener('click', e => {
+  const b = e.target.closest('.who-chip');
+  if (!b) return;
+  draft.household = b.dataset.hh;
+  renderHouses();
+  if (draft.household === '__new') $('fHouseName').focus();
+  updateForm();
+});
+$('fHouseName').addEventListener('input', updateForm);
+
 $('fTags').addEventListener('click', e => {
   const b = e.target.closest('.pill');
   if (!b) return;
@@ -468,7 +625,13 @@ $('fSave').addEventListener('click', () => {
     const already = people.find(p => p.name.toLowerCase() === name.toLowerCase());
     if (already) payer = already.id;
     else {
-      const rec = { id: Sync.newId(), name, icon: freeIcon(), from: TRIP.start, to: TRIP.end };
+      // "__new" family means whatever they typed; anything else is either an
+      // existing family or the empty string for nobody.
+      const house = draft.household === '__new'
+        ? $('fHouseName').value.trim()
+        : (draft.household || '');
+      const rec = { id: Sync.newId(), name, icon: freeIcon(),
+                    from: TRIP.start, to: TRIP.end, household: house };
       Sync.savePerson(rec);
       people = loadPeople();
       payer = rec.id;
@@ -517,7 +680,11 @@ $('spendList').addEventListener('click', e => {
 });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && $('sheet').classList.contains('open')) closeForm();
+  if (e.key !== 'Escape') return;
+  // The confirm sits on top, so it takes Escape first. Any ambiguous dismissal
+  // of a destructive question has to mean cancel.
+  if ($('confirmSheet').classList.contains('open')) closeConfirm();
+  else if ($('sheet').classList.contains('open')) closeForm();
 });
 
 /* ---------------------------------------------------------- the rate */

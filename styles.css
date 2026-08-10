@@ -28,6 +28,11 @@
   --surface:var(--paper);
   --tx:var(--ink);
   --accent:var(--terra);
+  /* A deeper, dustier brick than the terracotta accent. Destructive actions
+     have to be distinguishable from ordinary ones, but this is an "are you
+     sure", not an alarm — so it comes from the same earth as everything else
+     rather than an off-the-shelf signal red. */
+  --danger:#9c3d26;
 
   --serif:"Iowan Old Style","Hoefler Text",Palatino,"Palatino Linotype",Georgia,serif;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
@@ -40,17 +45,20 @@
     --bg:#171b14; --surface:#1e231b; --tx:#ebe4d3; --mut:#8e9583; --hair:#2d3328;
     --terra:#d4784f; --lichen:#93a07c; --cool:#6f9a95; --lamp:#e8b25c;
     --accent:var(--lamp);
+    --danger:#e0846a;
   }
 }
 :root[data-theme="dark"]{
   --bg:#171b14; --surface:#1e231b; --tx:#ebe4d3; --mut:#8e9583; --hair:#2d3328;
   --terra:#d4784f; --lichen:#93a07c; --cool:#6f9a95; --lamp:#e8b25c;
   --accent:var(--lamp);
+  --danger:#e0846a;
 }
 :root[data-theme="light"]{
   --bg:#e9e4d7; --surface:#f3efe4; --tx:#1e2419; --mut:#6d7563; --hair:#d3ccba;
   --terra:#b0552f; --lichen:#7e8a6a; --cool:#5c7d7a; --lamp:#d99a3f;
   --accent:var(--terra);
+  --danger:#9c3d26;
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -673,6 +681,29 @@ body.picking .bar{display:none}
 .quiet[open] > summary::after{transform:translateY(1px) rotate(-135deg)}
 .quiet-in{padding:0 0 18px}
 .quiet-in .level{margin-top:0;padding:13px 14px}
+
+/* --------------------------------------------------------- are you sure?
+   A bottom sheet like every other decision in this app, not a centred modal.
+   It is used one-handed on a phone, and the thumb is already down there.
+   Above the ordinary sheet's z-index because both can be in the DOM at once. */
+.scrim{
+  position:fixed;inset:0;z-index:55;background:rgba(10,13,8,.58);
+  opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s;
+}
+.scrim.open{opacity:1;visibility:visible}
+.sheet.confirm{z-index:60}
+.cf-body{margin:9px 0 20px;color:var(--tx);font-size:14.5px;line-height:1.55}
+/* The numbers are what make a confirmation mean anything, so they are not
+   fine print. Tabular so they don't shimmy as the count changes. */
+.cf-body b{font-weight:600;font-variant-numeric:tabular-nums}
+
+/* Destructive, and outlined rather than filled — the solid button next to it
+   is "keep them", so the weight of the thing your eye lands on first is the
+   safe choice. Filling only on hover, when the pointer is already committed. */
+.btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.btn.danger:hover,.btn.danger:focus-visible{background:var(--danger);color:var(--bg)}
+.btn.wide{width:100%;margin-top:2px}
+@media (prefers-reduced-motion:reduce){.scrim{transition:none}}
 @media (prefers-reduced-motion:reduce){
   .quiet > summary::after{transition:none}
 }

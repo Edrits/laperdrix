@@ -19,7 +19,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=1">
-<link rel="stylesheet" href="styles.css?v=14">
+<link rel="stylesheet" href="styles.css?v=15">
 </head>
 <body>
 
@@ -154,6 +154,11 @@
     <p class="hint" id="hint"></p>
     <label for="name">Your name</label>
     <input id="name" type="text" autocomplete="given-name" enterkeyhint="done" maxlength="40">
+    <!-- Optional, and never guessed at. It only groups the kitty's totals, so
+         a wrong family would be quietly wrong for a fortnight. -->
+    <label id="hhLabel">Family</label>
+    <div class="payers" id="fHouse" role="group" aria-labelledby="hhLabel"></div>
+    <input id="fHouseName" type="text" maxlength="30" placeholder="Family name" autocomplete="off" hidden>
     <label id="pickLabel">Your icon</label>
     <div class="picker" id="picker" role="group" aria-labelledby="pickLabel"></div>
     <div class="row">
@@ -205,7 +210,11 @@ function load(){
     /* Records written before profiles existed have a colour but no icon.
        Keep them working: give them one rather than dropping the row. */
     icon: p.icon || ICONS[i % ICONS.length][0],
-    from: p.from, to: p.to
+    from: p.from, to: p.to,
+    /* Must be carried, not dropped: this list is what the save path rebuilds a
+       person from, so losing it here would quietly erase somebody's family the
+       next time they edited their dates. */
+    household: (p.household || '').trim()
   }));
 }
 
@@ -457,22 +466,54 @@ function clearOfSheet(){
   });
 }
 
+/* The families already in use, first spelling wins. Folded on case and trimmed,
+   so "Ritchie" and "ritchie " don't become two families that never add up. */
+function familyNames(){
+  const seen = new Map();
+  for (const p of people) {
+    const h = (p.household || '').trim();
+    if (h && !seen.has(h.toLowerCase())) seen.set(h.toLowerCase(), h);
+  }
+  return [...seen.values()];
+}
+
+function renderHouses(){
+  const chosen = draft.household === undefined ? '' : draft.household;
+  const chip = (val, text, extra) =>
+    `<button type="button" class="who-chip${extra || ''}${chosen === val ? ' on' : ''}" data-hh="${esc(val)}">${text}</button>`;
+  $('fHouse').innerHTML =
+    chip('', 'On my own') +
+    familyNames().map(h => chip(h, esc(h))).join('') +
+    chip('__new', '<span class="plus">＋</span>New family', ' newp');
+  $('fHouseName').hidden = chosen !== '__new';
+}
+
 function startDraft(d){
   draft = d; mode = 'picking'; hover = null; focus = null;
-  renderPicker(); render();
+  renderPicker(); renderHouses(); render();
   $('name').value = d.name;
+  $('fHouseName').value = '';
   clearOfSheet();
 }
 
+$('fHouse').addEventListener('click', e => {
+  const b = e.target.closest('.who-chip');
+  if (!b) return;
+  draft.household = b.dataset.hh;
+  renderHouses();
+  if (draft.household === '__new') $('fHouseName').focus();
+});
+
 $('add').addEventListener('click', () => {
-  startDraft({ name:'', icon: ICONS[people.length % ICONS.length][0], from:null, to:null });
+  startDraft({ name:'', icon: ICONS[people.length % ICONS.length][0], from:null, to:null, household:'' });
 });
 
 $('folk').addEventListener('click', e => {
   const chip = e.target.closest('.chip');
   if (!chip) return;
   const p = people.find(x => x.id === chip.dataset.id);
-  if (p) startDraft({ id:p.id, name:p.name, icon:p.icon, from:p.from, to:p.to });
+  if (p) startDraft({ id:p.id, name:p.name, icon:p.icon, from:p.from, to:p.to,
+                      household: (p.household || '').trim() });
 });
 
 $('picker').addEventListener('click', e => {
@@ -488,9 +529,15 @@ $('name').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blu
 $('cancel').addEventListener('click', () => { mode='idle'; draft=null; hover=null; render(); });
 
 $('save').addEventListener('click', () => {
+  // "__new" means whatever they typed in the box; anything else is either an
+  // existing family or '' for nobody. Never null — '' is the one absent value.
+  const house = draft.household === '__new'
+    ? $('fHouseName').value.trim()
+    : (draft.household || '').trim();
   const rec = {
     id: draft.id || Sync.newId(),
-    name: draft.name.trim(), icon: draft.icon, from: draft.from, to: draft.to
+    name: draft.name.trim(), icon: draft.icon, from: draft.from, to: draft.to,
+    household: house
   };
   // Saves locally at once and queues for the server; the entry is safe even if
   // the line is down.

@@ -277,6 +277,210 @@ group('spendByPerson — awkward inputs');
 deep(M.spendByPerson([], evenly), [], 'no people is not a crash');
 deep(M.spendByPerson([], []), [],     'neither is nothing at all');
 
+/* ------------------------------------------------------------ households */
+const ritchies = [
+  { id: 'r1', name: 'Ed',   household: 'Ritchie' },
+  { id: 'r2', name: 'Kate', household: ' ritchie ' },
+  { id: 'p1', name: 'Pip' },
+];
+
+group('householdsOf — a family is one group, a loner is a group of one');
+{
+  const g = M.householdsOf(ritchies);
+  eq(g.length, 2,                     'three people, two groups');
+  deep(g.map(x => x.key), ['hh:ritchie', 'me:p1'], 'families are hh:, loners are me:');
+  deep(g[0].ids, ['r1', 'r2'],        'both Ritchies are in the family group');
+  deep(g[1].ids, ['p1'],              'Pip stands alone as a group of one');
+}
+{
+  const g = M.householdsOf(ritchies);
+  eq(g[0].label, 'Ritchie',  'case and surrounding whitespace do not split a family');
+  eq(g[1].label, 'Pip',      'somebody with no household is labelled with their name');
+}
+{
+  // The label is the FIRST spelling seen, not the tidiest one.
+  const g = M.householdsOf([
+    { id: 'a', name: 'Ed',   household: 'ritchie' },
+    { id: 'b', name: 'Kate', household: 'Ritchie' },
+  ]);
+  eq(g.length, 1,           'one family however it was typed');
+  eq(g[0].label, 'ritchie', 'and the label keeps the first spelling');
+}
+{
+  const g = M.householdsOf([
+    { id: 'a', name: 'Ed', household: '   ' },
+    { id: 'b', name: 'Kate', household: '' },
+    { id: 'c', name: 'Sam' },
+    { id: 'd', name: 'Jo', household: null },
+  ]);
+  deep(g.map(x => x.key), ['me:a', 'me:b', 'me:c', 'me:d'],
+       'blank, empty, missing and non-string households all mean no family');
+}
+{
+  const g = M.householdsOf([{ id: 'x', name: 'Sam', household: 'Bell' }]);
+  deep(g, [{ key: 'hh:bell', label: 'Bell', ids: ['x'] }],
+       'a household of exactly one person is still a household');
+}
+
+group('spendByHousehold — the family folds into one row');
+{
+  const r = M.spendByHousehold(ritchies, [
+    { paidBy: 'r1', amountLocal: 100, amountHome: 85 },
+    { paidBy: 'r2', amountLocal: 40,  amountHome: 34 },
+    { paidBy: 'p1', amountLocal: 20,  amountHome: 17 },
+  ]);
+  eq(r.length, 2,                       'two groups, two rows');
+  const fam = r.find(x => x.key === 'hh:ritchie');
+  eq(fam.paidHome, 119,                 "the family's paidHome is 85 + 34");
+  eq(fam.paidLocal, 140,                'and paidLocal likewise');
+  eq(fam.count, 2,                      'with both their entries counted');
+  eq(fam.label, 'Ritchie',              'labelled with the family name');
+  deep(fam.ids, ['r1', 'r2'],           'and carrying its members');
+  const pip = r.find(x => x.key === 'me:p1');
+  eq(pip.paidHome, 17,                  'Pip is her own group of one');
+  eq(pip.label, 'Pip',                  'labelled with her name');
+}
+{
+  const r = M.spendByHousehold(ritchies, [
+    { paidBy: 'r1',    amountLocal: 20,  amountHome: 17 },
+    { paidBy: 'ghost', amountLocal: 500, amountHome: 425 },
+  ]);
+  eq(r.length, 2,                                         'no phantom group for the ghost');
+  eq(M.round2(r.reduce((t, x) => t + x.paidHome, 0)), 17, 'and their spend is ignored');
+}
+{
+  const r = M.spendByHousehold(ritchies, [
+    { paidBy: 'r1', amountLocal: 0.1, amountHome: 0.1 },
+    { paidBy: 'r2', amountLocal: 0.2, amountHome: 0.2 },
+  ]);
+  eq(r.find(x => x.key === 'hh:ritchie').paidHome, 0.3,
+     'a family total is rounded once, not accumulated from rounded members');
+}
+
+group('spendByHousehold — fraction drives the bar widths');
+{
+  const four = [
+    { id: 'r1', name: 'Ed',   household: 'Ritchie' },
+    { id: 'r2', name: 'Kate', household: 'Ritchie' },
+    { id: 'b1', name: 'Sam',  household: 'Bell' },
+    { id: 'p1', name: 'Pip' },
+  ];
+  const r = M.spendByHousehold(four, [
+    { paidBy: 'r1', amountLocal: 60, amountHome: 60 },
+    { paidBy: 'r2', amountLocal: 40, amountHome: 40 },
+    { paidBy: 'b1', amountLocal: 25, amountHome: 25 },
+  ]);
+  deep(r.map(x => x.key), ['hh:ritchie', 'hh:bell', 'me:p1'], 'biggest household first');
+  eq(r.find(x => x.key === 'hh:ritchie').fraction, 1,    'the top household is exactly 1');
+  eq(r.find(x => x.key === 'hh:bell').fraction, 0.25,    '25 against a top of 100 is 0.25');
+  eq(r.find(x => x.key === 'me:p1').fraction, 0,         'and nothing spent is 0');
+}
+{
+  // Level on money and on count: the group key decides, deterministically.
+  const two = [
+    { id: 'b1', name: 'Sam', household: 'Bell' },
+    { id: 'a1', name: 'Ann', household: 'Arnaud' },
+  ];
+  const spend = [
+    { paidBy: 'b1', amountLocal: 30, amountHome: 30 },
+    { paidBy: 'a1', amountLocal: 30, amountHome: 30 },
+  ];
+  deep(M.spendByHousehold(two, spend).map(x => x.key), ['hh:arnaud', 'hh:bell'],
+       'a full tie breaks on the group key');
+  deep(M.spendByHousehold(two.slice().reverse(), spend.slice().reverse()).map(x => x.key),
+       ['hh:arnaud', 'hh:bell'], 'and does not flicker if the inputs are reordered');
+}
+
+group('summariseHouseholds — a family of three carries THREE shares');
+{
+  // The fairness property. A household aggregates shares already computed per
+  // head; it never becomes a single share, or a couple with three children
+  // would pay the same as a lone adult.
+  const trio = [
+    { id: 'r1', name: 'Ed',   household: 'Ritchie' },
+    { id: 'r2', name: 'Kate', household: 'Ritchie' },
+    { id: 'r3', name: 'Nell', household: 'Ritchie' },
+    { id: 'p1', name: 'Pip' },
+  ];
+  const s = M.summariseHouseholds(trio, [
+    { paidBy: 'p1', amountHome: 120, beneficiaries: null },
+  ]);
+  const fam = s.find(x => x.id === 'hh:ritchie'), pip = s.find(x => x.id === 'me:p1');
+  eq(fam.share, 90,             'the family of three is charged three shares of 30');
+  eq(pip.share, 30,             'the lone adult is charged one');
+  eq(fam.share / pip.share, 3,  'exactly three times, which must never regress');
+  eq(pip.paid, 120,             'Pip put the whole 120 in');
+  eq(fam.balance, -90,          'so the family is 90 down');
+  eq(pip.balance, 90,           'and Pip is 90 up');
+  eq(M.round2(s.reduce((t, x) => t + x.balance, 0)), 0, 'household balances sum to zero');
+  deep(s.map(x => Object.keys(x)), [['id','paid','share','balance'], ['id','paid','share','balance']],
+       'the shape is summarise()-shaped, so levellingTransfers eats it unchanged');
+}
+
+group('summariseHouseholds — a member who does not count');
+{
+  const withBaby = [
+    { id: 'r1', name: 'Ed',   household: 'Ritchie' },
+    { id: 'r2', name: 'Kate', household: 'Ritchie' },
+    { id: 'r3', name: 'Baby', household: 'Ritchie', counts: false },
+    { id: 'p1', name: 'Pip' },
+  ];
+  const s = M.summariseHouseholds(withBaby, [
+    { paidBy: 'r1', amountHome: 90, beneficiaries: null },
+  ]);
+  const fam = s.find(x => x.id === 'hh:ritchie');
+  eq(fam.share, 60,   'the baby carries no share, so the family carries two, not three');
+  eq(fam.paid, 90,    'but what the family paid is untouched by that');
+  eq(fam.balance, 30, 'leaving them 30 up');
+  eq(s.find(x => x.id === 'me:p1').share, 30, 'and the split is three ways, not four');
+}
+
+group('summariseHouseholds — feeds levellingTransfers');
+{
+  const four = [
+    { id: 'r1', name: 'Ed',   household: 'Ritchie' },
+    { id: 'r2', name: 'Kate', household: 'Ritchie' },
+    { id: 'b1', name: 'Sam',  household: 'Bell' },
+    { id: 'p1', name: 'Pip' },
+  ];
+  const s = M.summariseHouseholds(four, [
+    { paidBy: 'r1', amountHome: 120, beneficiaries: null },
+  ]);
+  const t = M.levellingTransfers(s);
+  const keys = new Set(M.householdsOf(four).map(g => g.key));
+  eq(t.every(x => keys.has(x.from) && keys.has(x.to)), true,
+     'every transfer is keyed by group key, not by person id');
+  eq(t.every(x => x.to === 'hh:ritchie'), true, 'all of them go to the family that paid');
+  eq(M.round2(t.reduce((x, y) => x + y.amount, 0)), 60,
+     'and they total the 60 the Ritchies are up');
+  eq(t.length, 2, 'two payments level three households');
+}
+{
+  const s = M.summariseHouseholds(ritchies, [{ paidBy: 'r1', amountHome: 90 }], 'none');
+  eq(s.find(x => x.id === 'hh:ritchie').paid, 90, "basis 'none' still shows what was paid");
+  eq(s.every(x => x.share === 0 && x.balance === 0), true, 'but computes no shares at all');
+}
+
+group('households — awkward inputs');
+{
+  deep(M.householdsOf([]), [],          'no people is not a crash');
+  deep(M.spendByHousehold([], []), [],  'neither is nothing at all');
+  deep(M.summariseHouseholds([], []), [], 'nor summarising nobody');
+  deep(M.spendByHousehold(ritchies, []).map(x => x.paidHome), [0, 0], 'no expenses: everybody on zero');
+  eq(M.spendByHousehold(ritchies, []).every(x => x.fraction === 0), true, 'and every fraction is 0');
+  const s = M.summariseHouseholds(ritchies, []);
+  eq(s.every(x => x.balance === 0), true, 'no expenses means nobody is up or down');
+}
+{
+  const solo = [{ id: 'x', name: 'Sam', household: 'Bell' }];
+  const r = M.spendByHousehold(solo, [{ paidBy: 'x', amountLocal: 10, amountHome: 8 }]);
+  eq(r.length, 1,          'a household of one behaves like any other');
+  eq(r[0].paidHome, 8,     'with its own spend');
+  eq(r[0].fraction, 1,     'and it is its own top');
+  const s = M.summariseHouseholds(solo, [{ paidBy: 'x', amountHome: 8 }]);
+  eq(s[0].balance, 0,      'and pays only for itself');
+}
+
 /* ---------------------------------------------------------------- totals */
 group('total');
 eq(M.total([{ amountHome: 1.1 }, { amountHome: 2.2 }]), 3.3, '1.1 + 2.2 is 3.3, not 3.3000000000000003');

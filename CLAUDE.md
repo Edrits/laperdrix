@@ -154,6 +154,24 @@ sprite; a mismatch renders an empty circle with no error.
 - `split_basis` has a `per_household` value in the schema enum, but `summarise()` implements only
   `per_person` and `none`, and the app now always passes `per_person`. Picking `per_household`
   would silently behave as an even per-person split.
+- **Families are a label on the person, not a table.** `members.household` is plain text; the
+  `households` table and `members.household_id` are from an earlier design and are dead. Matching
+  folds on case and trims, so "Ritchie" and "ritchie " are one family — two people typing the same
+  name and agreeing beats two phones racing to create a row with no signal. Both `index.html` and
+  `kitty.html` gather the chips from the current people list, first spelling wins.
+- **Grouping by family never changes the denominator.** `summariseHouseholds()` sums shares that are
+  still computed per head, so a family of five carries five shares. Ed asked for families to group
+  "the owing", not to become the unit of it — one-share-per-household would mean a couple with three
+  children paid the same as a lone adult, which is the unfairness the person-as-atom model exists to
+  avoid. `split_basis = 'per_household'` in the schema means the wrong thing; don't wire it up.
+- **Any new field on a person has to be added in four places**, and three of them fail silently:
+  `personIn` *and* `personOut` in `worker.js`, the mapper in `kitty.html`'s `loadPeople()`, and the
+  mapper in `index.html`. The landing page one is the nastiest — it rebuilds the record on save, so
+  a field it drops is erased the next time anyone edits their dates.
+- **Clearing the spending deletes through `Sync.removeExpense`, one id at a time**, off a snapshot of
+  the ids rather than the live array. Clearing only `localStorage` would look like it worked and then
+  have the next `pull()` put everything back. The confirm names the real count and total — a dialog
+  that only says "are you sure?" is a speed bump, not a decision.
 - **Amount fields must stay `type="text"` with `inputmode="decimal"`.** `type="number"` rejects
   `12,50` outright in some locales, which loses French receipts at the keyboard rather than in the
   parser. The phone keypad comes from `inputmode`, and the keyboard only *appears* if `focus()` is
