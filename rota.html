@@ -13,7 +13,7 @@
 <!-- Before styles.css, so the --ph-* stand-ins exist by the time the rule that
      uses one is parsed. Same order as index.html. -->
 <link rel="stylesheet" href="photos.css?v=2">
-<link rel="stylesheet" href="styles.css?v=18">
+<link rel="stylesheet" href="styles.css?v=19">
 </head>
 <body class="kitty-page rota-page">
 
@@ -38,13 +38,15 @@
      photograph that vanished when there was nothing to cook would leave a
      first-time visitor looking at a bare list of controls. -->
 <div class="band table">
-  <div class="cap"><small>Most evenings</small><p>The long table under the awning. Somebody has to cook it.</p></div>
+  <div class="cap"><p>À vos casseroles. The hungry revellers await.</p></div>
 </div>
 
 <main>
   <!-- Tonight, or the next night still to come. -->
   <section class="sec hero-cook" id="heroSec" hidden>
-    <p class="eyebrow">Aux fourneaux</p>
+    <!-- The same mark the landing page's rota band carries, so arriving here
+         from it feels like the same section rather than a different page. -->
+    <p class="eyebrow"><span class="eb-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-fourneaux"/></svg></span>Aux fourneaux</p>
     <h1 class="cook-when" id="heroWhen"></h1>
     <div class="lineup" id="heroTeam"></div>
     <p class="cook-note" id="heroNote"></p>
@@ -54,8 +56,8 @@
     <h2 class="chart-h" id="allHead" hidden>The fortnight</h2>
     <div id="nights"></div>
     <p class="empty-note" id="noRota">
-      No rota yet. Tap <b>Scramble the teams</b> and one gets built from everybody's dates —
-      nothing happens until you ask, so people can keep adding themselves without it churning.
+      No rota yet. Tap <b>Scramble the teams</b> and one gets built from everybody's dates.
+      Nothing happens until you ask, so people can keep adding themselves without it churning.
     </p>
   </section>
 
@@ -109,7 +111,7 @@
   </div>
 </div>
 
-<script src="icons.js?v=5"></script>
+<script src="icons.js?v=6"></script>
 <script src="sync.js?v=3"></script>
 <script src="photos.js?v=1"></script>
 <script src="rota.js?v=1"></script>
@@ -430,8 +432,8 @@ function openAdd(day){
   const on = teamOn(day);
   const spare = presentOn(day).filter(id => !on.includes(id));
   $('addWhen').textContent = spare.length
-    ? `${longDay(day)} — anyone here that evening.`
-    : `${longDay(day)} — everybody here is already cooking.`;
+    ? `${longDay(day)}, anyone here that evening.`
+    : `${longDay(day)}, everybody here is already cooking.`;
   $('addWho').innerHTML = spare.map(id => {
     const p = personById(id);
     return p ? `<button type="button" class="who-chip" data-id="${esc(id)}">

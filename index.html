@@ -8,7 +8,7 @@
 <!-- iOS ignores the manifest's icons for Add to Home Screen and uses this instead,
      and Safari will not accept an SVG here — hence the one PNG in the repo. -->
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="description" content="La Perdrix, St Martin de Ribérac — 31 July to 14 August 2027.">
+<meta name="description" content="La Perdrix, St Martin de Ribérac, 31 July to 14 August 2027.">
 <meta name="theme-color" content="#e9e4d7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#171b14" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -19,7 +19,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=2">
-<link rel="stylesheet" href="styles.css?v=18">
+<link rel="stylesheet" href="styles.css?v=19">
 </head>
 <body>
 
@@ -83,7 +83,7 @@
   <div class="reveal">
     <p class="eyebrow">Who's here when</p>
     <h2 class="big">Not everybody's there for the whole fortnight.</h2>
-    <p class="muted">People trickle in and out. Add your dates and everyone can see who overlaps with whom — handy before you promise anyone a lift from the airport.</p>
+    <p class="muted">People trickle in and out. Add your dates and everyone can see who overlaps with whom. Handy before you promise anyone a lift from the airport.</p>
   </div>
 
   <div class="cal reveal">
@@ -114,9 +114,22 @@
      and a rota that rebuilt itself would never settle. -->
 <section class="sec cook-sec reveal" id="cookSec" hidden>
   <p class="eyebrow">Aux fourneaux</p>
-  <h2 class="cook-when" id="cookWhen"></h2>
+  <div class="cook-head">
+    <span class="cook-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-fourneaux"/></svg></span>
+    <div>
+      <h2 class="cook-title">The cooking rota</h2>
+      <p class="cook-blurb">Everybody takes a turn, and nobody two nights running.</p>
+    </div>
+  </div>
+  <!-- Was the h2. The heading is now the section's name, so the date is a line
+       of copy — it changes every day and was never a heading in any real sense. -->
+  <p class="cook-when" id="cookWhen"></p>
   <div class="lineup" id="cookTeam"></div>
   <p class="cook-note" id="cookNote"></p>
+  <!-- The nights after this one. One night and a link made the band a teaser;
+       three makes it worth stopping at, which is the whole difference between
+       a section people scroll past and one they read. -->
+  <ul class="cook-next" id="cookNext" hidden></ul>
   <a class="cook-link" href="rota.html" id="openRota">
     <span id="rotaLinkText">The whole fortnight</span>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="M12 5l7 7-7 7"/></svg>
@@ -150,7 +163,7 @@
        business" feel the landing page is meant to avoid. -->
   <div class="a2hs" id="a2hs" hidden>
     <span class="a2hs-ic"><svg viewBox="0 0 24 24"><use href="#i-partridge"/></svg></span>
-    <p>Keep this on your home screen — tap <b>Share</b>, then <b>Add to Home Screen</b>. It opens like an app, without the browser bar.</p>
+    <p>Keep this on your home screen: tap <b>Share</b>, then <b>Add to Home Screen</b>. It opens like an app, without the browser bar.</p>
     <button class="a2hs-x" id="a2hsClose" aria-label="Dismiss">&times;</button>
   </div>
 
@@ -215,7 +228,7 @@
 
 <!-- the icon sprite is injected by icons.js, shared with kitty.html -->
 
-<script src="icons.js?v=5"></script>
+<script src="icons.js?v=6"></script>
 <script src="sync.js?v=3"></script>
 <script src="photos.js?v=1"></script>
 <script src="rota.js?v=1"></script>
@@ -356,7 +369,7 @@ function renderGrid(){
 
     cell.setAttribute('aria-label',
       DOWL[dowIdx(d)] + ' ' + d.getUTCDate() + ' ' + MONL[d.getUTCMonth()] +
-      (staying.length ? ' — ' + staying.map(p => p.name).join(', ') : ''));
+      (staying.length ? ': ' + staying.map(p => p.name).join(', ') : ''));
 
     grid.appendChild(cell);
   });
@@ -473,7 +486,7 @@ function renderSheet(){
   $('hint').textContent =
     !draft.from ? 'Tap the day you arrive.' :
     !draft.to   ? 'Now tap the day you leave.' :
-                  nights(draft) + ' — tap a day to start again.';
+                  nights(draft) + '. Tap a day to start again.';
   $('save').disabled = !(draft.name.trim() && draft.from && draft.to);
 }
 
@@ -492,19 +505,28 @@ function todayLocal(){
 }
 /* DOWL here is Monday-first (the calendar grid needs it that way), so it must
    be indexed through dowIdx, never with getUTCDay(). */
-const longNight = day => DOWL[dowIdx(D(day))] + ' ' + D(day).getUTCDate() + ' ' + MON[D(day).getUTCMonth()];
+const longNight  = day => DOWL[dowIdx(D(day))] + ' ' + D(day).getUTCDate() + ' ' + MON[D(day).getUTCMonth()];
+const shortNight = day => DOW[dowIdx(D(day))] + ' ' + D(day).getUTCDate() + ' ' + MON[D(day).getUTCMonth()];
 
 function renderCooks(){
   const roster = people.filter(p => p.from && p.to);
   $('cookSec').hidden = roster.length === 0;
   if (!roster.length) return;
 
+  /* Cleared up front, not in each branch below. Every one of them returns
+     early, and a list left over from the last render would be showing nights
+     that the current state says nothing about. */
+  $('cookNext').hidden = true;
+  $('cookNext').innerHTML = '';
+
   const conf = (Sync.settings() || {}).rota;
   if (!conf) {
-    $('cookWhen').textContent = 'No cooking rota yet';
+    /* Both of these used to restate the blurb now sitting under the title.
+       Say the thing the blurb doesn't: why the page is empty. */
+    $('cookWhen').textContent = 'Not built yet';
     $('cookTeam').innerHTML = '';
     $('cookNote').textContent =
-      'Teams get built from everybody’s dates — evenly, and never two nights running.';
+      'Nothing gets built until somebody asks for it, so people can keep adding their dates.';
     $('rotaLinkText').textContent = 'Make one';
     return;
   }
@@ -531,6 +553,18 @@ function renderCooks(){
   }).join('');
   $('cookNote').textContent = (night.day === today ? 'Cooking for ' : 'Next one on. Cooking for ')
     + night.present.length + '.';
+
+  /* Only nights with somebody on them: an empty night is a gap in the rota,
+     and listing it here would read as "nobody is feeding you on Thursday"
+     when the real answer is on rota.html. */
+  const after = rota.slice(night.index + 1).filter(n => n.team.length).slice(0, 3);
+  if (after.length) {
+    $('cookNext').innerHTML = after.map(n => {
+      const names = n.team.map(id => (roster.find(x => x.id === id) || {}).name).filter(Boolean);
+      return `<li><span class="d">${esc(shortNight(n.day))}</span><span class="t">${esc(names.join(' & '))}</span></li>`;
+    }).join('');
+    $('cookNext').hidden = false;
+  }
 }
 
 function render(){ renderGrid(); renderWho(); renderFolk(); renderChart(); renderSheet(); renderCooks(); }
@@ -659,7 +693,7 @@ function openRemove(){
   const who = draft.name.trim() || 'you';
   $('rmBody').innerHTML = mine.length
     ? `Takes <b>${esc(who)}</b> off the calendar. The <b>${mine.length} ${mine.length === 1 ? 'spend' : 'spends'}</b> ` +
-      `logged against ${esc(who)}, <b>€${spent.toFixed(2)}</b>, stay in the kitty — but they'll stop showing a name. ` +
+      `logged against ${esc(who)}, <b>€${spent.toFixed(2)}</b>, stay in the kitty, but they'll stop showing a name. ` +
       `There's no undo.`
     : `Takes <b>${esc(who)}</b> off the calendar. Nothing is in the kitty under that name, so nothing else changes. ` +
       `You can always add yourself again.`;

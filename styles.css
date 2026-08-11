@@ -143,6 +143,10 @@ body::before{
   display:flex;align-items:center;gap:12px;margin:0 0 18px;
 }
 .eyebrow::after{content:"";flex:1;height:1px;background:var(--hair)}
+/* A mark inside an eyebrow. The gap:12px is meant for the rule that follows,
+   not for this, so it gets its own tighter spacing. */
+.eb-mark{display:inline-grid;place-items:center;color:var(--accent);margin-right:-4px}
+.eb-mark svg{width:19px;height:19px;display:block}
 h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-spacing:-.015em;text-wrap:balance}
 .lede{font:400 clamp(17px,2.4vw,20px)/1.62 var(--serif);max-width:34em;margin:0 0 18px}
 .muted{color:var(--mut);font-size:15px;max-width:36em;margin:0}
@@ -819,7 +823,41 @@ body.dragging .cook{cursor:grabbing}
    the kitty's amber pill — two big calls to action stacked would compete, and
    the kitty is the one that matters more. */
 .cook-sec{padding-block:70px 0}
-.cook-sec .cook-when{font:600 clamp(26px,5vw,38px)/1.1 var(--serif);margin:0 0 18px}
+
+/* The section's own title and mark. The date used to be the heading, which
+   meant the band had no name and read as a stray fact — you had to work out
+   what it was before you could care about it. */
+/* flex-start, not centre: on a phone the blurb wraps to two lines and a centred
+   mark drifts down beside the second one, reading as a bullet for the sentence
+   rather than a mark for the title. */
+.cook-head{display:flex;align-items:flex-start;gap:15px;margin:0 0 22px}
+.cook-mark{
+  flex:none;width:52px;height:52px;border-radius:99px;display:grid;place-items:center;margin-top:-2px;
+  color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 38%,transparent);
+  background:color-mix(in srgb,var(--accent) 9%,transparent);
+}
+/* Needs the viewBox on the <svg> too, or <use> crops instead of scaling. */
+.cook-mark svg{width:28px;height:28px}
+.cook-title{font:600 clamp(26px,5vw,38px)/1.06 var(--serif);margin:0;letter-spacing:-.015em}
+.cook-blurb{margin:5px 0 0;color:var(--mut);font-size:14px}
+
+/* Smaller than it was — it is no longer carrying the section on its own. */
+.cook-sec .cook-when{font:600 clamp(19px,3.2vw,24px)/1.15 var(--serif);margin:0 0 14px}
+
+/* The nights after this one. Rules between rows rather than around the block:
+   it is a continuation of the night above, not a separate table. */
+.cook-next{list-style:none;margin:20px 0 0;padding:0}
+.cook-next li{
+  display:flex;gap:14px;align-items:baseline;padding:10px 0;
+  border-top:1px solid var(--hair);font-size:14px;
+}
+.cook-next .d{color:var(--mut);flex:none;min-width:7.5em;font-variant-numeric:tabular-nums}
+.cook-next .t{color:var(--tx)}
+@media (max-width:420px){
+  .cook-next .d{min-width:6.4em}
+  .cook-mark{width:46px;height:46px}
+  .cook-mark svg{width:25px;height:25px}
+}
 .cook-link{
   display:inline-flex;align-items:center;gap:9px;margin-top:22px;
   min-height:44px;padding:9px 4px;

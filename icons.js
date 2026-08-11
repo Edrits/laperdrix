@@ -198,6 +198,17 @@ window.iconOf = (slug, cls) =>
     <path d="M12 11.6v6.2"/>
     <path d="M8 20.6c0-1.6 1.8-2.8 4-2.8s4 1.2 4 2.8z"/>
     <path d="M3.6 14.6h1.8M18.6 14.6h1.8M4.8 9.4 3.4 8M19.2 9.4l1.4-1.4"/></g>
+
+  <!-- Deliberately NOT in ICONS. This is the mark on the cooking-rota section,
+       not something anybody can choose as a profile: two crossed knives over a
+       baguette is a signpost, not a person. Adding it to the array would drop
+       it into the picker on both pages. Same recipe as the rest, so it sits
+       beside them without looking borrowed. -->
+  <g id="i-fourneaux" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.2 9.6 19.6 2.6Q17 8.2 11.5 11Z"/><path d="M10.7 10.6 4.8 15.2"/>
+    <path d="M13.8 9.6 4.4 2.6Q7 8.2 12.5 11Z"/><path d="M13.3 10.6 19.2 15.2"/>
+    <path d="M18.4 20.4 5.6 20.4a1.7 1.7 0 0 1 0-3.4h12.8a1.7 1.7 0 0 1 0 3.4z"/>
+    <path d="M9.2 18 8.4 19.2M12.4 18 11.6 19.2M15.6 18 14.8 19.2"/></g>
 </defs></svg>`;
   const host = document.createElement('div');
   host.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';

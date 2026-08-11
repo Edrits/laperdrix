@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#171b14" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="styles.css?v=18">
+<link rel="stylesheet" href="styles.css?v=19">
 </head>
 <body class="kitty-page">
 
@@ -166,7 +166,7 @@
   </div>
 </div>
 
-<script src="icons.js?v=5"></script>
+<script src="icons.js?v=6"></script>
 <script src="sync.js?v=3"></script>
 <script src="money.js?v=3"></script>
 <script>
@@ -522,7 +522,7 @@ function updateForm(){
       ? `≈ ${fmtH(Money.toHome(parsed, rate))}`
       : `≈ ${fmtL(Money.toLocal(parsed, rate))}`;
   } else if ($('fAmount').value.trim()) {
-    conv = "Can't read that — try 12,50";
+    conv = "Can't read that. Try 12,50";
   }
   $('fConv').textContent = conv;
 
