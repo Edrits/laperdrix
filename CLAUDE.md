@@ -287,6 +287,20 @@ sprite; a mismatch renders an empty circle with no error.
   `12,50` outright in some locales, which loses French receipts at the keyboard rather than in the
   parser. The phone keypad comes from `inputmode`, and the keyboard only *appears* if `focus()` is
   called synchronously inside the tap's own task — iOS ignores a deferred one.
+- **Dates can be typed as well as tapped, and the two must stay in step.** The dates sheet has
+  Arrive/Leave `<input type="date">` bounded by `TRIP.start`/`TRIP.end`. Tapping the calendar fills
+  them; setting them highlights the calendar. Reversed entries are swapped and out-of-range ones
+  clamped, never refused — a field that silently ignores you reads as broken. They listen on
+  **`change`, not `input`**: typing a year on a desktop fires `input` at `0002`, which would swap
+  the two dates under the person's hands mid-keystroke.
+- **The dates sheet is capped at `58svh`, and that cap hangs off `.dates-sheet`, not `#sheet`.**
+  It is the one sheet used *while looking at what is behind it*, and at the shared 92svh it covered
+  the calendar it was asking you to tap. `kitty.html`'s add-spend sheet **has the same id** and
+  needs the taller default, so scoping the cap by id breaks the kitty instead.
+- **`clearOfSheet()` scrolls the calendar both ways.** It used to scroll only down, when the grid
+  fell behind the sheet; opening the sheet from the button at the foot of the page left the calendar
+  off the *top* of the screen with nothing to bring it back, so people got "tap the day you arrive"
+  over a photograph.
 
 ## Testing and checking
 

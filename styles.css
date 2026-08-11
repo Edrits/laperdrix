@@ -387,6 +387,14 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
   width:100%;font:inherit;font-size:16.5px;padding:11px 13px;border-radius:10px;
   background:var(--bg);color:var(--tx);border:1px solid var(--hair);margin-bottom:16px;
 }
+/* Arrive and Leave, side by side. Two columns even on the narrowest phone: as
+   one column they push the icon picker down a whole field's worth, and the
+   point of them is to make the sheet SHORTER to work with, not taller. */
+.dates{display:flex;gap:10px}
+.dates > div{flex:1;min-width:0}
+/* Safari gives a date input its own intrinsic width and won't shrink below it,
+   which overflows the row on a 375px screen unless it is told to. */
+.dates input{min-width:0}
 /* Six across, not nine. On a 375px phone nine columns gave ~35px cells — below
    the 44px minimum for a comfortable tap, and far too small to tell a walnut
    from a fig. */
@@ -598,6 +606,20 @@ body.picking .bar{display:none}
    on a 667px one it would run off the bottom with Save unreachable and no way
    to scroll. Cap it and let the inside scroll instead. */
 .sheet .in2{max-height:92svh;overflow-y:auto;overscroll-behavior:contain}
+
+/* The dates sheet is the exception: it is the one sheet you use WHILE looking
+   at what is behind it. At 92svh it covered the calendar it was asking you to
+   tap. Capped at 58% so a usable strip of calendar is always left showing, and
+   clearOfSheet() in index.html scrolls the grid into exactly that strip. The
+   sheet scrolls inside itself, so nothing below is out of reach.
+
+   Scoped to .dates-sheet and NOT to #sheet: kitty.html's add-spend sheet
+   carries the same id, and capping that one hides its Save behind a scroll for
+   no reason — it has nothing behind it worth seeing. */
+.dates-sheet .in2{max-height:min(58svh,540px)}
+/* Six rows of icons don't fit in what's left, and the picker is the part that
+   can afford to give: it already scrolls, and every icon stays reachable. */
+.dates-sheet .picker{max-height:min(22vh,150px)}
 
 /* ------------------------------------------------- who's spent what chart
    The kitty's centrepiece, replacing the old Spending/Balance tabs. Same

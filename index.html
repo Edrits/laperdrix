@@ -18,7 +18,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=2">
-<link rel="stylesheet" href="styles.css?v=20">
+<link rel="stylesheet" href="styles.css?v=21">
 <!-- Dark is the default, and this has to run in the <head>: set the attribute
      any later and a light frame paints first, which on a phone in a dim room is
      a flash in the eye. Inline and tiny for the same reason — an external file
@@ -196,10 +196,21 @@
 <!-- ============================================================ add your dates -->
 <div class="bar"><button class="btn" id="add">Add your dates</button></div>
 
-<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+<!-- .dates-sheet, not #sheet, is what the height cap hangs off: kitty.html's
+     add-spend sheet uses the same id, and it needs the taller default. -->
+<div class="sheet dates-sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
   <div class="in2">
     <h2 id="sheetTitle">Your dates</h2>
     <p class="hint" id="hint"></p>
+    <!-- Typing beats tapping here. The sheet covers the bottom of the screen,
+         so the calendar behind it is a small target held one-handed, and the
+         two are wired together both ways: tap the grid and these fill in, set
+         these and the grid highlights. min/max are the trip itself, so the
+         native picker cannot offer a day the rest of the page can't show. -->
+    <div class="dates">
+      <div><label for="dFrom">Arrive</label><input id="dFrom" type="date"></div>
+      <div><label for="dTo">Leave</label><input id="dTo" type="date"></div>
+    </div>
     <label for="name">Your name</label>
     <input id="name" type="text" autocomplete="given-name" enterkeyhint="done" maxlength="40">
     <!-- Optional, and never guessed at. It only groups the kitty's totals, so
@@ -493,9 +504,14 @@ function renderSheet(){
   $('sheetTitle').textContent = draft.id ? 'Your dates' : 'Add your dates';
   $('remove').hidden = !draft.id;
   $('hint').textContent =
-    !draft.from ? 'Tap the day you arrive.' :
-    !draft.to   ? 'Now tap the day you leave.' :
-                  nights(draft) + '. Tap a day to start again.';
+    !draft.from ? 'Pick the day you arrive, below or on the calendar.' :
+    !draft.to   ? 'Now the day you leave.' :
+                  nights(draft) + '. Change either date, or tap the calendar again.';
+  /* Kept in step with the calendar, which is the other way in to the same two
+     values. Assigning the same string back is a no-op, so this is safe to run
+     on every render, including while a native picker is open. */
+  $('dFrom').value = draft.from || '';
+  $('dTo').value   = draft.to   || '';
   $('save').disabled = !(draft.name.trim() && draft.from && draft.to);
 }
 
@@ -598,16 +614,28 @@ $('grid').addEventListener('pointerover', e => {
   renderGrid();
 });
 
-/* Slide the calendar clear of the sheet, so no day is hidden behind it.
+/* Put the calendar in the strip of screen the sheet doesn't cover.
    Deliberately no autofocus on the name field: on a phone the keyboard would
-   swallow the very thing you are being asked to tap. */
+   swallow the very thing you are being asked to tap.
+
+   The old version only ever scrolled DOWN, when the grid's bottom fell behind
+   the sheet. Opening the sheet from the button at the foot of the page left the
+   calendar off the top of the screen instead, and nothing brought it back — you
+   got a sheet saying "tap the day you arrive" above a photograph. This centres
+   the calendar in the free strip, moving whichever way it has to. */
 function clearOfSheet(){
   requestAnimationFrame(() => {
     const h = $('sheet').offsetHeight;
     document.body.style.setProperty('--sheet-h', (h + 24) + 'px');
-    const bottom = $('grid').getBoundingClientRect().bottom;
-    const room = window.innerHeight - h - 14;
-    if (bottom > room) window.scrollBy({ top: bottom - room, behavior:'smooth' });
+    const cal = document.querySelector('.cal');
+    if (!cal) return;
+    const room = window.innerHeight - h - 14;      // strip left above the sheet
+    const r = cal.getBoundingClientRect();
+    // 12px off the top at minimum, so a tall calendar starts at the top of the
+    // strip rather than being centred with its first row cut off.
+    const want = Math.max(12, (room - r.height) / 2);
+    const delta = r.top - want;
+    if (Math.abs(delta) > 8) window.scrollBy({ top: delta, behavior:'smooth' });
   });
 }
 
@@ -670,6 +698,32 @@ $('picker').addEventListener('click', e => {
 
 $('name').addEventListener('input', e => { draft.name = e.target.value; renderSheet(); });
 $('name').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+
+/* ------------------------------------------------------------ typed dates
+   The same two values the calendar sets, reachable without tapping a grid
+   behind a half-screen sheet. The trip bounds both fields, so the native
+   picker cannot offer a day the page has no column for; a value typed on a
+   desktop keyboard is clamped rather than refused, since a silently ignored
+   field looks broken.
+
+   'change', not 'input': typing a year on a desktop fires input at "0002",
+   which would swap the dates around under the person's hands mid-keystroke. */
+$('dFrom').min = $('dTo').min = TRIP.start;
+$('dFrom').max = $('dTo').max = TRIP.end;
+
+function setEnd(which, raw){
+  if (!draft) return;
+  const v = raw ? (raw < TRIP.start ? TRIP.start : raw > TRIP.end ? TRIP.end : raw) : null;
+  draft[which] = v;
+  // Filling in "leave" first is a reasonable way to work, not a mistake.
+  if (draft.from && draft.to && draft.from > draft.to){
+    const t = draft.from; draft.from = draft.to; draft.to = t;
+  }
+  hover = null;
+  render();
+}
+$('dFrom').addEventListener('change', e => setEnd('from', e.target.value));
+$('dTo').addEventListener('change', e => setEnd('to', e.target.value));
 
 $('cancel').addEventListener('click', () => { mode='idle'; draft=null; hover=null; render(); });
 
