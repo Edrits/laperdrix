@@ -9,6 +9,15 @@
    Dark mode is the LEAD design, not an inversion — several of the reference
    photos are evening interiors lit by one lamp, and that is the mood of the
    place. In dark, the accent moves from terracotta to lamp amber.
+
+   Dark is also the DEFAULT, and the phone's own light/dark setting is
+   deliberately ignored: there is no prefers-color-scheme rule anywhere in this
+   file. Every page sets data-theme on <html> in the <head>, before first paint,
+   and the only two values are "dark" (unless somebody has chosen otherwise) and
+   "light". The raw palette below is the light one, because the light theme
+   overrides fewer things; what makes dark the default is that attribute, not
+   the cascade. Don't "tidy" this by putting the dark values in :root — the
+   light block would then have to unset every one of them.
    ========================================================================= */
 
 :root{
@@ -40,14 +49,6 @@
   --safe-b:env(safe-area-inset-bottom,0px);
 }
 
-@media (prefers-color-scheme:dark){
-  :root{
-    --bg:#171b14; --surface:#1e231b; --tx:#ebe4d3; --mut:#8e9583; --hair:#2d3328;
-    --terra:#d4784f; --lichen:#93a07c; --cool:#6f9a95; --lamp:#e8b25c;
-    --accent:var(--lamp);
-    --danger:#e0846a;
-  }
-}
 :root[data-theme="dark"]{
   --bg:#171b14; --surface:#1e231b; --tx:#ebe4d3; --mut:#8e9583; --hair:#2d3328;
   --terra:#d4784f; --lichen:#93a07c; --cool:#6f9a95; --lamp:#e8b25c;

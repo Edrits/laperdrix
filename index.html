@@ -9,8 +9,7 @@
      and Safari will not accept an SVG here — hence the one PNG in the repo. -->
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="description" content="La Perdrix, St Martin de Ribérac, 31 July to 14 August 2027.">
-<meta name="theme-color" content="#e9e4d7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#171b14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" id="tc" content="#171b14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <!-- Bump ?v= whenever styles.css changes. Neither python's http.server nor
@@ -19,7 +18,18 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=2">
-<link rel="stylesheet" href="styles.css?v=19">
+<link rel="stylesheet" href="styles.css?v=20">
+<!-- Dark is the default, and this has to run in the <head>: set the attribute
+     any later and a light frame paints first, which on a phone in a dim room is
+     a flash in the eye. Inline and tiny for the same reason — an external file
+     could arrive after the first paint. The phone's own setting is ignored on
+     purpose; the only thing consulted is what the person chose here before. -->
+<script>
+  try {
+    document.documentElement.setAttribute(
+      'data-theme', localStorage.getItem('laperdrix.theme') === 'light' ? 'light' : 'dark');
+  } catch { document.documentElement.setAttribute('data-theme', 'dark'); }
+</script>
 </head>
 <body>
 
@@ -37,9 +47,8 @@
     <a href="rota.html">Rota</a>
   </nav>
   <div class="themes">
+    <button id="t-dark" aria-pressed="true">Dark</button>
     <button id="t-light" aria-pressed="false">Light</button>
-    <button id="t-dark" aria-pressed="false">Dark</button>
-    <button id="t-auto" aria-pressed="true">Auto</button>
   </div>
   <div class="inner">
     <p class="place">St Martin de Ribérac · Dordogne</p>
@@ -749,18 +758,26 @@ summariseKitty();
    This page shows the lot; the rota only needs its own backdrop. */
 Photos.load(['group', 'lake', 'abbey', 'chair', 'mirror', 'heads', 'hens', 'window']);
 
-/* ---------------------------------------------------------------- theme */
+/* ---------------------------------------------------------------- theme
+   Dark unless somebody has chosen light. The attribute is already on <html>
+   from the <head> script, so this only wires the buttons up and keeps the
+   browser chrome in step — reading the same key, and defaulting the same way.
+   The address bar has to be set here rather than by two media-scoped metas:
+   those follow the phone's setting, which we no longer honour, and a light
+   bar over a dark page looks like a rendering fault. */
 (function(){
   const root = document.documentElement;
-  const b = { light:$('t-light'), dark:$('t-dark'), auto:$('t-auto') };
+  const b = { dark:$('t-dark'), light:$('t-light') };
+  const BAR = { dark:'#171b14', light:'#e9e4d7' };
   const set = m => {
-    if (m === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', m);
+    root.setAttribute('data-theme', m);
+    $('tc').setAttribute('content', BAR[m]);
     try { localStorage.setItem('laperdrix.theme', m); } catch {}
     for (const k in b) b[k].setAttribute('aria-pressed', String(k === m));
   };
   for (const k in b) b[k].addEventListener('click', () => set(k));
-  let saved = 'auto';
-  try { saved = localStorage.getItem('laperdrix.theme') || 'auto'; } catch {}
+  let saved = 'dark';
+  try { saved = localStorage.getItem('laperdrix.theme') === 'light' ? 'light' : 'dark'; } catch {}
   set(saved);
 })();
 

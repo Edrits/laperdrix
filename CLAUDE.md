@@ -151,6 +151,20 @@ terracotta `#b0552f` (the heads, roof tiles), limestone `#e9e4d7`, lichen `#7e8a
 interiors lit by one warm lamp, and that's the evening-on-the-terrace mood. Accent shifts from
 terracotta in light to lamp amber in dark.
 
+**Dark is the default, light is a choice, and there is no "Auto".** Ed asked for exactly that. The
+phone's own light/dark setting is ignored: there is **no `prefers-color-scheme` rule in
+`styles.css`** and putting one back would quietly hand the decision to the OS again. Instead every
+page sets `data-theme` on `<html>` from a **tiny inline script in the `<head>`** — it has to run
+before the first paint, or a light frame flashes first, which is worst in the dim room the design
+is for. It reads `laperdrix.theme` and treats **anything that isn't `'light'` as dark**, so phones
+carrying the old `'auto'` migrate silently on the next visit. Three consequences:
+
+- The theme switcher is two buttons, **Dark then Light**, on all three pages.
+- `<meta name="theme-color">` is a **single tag with `id="tc"`**, updated in JS. The old pair of
+  media-scoped tags followed the OS, so the address bar could go light over a dark page.
+- The manifest's `background_color` and `theme_color` are both `#171b14`, so the home-screen launch
+  splash doesn't flash limestone. Regenerate it, don't hand-edit: `python3 scripts/gen_manifest.py`.
+
 People pick an **icon** as their profile. **Thirty-six of them**, in one inline SVG sprite in
 `icons.js` — there are 27 people, and 18 would have forced strangers to share a partridge. Each icon
 carries its own colour, so picking one is a single decision rather than two.
@@ -165,6 +179,14 @@ sprite; a mismatch renders an empty circle with no error.
 ## Conventions
 
 - **UK spelling** in all user-facing copy and comments (*colour*, *organise*, *travelled*).
+- **No em dashes in user-facing copy.** Ed asked for them out. A full stop, a comma or a colon
+  always does the job: *"…built from everybody's dates. Nothing happens until you ask"*, not
+  *"…dates — nothing happens"*. This covers page copy, button and sheet text, strings built in JS,
+  `aria-label`s and the `<meta name="description">`. **Two exceptions:** the em dash used as a
+  *placeholder* for a figure that hasn't loaded (the countdown, the three kitty stats on the
+  landing page, `formatMoney()`'s fallback for a non-number) — that's a glyph standing in for a number, and blanking
+  it makes the band look broken for the half-second before data arrives; and **code comments**,
+  including this file, which nobody using the app ever sees.
 - Money is `numeric(12,2)` in the database — never floats.
 - **French receipts use comma decimals.** `12,50` is twelve-fifty, not 1250. Misparsing this
   multiplies an expense by 100 in a shared ledger; it has its own unit test.

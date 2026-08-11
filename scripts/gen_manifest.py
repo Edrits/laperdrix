@@ -11,7 +11,7 @@ from urllib.parse import quote
 
 TERRA = "#b0552f"      # the terracotta of the heads against the wall
 INK   = "#f7f3e8"      # limestone, for the glyph itself
-LIME  = "#e9e4d7"      # launch splash
+DAPPLE = "#171b14"     # launch splash, and the dark the app now opens in
 
 # partridge paths, in a 24x24 coordinate space (identical to the sprite)
 GLYPH = (
@@ -42,11 +42,12 @@ manifest = {
     "scope": ".",
     "display": "standalone",
     "orientation": "portrait",
-    "background_color": LIME,
-    # A manifest allows only one theme_color. index.html carries per-scheme
-    # <meta name="theme-color"> tags which override this in the browser; this
-    # value is the fallback used for the launch splash.
-    "theme_color": TERRA,
+    # Both dark, because the app opens dark: launched from the home screen, a
+    # limestone splash would flash before the first dark frame. A page can still
+    # be switched to light, and its <meta name="theme-color"> follows — this is
+    # only the launch, which happens before any of that is known.
+    "background_color": DAPPLE,
+    "theme_color": DAPPLE,
     "icons": [
         # 24 * 5.5 = 132, sitting 30..162 inside 192 — comfortably inset
         {"src": icon(192, 5.5, 30, 26, 42, 1.5),
