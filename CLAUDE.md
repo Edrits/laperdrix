@@ -1,20 +1,54 @@
 # CLAUDE.md
 
-Guidance for Claude Code (claude.ai/code) working in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What this is
 
 A private web app for a group holiday at **La Perdrix**, St Martin de Ribérac, Dordogne —
-31 July – 14 August 2027, around 27 people across several households. Two halves:
+31 July – 14 August 2027, around 27 people across several households. Three pages:
 
-1. **The landing page** — atmosphere first. A cinematic hero, the shape of the fortnight, and a
-   presence chart showing who's there on which days. You go here to *enjoy the feeling of the
-   holiday*, not to do admin.
-2. **The kitty** — the spend tracker, deliberately **behind a click** off the landing page.
+1. **`index.html` — the landing page.** Atmosphere first. A cinematic hero, the shape of the
+   fortnight, a presence chart showing who's there on which days, and read-only bands for tonight's
+   cooks and the kitty total. You go here to *enjoy the feeling of the holiday*, not to do admin.
+2. **`kitty.html` — the spend tracker**, deliberately **behind a click** off the landing page.
+3. **`rota.html` — the cooking rota** ("Aux fourneaux"), where teams are generated and hand-edited.
+
+The landing page never *writes* rota or kitty state; it renders what those two pages stored. Kitty
+and Rota are also reachable top-left from every page.
 
 > Ed's framing, and it governs every design decision: *"a spending tracker so we can keep an eye on
 > the balance, **not a direct accounting tool which helps settle**."* The app shows what people have
 > put in. **It never tells anyone they owe anyone money.**
+
+## Commands
+
+No build, no lint, no package manager — there is nothing to install.
+
+| Task | Command |
+|---|---|
+| Run the app | `python3 -m http.server 4173`, then <http://localhost:4173> |
+| Unit tests | Open <http://localhost:4173/tests.html>. Pass/fail renders on the page and lands on `window.__results` as `{pass, fail}` |
+| Run a *single* test | There is no runner and no filter. Comment out the blocks you don't want in `tests.html` |
+| Check the live deployment | `./scripts/check.sh` |
+| Regenerate blur placeholders | `python3 scripts/gen_placeholders.py` |
+| Regenerate the manifest | `python3 scripts/gen_manifest.py` |
+
+Port **4173** specifically — it is in the Worker's `ALLOWED_ORIGINS`, so any other port fails CORS.
+Must be served over HTTP; opening `file://` breaks `fetch` and the localStorage origin.
+
+## ⚠️ The deployed Worker is behind the repo
+
+`worker/worker.js` is pasted into the Cloudflare dashboard by hand, and the repo copy is currently
+**ahead of the live one**. Two manual steps are outstanding, in this order:
+
+```sql
+alter table trips add column if not exists settings jsonb not null default '{}'::jsonb;
+notify pgrst, 'reload schema';
+```
+
+then re-paste `worker/worker.js`. Until both land, the cooking rota works per-device and queues its
+writes, but is not the same rota on everyone's phone. `./scripts/check.sh` will not catch this —
+it predates the `/settings` route.
 
 ## ⚠️ Two agents are working on this
 
@@ -23,7 +57,7 @@ Work is split to avoid clobbering. Check which side you're on before editing.
 | Side | Owns | Files |
 |---|---|---|
 | **Calendar** | Itinerary and attendance — data and logic | its own schema file, its own JS |
-| **App / landing** | Profiles, expenses, the kitty, and **all presentation** | `schema.sql`, `index.html`, `kitty.html`, `styles.css`, `photos.css`, `icons.js`, `money.js`, `sync.js`, `worker/` |
+| **App / landing** | Profiles, expenses, the kitty, the rota, and **all presentation** | `schema.sql`, `index.html`, `kitty.html`, `rota.html`, `styles.css`, `photos.css`, `icons.js`, `money.js`, `rota.js`, `sync.js`, `tests.html`, `scripts/`, `worker/` |
 
 **The integration surface is two database views and nothing else:**
 
@@ -50,7 +84,9 @@ dependency tree to rot between holidays, which matters for something used once e
   specifically: it is in the Worker's `ALLOWED_ORIGINS`, so any other port fails CORS.
 - **Host:** GitHub Pages.
 - **API:** one Cloudflare Worker holding `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and
-  `ANTHROPIC_API_KEY` as secrets. The browser never talks to Supabase directly.
+  `SHARE_TOKEN` as secrets. The browser never talks to Supabase directly. There is **no
+  `ANTHROPIC_API_KEY`** — receipt photography with AI extraction was designed, costed and then
+  declined by Ed (*"we don't need that feature, it's not worth it"*). Don't build it back.
 - **Data:** Supabase Postgres over its REST API, via plain `fetch` from the Worker. No client library.
 
 **Worker deploys are manual** — Ed pastes `worker.js` into the Cloudflare dashboard, as with
@@ -61,7 +97,10 @@ version silently drifts.
 
 Four files, and you need all four in your head before changing any of them.
 
-`index.html` / `kitty.html` → `sync.js` → `worker/worker.js` → Supabase REST.
+`index.html` / `kitty.html` / `rota.html` → `sync.js` → `worker/worker.js` → Supabase REST.
+
+`Sync` exposes three kinds of state: `people()`, `expenses()` and `settings()` (the generic JSON bag
+on the trip row, currently holding the rota). All three follow the same local-first path.
 
 **`sync.js` is local-first, and the order is load-bearing.** Every write goes to `localStorage`
 first and the network second, because someone logging a shop in a supermarket car park must not
@@ -94,7 +133,13 @@ second empty trip and orphaned everyone's data. Rotating the token is therefore 
   anything in them is readable by anyone.
 - **The share link is the password.** No accounts, no roles. Fine for a family group; it means the
   app should never hold anything genuinely sensitive.
-- Receipt photos can carry card digits and names — private bucket, short-lived signed URLs only.
+- The trip photographs live in a **private** Supabase bucket and are served as short-lived signed
+  URLs. `photos/` and `Photos for project /` are gitignored: the Pages repo is public and the group
+  shot shows the family, children included. This has been got wrong once — a trailing space in the
+  folder name defeated the ignore rule and the photographs were committed.
+- CSS `background-image` cannot send an `Authorization` header, which is why photos are addressed
+  through `--ph-*` custom properties that JS sets once the token is known, with inlined blur
+  placeholders as the default value.
 
 ## Design
 
@@ -128,8 +173,10 @@ sprite; a mismatch renders an empty circle with no error.
   without it a successful-but-retried request duplicates the expense.
 - Connectivity in rural Dordogne is poor. Expenses save **separately from** their photo, so a failed
   upload never loses the number.
-- **`money.js` stays pure** — no DOM, no storage, no `fetch`. Every function is a function of its
-  arguments, which is the only reason `tests.html` can check it. Put anything impure elsewhere.
+- **`money.js` and `rota.js` stay pure** — no DOM, no storage, no `fetch`. Every function is a
+  function of its arguments, which is the only reason `tests.html` can check them. Put anything
+  impure elsewhere. Both are where the real bugs live, so new logic belongs in them rather than
+  inline in a page.
 - **`parseAmount` returns `null` for what it cannot read**, never `0`. Callers must treat `null` as
   "ask the human"; defaulting it to zero silently books a free lunch.
 - **Bump the `?v=` on changed assets** — `styles.css?v=10`, `sync.js?v=1`. Pages caches hard, and
@@ -206,9 +253,12 @@ sprite; a mismatch renders an empty circle with no error.
 
 No Node, so no Vitest.
 
-- **Unit tests:** open `tests.html` over the local server. It asserts against `money.js` and shows a
-  pass/fail summary; results are also on `window.__results` as `{pass, fail}`. There is no test
-  runner and no way to run a single test — edit or comment out the block you don't want.
+- **Unit tests:** open `tests.html` over the local server. It asserts against the two pure modules,
+  `money.js` and `rota.js`, and shows a pass/fail summary; results are also on `window.__results` as
+  `{pass, fail}`. There is no test runner and no way to run a single test — edit or comment out the
+  block you don't want. **Screenshots, not `getComputedStyle`, are the trustworthy check for
+  anything visual** — the preview pane has returned confidently wrong computed values, and a
+  JS-driven `.click()` succeeds happily on a button the user cannot see. One shipped that way.
 - **Deployment:** `./scripts/check.sh` checks the live Worker end to end — secrets present, data
   routes deployed (i.e. the pasted copy isn't stale), a wrong token refused with 401, the database
   reachable, all seven photographs signable. It reads the share token from `secrets.txt` or `.env`
