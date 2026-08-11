@@ -18,7 +18,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=2">
-<link rel="stylesheet" href="styles.css?v=21">
+<link rel="stylesheet" href="styles.css?v=22">
 <!-- Dark is the default, and this has to run in the <head>: set the attribute
      any later and a light frame paints first, which on a phone in a dim room is
      a flash in the eye. Inline and tiny for the same reason — an external file
@@ -194,7 +194,10 @@
 </section>
 
 <!-- ============================================================ add your dates -->
-<div class="bar"><button class="btn" id="add">Add your dates</button></div>
+<!-- .bare: no fade behind the button. The other two pages scroll flat colour
+     under theirs, but this one scrolls photographs, and a strip of page
+     background sitting over a photograph reads as a rendering fault. -->
+<div class="bar bare"><button class="btn" id="add">Add your dates</button></div>
 
 <!-- .dates-sheet, not #sheet, is what the height cap hangs off: kitty.html's
      add-spend sheet uses the same id, and it needs the taller default. -->

@@ -364,6 +364,12 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 }
 .bar.show{opacity:1;transform:none;visibility:visible}
 .bar .btn{pointer-events:auto}
+/* The landing page's button floats free instead. Without the fade behind it the
+   button has to carry its own separation from whatever photograph is passing
+   underneath, hence the shadow — the pill itself is solid accent, which stays
+   legible over anything in the set. */
+.bar.bare{background:none}
+.bar.bare .btn{box-shadow:0 10px 30px -8px rgba(10,13,8,.75)}
 @media (prefers-reduced-motion:reduce){.bar{transition:none}}
 .btn{
   font:600 15px/1 var(--sans);padding:14px 26px;border-radius:99px;border:none;cursor:pointer;
