@@ -34,9 +34,9 @@ the new value in Cloudflare.
 2. Paste the whole of `schema.sql`, run it. It creates the tables and two private
    buckets, `receipts` and `trip-photos`.
 3. Go to **Storage** → `trip-photos`. Confirm it says **Private**.
-4. Upload the seven files from `photos/`, keeping their names exactly:
+4. Upload the nine files from `photos/`, keeping their names exactly:
    `group.jpg`, `lake.jpg`, `abbey.jpg`, `chair.jpg`, `mirror.jpg`, `heads.jpg`,
-   `hens.jpg`. The Worker looks for those names.
+   `hens.jpg`, `table.jpg`, `window.jpg`. The Worker looks for those names.
 5. **Settings → API.** You'll need the project URL and the `service_role` key in
    step 2. Copy them somewhere temporary; don't paste them into the repo.
 

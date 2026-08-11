@@ -224,5 +224,12 @@ No Node, so no Vitest.
   migration wastes an evening. Worse, because `personIn` sends every field unconditionally, one
   unknown column fails **every** person write, not just writes that set it — so the blast radius is
   much bigger than the feature being added.
+- **Adding a photograph touches six places, and the bucket is the one that bites.** Put the file in
+  `photos/` (gitignored — the Pages repo is public), then add its name to `NAMES` in
+  `scripts/gen_placeholders.py` and re-run it, to `PHOTOS` in `worker.js`, to the `Photos.load([…])`
+  call on each page that shows it, and to the count in `scripts/check.sh`. Then **upload it to the
+  `trip-photos` bucket in Supabase under exactly that filename** — locally the page finds the file
+  next to itself and everything looks right, so a missing upload only shows up as a blur on the live
+  site. `check.sh` is what catches it.
 - **`manifest.webmanifest` is generated**, not hand-edited — `python3 scripts/gen_manifest.py`.
   Percent-encoding a data URI inside JSON by hand is how you get an icon that never renders.

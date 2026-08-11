@@ -10,7 +10,10 @@
 <meta name="theme-color" content="#171b14" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="styles.css?v=17">
+<!-- Before styles.css, so the --ph-* stand-ins exist by the time the rule that
+     uses one is parsed. Same order as index.html. -->
+<link rel="stylesheet" href="photos.css?v=2">
+<link rel="stylesheet" href="styles.css?v=18">
 </head>
 <body class="kitty-page rota-page">
 
@@ -28,6 +31,15 @@
     <button id="t-auto" aria-pressed="true">Auto</button>
   </div>
 </header>
+
+<!-- Outside <main> and above everything, because it is the page's one bit of
+     atmosphere and the rest is a working list. Deliberately not attached to the
+     "tonight's team" section: that section is hidden until a rota exists, and a
+     photograph that vanished when there was nothing to cook would leave a
+     first-time visitor looking at a bare list of controls. -->
+<div class="band table">
+  <div class="cap"><small>Most evenings</small><p>The long table under the awning. Somebody has to cook it.</p></div>
+</div>
 
 <main>
   <!-- Tonight, or the next night still to come. -->
@@ -99,6 +111,7 @@
 
 <script src="icons.js?v=5"></script>
 <script src="sync.js?v=3"></script>
+<script src="photos.js?v=1"></script>
 <script src="rota.js?v=1"></script>
 <script>
 /* =========================================================================
@@ -114,6 +127,10 @@
    hand, and the team size. Everything else is derived by rota.js, which is
    pure and tested. Nothing here recomputes unless you press the button.
    ========================================================================= */
+
+/* Just the one — no point signing nine URLs for a page that shows a single
+   photograph, on a line that may well be a phone in a French kitchen. */
+Photos.load(['table']);
 
 const TRIP = Sync.TRIP;
 const $ = id => document.getElementById(id);

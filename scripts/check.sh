@@ -118,15 +118,16 @@ CODE=$(echo "$OUT" | tail -1)
 BODY=$(echo "$OUT" | sed '$d')
 if [ "$CODE" = "200" ]; then
   N=$(echo "$BODY" | grep -o 'https' | wc -l | tr -d ' ')
-  if [ "$N" -ge 7 ]; then
-    pass "All 7 photographs are in the bucket"
+  if [ "$N" -ge 9 ]; then
+    pass "All 9 photographs are in the bucket"
   else
-    fail "Only $N of 7 photographs could be signed"
-    note "Check the names in trip-photos: group, lake, abbey, chair, mirror, heads, hens (.jpg)"
+    fail "Only $N of 9 photographs could be signed"
+    note "Check the names in trip-photos: group, lake, abbey, chair, mirror, heads,"
+    note "hens, table, window (.jpg)"
   fi
 else
   fail "Photographs are not available ($CODE)"
-  note "Upload the seven files from photos/ into the trip-photos bucket."
+  note "Upload the nine files from photos/ into the trip-photos bucket."
 fi
 
 echo

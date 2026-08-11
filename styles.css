@@ -195,6 +195,16 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 }
 .band.abbey{background-image:var(--ph-abbey)}
 .band.chair{background-image:var(--ph-chair)}
+.band.window{background-image:var(--ph-window)}
+/* The rota's backdrop. Slightly above centre: the band is a wide slice, and
+   dead centre puts the crop on bare tablecloth. This keeps the awning, the
+   laid table and the pots all in frame from a phone up to a desktop. */
+.band.table{background-image:var(--ph-table);background-position:center 42%}
+
+/* Shorter here, and hard up under the header. The point of the rota page is
+   who is cooking tonight, and a landing-page-sized photograph would push that
+   under the fold on a phone — which is where it is always read. */
+.rota-page .band{margin:14px 0 0;min-height:34svh}
 
 /* ---------------------------------------------------------------- calendar */
 .cal-sec{padding-block:78px 0}

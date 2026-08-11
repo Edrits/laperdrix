@@ -15,7 +15,7 @@ import base64, pathlib, subprocess, sys, tempfile
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "photos"
 OUT = ROOT / "photos.css"
-NAMES = ["group", "lake", "abbey", "chair", "mirror", "heads", "hens"]
+NAMES = ["group", "lake", "abbey", "chair", "mirror", "heads", "hens", "table", "window"]
 
 if not SRC.is_dir():
     sys.exit(f"no {SRC} — the full-size photographs must be present to shrink them")

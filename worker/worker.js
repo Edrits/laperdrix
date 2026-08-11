@@ -39,7 +39,7 @@ const ALLOWED_ORIGINS = [
 
 // An allow-list, not a path parameter. Anything reaching Supabase Storage as a
 // caller-supplied path is a directory-traversal bug waiting to happen.
-const PHOTOS = ['group', 'lake', 'abbey', 'chair', 'mirror', 'heads', 'hens'];
+const PHOTOS = ['group', 'lake', 'abbey', 'chair', 'mirror', 'heads', 'hens', 'table', 'window'];
 
 const BUCKET = 'trip-photos';
 const EXPIRES_IN = 60 * 60 * 12;   // 12 hours; a page load always gets fresh ones
