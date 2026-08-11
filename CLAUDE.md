@@ -57,7 +57,7 @@ Work is split to avoid clobbering. Check which side you're on before editing.
 | Side | Owns | Files |
 |---|---|---|
 | **Calendar** | Itinerary and attendance — data and logic | its own schema file, its own JS |
-| **App / landing** | Profiles, expenses, the kitty, the rota, and **all presentation** | `schema.sql`, `index.html`, `kitty.html`, `rota.html`, `styles.css`, `photos.css`, `icons.js`, `money.js`, `rota.js`, `sync.js`, `tests.html`, `scripts/`, `worker/` |
+| **App / landing** | Profiles, expenses, the kitty, the rota, and **all presentation** | `schema.sql`, `index.html`, `kitty.html`, `rota.html`, `styles.css`, `photos.css`, `icons.js`, `money.js`, `photos.js`, `rota.js`, `sync.js`, `tests.html`, `scripts/`, `worker/` |
 
 **The integration surface is two database views and nothing else:**
 
@@ -261,7 +261,7 @@ No Node, so no Vitest.
   JS-driven `.click()` succeeds happily on a button the user cannot see. One shipped that way.
 - **Deployment:** `./scripts/check.sh` checks the live Worker end to end — secrets present, data
   routes deployed (i.e. the pasted copy isn't stale), a wrong token refused with 401, the database
-  reachable, all seven photographs signable. It reads the share token from `secrets.txt` or `.env`
+  reachable, all nine photographs signable. It reads the share token from `secrets.txt` or `.env`
   (both gitignored) so it never has to be typed into a shell history or a chat window.
 - **After adding a column in Supabase, reload the schema cache** — PostgREST keeps its own copy and
   a new column stays invisible to the API until it does:
@@ -277,7 +277,9 @@ No Node, so no Vitest.
 - **Adding a photograph touches six places, and the bucket is the one that bites.** Put the file in
   `photos/` (gitignored — the Pages repo is public), then add its name to `NAMES` in
   `scripts/gen_placeholders.py` and re-run it, to `PHOTOS` in `worker.js`, to the `Photos.load([…])`
-  call on each page that shows it, and to the count in `scripts/check.sh`. Then **upload it to the
+  call in each page that shows it (the loader itself is shared — `photos.js`; each page passes only
+  the names it uses, so it isn't signing nine URLs to show one), and to the count in
+  `scripts/check.sh`. Then **upload it to the
   `trip-photos` bucket in Supabase under exactly that filename** — locally the page finds the file
   next to itself and everything looks right, so a missing upload only shows up as a blur on the live
   site. `check.sh` is what catches it.
