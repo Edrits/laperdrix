@@ -36,19 +36,36 @@ No build, no lint, no package manager — there is nothing to install.
 Port **4173** specifically — it is in the Worker's `ALLOWED_ORIGINS`, so any other port fails CORS.
 Must be served over HTTP; opening `file://` breaks `fetch` and the localStorage origin.
 
-## ⚠️ The deployed Worker is behind the repo
+## The deployed Worker: checking it isn't behind the repo
 
-`worker/worker.js` is pasted into the Cloudflare dashboard by hand, and the repo copy is currently
-**ahead of the live one**. Two manual steps are outstanding, in this order:
+`worker/worker.js` is pasted into the Cloudflare dashboard by hand, so the repo copy can silently
+run ahead of the live one. **As of 11 August 2026 it is not behind**: the `settings` column and the
+`/settings` route are both live, so the cooking rota is genuinely shared rather than per-device.
+The two manual steps that used to be outstanding — the `alter table` below and the paste — have
+landed.
+
+`./scripts/check.sh` does not cover the rota, so check that route by hand. Read-only, and the token
+never reaches your shell history:
+
+```bash
+curl -s "https://laperdrix.neddritchie.workers.dev/data?t=$(tr -d ' \t\r\n' < secrets.txt)" | head -c 400
+```
+
+**The token goes in `?t=`, not an `Authorization` header** — see `tokenMatches` in `worker.js`. A
+Bearer header returns `401 bad token`, which reads exactly like a wrong token and sends you looking
+for the wrong problem.
+
+A `settings` key in that response means both steps are done. If it is missing, or writing one
+returns `502` wrapping `PGRST204`, run this in Supabase and then re-paste the Worker:
 
 ```sql
 alter table trips add column if not exists settings jsonb not null default '{}'::jsonb;
 notify pgrst, 'reload schema';
 ```
 
-then re-paste `worker/worker.js`. Until both land, the cooking rota works per-device and queues its
-writes, but is not the same rota on everyone's phone. `./scripts/check.sh` will not catch this —
-it predates the `/settings` route.
+**Do not probe with `POST /settings`.** It is a *write*, and posting `{}` to see whether the route
+exists replaces the whole settings bag — the rota's seed and every hand-pinned night with it. `GET
+/data` answers the same question and changes nothing. This has already cost one live rota.
 
 ## ⚠️ Two agents are working on this
 
