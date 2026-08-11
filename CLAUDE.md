@@ -258,6 +258,10 @@ sprite; a mismatch renders an empty circle with no error.
   the ids rather than the live array. Clearing only `localStorage` would look like it worked and then
   have the next `pull()` put everything back. The confirm names the real count and total — a dialog
   that only says "are you sure?" is a speed bump, not a decision.
+- **"Start again" only appears under the "Whole trip" filter.** It clears every phase whatever is
+  selected, so under "Out there" it was a button that empties the whole kitty sitting at the foot of
+  a screen showing part of it, with a confirm whose count didn't match what you could see. The one
+  view it shows on is now the one showing everything it will take.
 - **The cooking rota only rebuilds when somebody presses the button.** Ed:
   *"Only do it once asked (not as we go as people will slowly add dates in and then we'll have to
   keep adding people if it does it too soon)."* Nothing on any page calls `Rota.buildRota()` to
