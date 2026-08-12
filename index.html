@@ -65,7 +65,7 @@
     <p class="eyebrow">The place</p>
     <h2 class="big">A monastery with a swimming pool and too many walnut trees.</h2>
     <p class="lede">Thirteenth century, gated, on the edge of the village. Three houses joined by a passage, a vine terrace that takes the afternoon shade, and a church steeple to watch the sun go behind. Johnny and Ingrid have lived here since 2007 and it is, by their own account, a little ramshackle.</p>
-    <p class="muted">Nothing to organise up here. Put your dates in further down when you know them.</p>
+    <p class="muted">Nothing to organise up here. When you know them, add your dates further down.</p>
   </div>
   <div class="sheet3 reveal">
     <figure class="print">
@@ -110,7 +110,7 @@
       <div id="bars"></div>
     </div>
   </div>
-  <p class="chart-empty" id="chartEmpty">Once a few people have put their dates in, a chart of who overlaps appears here.</p>
+  <p class="chart-empty" id="chartEmpty">Once a couple of people have added their dates, a chart of who overlaps appears here.</p>
 </section>
 
 <div class="band chair reveal">
@@ -426,7 +426,7 @@ function renderFolk(){
   el.innerHTML = '';
   if (mode === 'picking') return;
   if (!people.length){
-    el.innerHTML = '<p class="empty">Nobody has put their dates in yet.</p>';
+    el.innerHTML = '<p class="empty">Nobody has put their dates in yet. Tap Add your dates below to add yours.</p>';
     return;
   }
   people.forEach(p => {
