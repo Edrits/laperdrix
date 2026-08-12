@@ -258,7 +258,7 @@ function renderSize(){
   const busiest = Math.max(0, ...rota.map(n => n.present.length));
   $('sizeNote').textContent = busiest
     ? `On the fullest night that's ${Rota.teamSizeFor(busiest, { perCook: conf.perCook || 6 })} cooks for ${busiest} people. Scramble again to apply.`
-    : 'Nobody has put dates in yet.';
+    : 'Nobody has added their dates yet.';
 }
 
 function render(){ rebuildView(); renderHero(); renderNights(); renderLoad(); renderSize(); }
