@@ -658,7 +658,7 @@ function renderHouses(){
   const chip = (val, text, extra) =>
     `<button type="button" class="who-chip${extra || ''}${chosen === val ? ' on' : ''}" data-hh="${esc(val)}">${text}</button>`;
   $('fHouse').innerHTML =
-    chip('', 'Just me') +
+    chip('', 'Cavalier seul') +
     familyNames().map(h => chip(h, esc(h))).join('') +
     chip('__new', '<span class="plus">＋</span>New family', ' newp');
   $('fHouseName').hidden = chosen !== '__new';

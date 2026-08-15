@@ -504,16 +504,17 @@ function renderPayers(){
   if (isNew) renderHouses();
 }
 
-/* Family chips, only ever shown while inventing a person. Defaults to "Just
-   them" — nobody's family should be guessed at, and a wrong one is quiet
-   enough that it would go unnoticed for a fortnight. The wording is a choice
-   about grouping, not a description of somebody being alone. */
+/* Family chips, only ever shown while inventing a person. Defaults to
+   "Cavalier seul" — nobody's family should be guessed at, and a wrong one is
+   quiet enough that it would go unnoticed for a fortnight. The French is the
+   same house voice as "Aux fourneaux", and it reads as going it alone by
+   choice rather than as a bare absence of family. */
 function renderHouses(){
   const chosen = draft.household === undefined ? '' : draft.household;
   const chip = (val, text, extra) =>
     `<button type="button" class="who-chip${extra || ''}${chosen === val ? ' on' : ''}" data-hh="${esc(val)}">${text}</button>`;
   $('fHouse').innerHTML =
-    chip('', 'Just them') +
+    chip('', 'Cavalier seul') +
     familyNames().map(h => chip(h, esc(h))).join('') +
     chip('__new', '<span class="plus">＋</span>New family', ' newp');
   $('fHouseName').hidden = chosen !== '__new';
