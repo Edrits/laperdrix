@@ -887,6 +887,12 @@ $('cancel').addEventListener('click', () => { mode='idle'; draft=null; hover=nul
    dismiss it. */
 document.addEventListener('pointerdown', e => {
   if (mode !== 'picking') return;
+  // The "Take yourself off?" confirm sits on top while still in picking mode,
+  // and brings its own dismissal: its scrim, its two buttons, and Escape all
+  // route through closeRemove. While it is up this handler must stand down
+  // completely, or a tap meant for it reaches through and cancels the whole
+  // edit underneath. Guarding only #rmSheet left the scrim doing exactly that.
+  if ($('rmSheet').classList.contains('open')) return;
   if (e.target.closest('#sheet, .cal, #grid, .bar, #folk')) return;
   $('cancel').click();
 });
