@@ -199,6 +199,8 @@ const personOut = r => ({
   // literal null would render as the word "null" the moment anything joins it
   // to a string.
   household: r.household || '',
+  pickupFrom: r.pickup_from || '',
+  pickupAt: r.pickup_at || '',
 });
 
 const personIn = (b, trip) => ({
@@ -215,6 +217,11 @@ const personIn = (b, trip) => ({
   // household is absent in the database rather than an empty-string third state.
   // The second trim is for the case where the 40-char cap lands mid-space.
   household: String(b.household || '').trim().slice(0, 40).trim() || null,
+  // Where they need collecting from and roughly when. Empty means they are
+  // making their own way, which must store as NULL rather than an empty string
+  // so "no pickup" is one value and not two.
+  pickup_from: String(b.pickupFrom || '').trim().slice(0, 60).trim() || null,
+  pickup_at: String(b.pickupAt || '').trim().slice(0, 10).trim() || null,
 });
 
 const expenseOut = r => ({

@@ -158,6 +158,14 @@ alter table members add column if not exists household text;
 -- ever need. Put the next one in the JSON, not in a new column.
 alter table trips add column if not exists settings jsonb not null default '{}'::jsonb;
 
+-- Added 2026-08: airport/station pickups. Two plain text columns rather than a
+-- table — a pickup is one place and one time attached to the person's arrival,
+-- and it dies with them. `pickup_at` is text, not `time`, because it is a rough
+-- "about four-ish" from a phone, not something anything computes with.
+-- Both null means "making their own way", which is the common case.
+alter table members add column if not exists pickup_from text;
+alter table members add column if not exists pickup_at   text;
+
 -- ---------------------------------------------------------------- expenses
 
 -- ONE ledger for the whole trip. The pre-trip budget is not a separate

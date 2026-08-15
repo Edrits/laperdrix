@@ -12,7 +12,7 @@
 <!-- Before styles.css, so the --ph-* stand-ins exist by the time the rule that
      uses one is parsed. Same order as index.html. -->
 <link rel="stylesheet" href="photos.css?v=2">
-<link rel="stylesheet" href="styles.css?v=22">
+<link rel="stylesheet" href="styles.css?v=24">
 <!-- In the <head> and inline, so the attribute lands before the first paint.
      See the same block in index.html. -->
 <script>
@@ -96,6 +96,7 @@
 <div class="bar"><button class="btn" id="scramble">Scramble the teams</button></div>
 
 <!-- Adding somebody to a night: only the people actually there that evening. -->
+<div class="scrim behind" id="formScrim"></div>
 <div class="sheet" id="addSheet" role="dialog" aria-modal="true" aria-labelledby="addTitle">
   <div class="in2">
     <h2 id="addTitle">Add a cook</h2>
@@ -446,14 +447,17 @@ function openAdd(day){
       <span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</button>` : '';
   }).join('');
   $('addSheet').classList.add('open');
+  $('formScrim').classList.add('open');
   document.body.classList.add('picking');
 }
 function closeAdd(){
   $('addSheet').classList.remove('open');
+  $('formScrim').classList.remove('open');
   document.body.classList.remove('picking');
   addingTo = null;
 }
 $('addCancel').addEventListener('click', closeAdd);
+$('formScrim').addEventListener('click', closeAdd);   // tapping away closes it
 $('addWho').addEventListener('click', e => {
   const b = e.target.closest('.who-chip');
   if (!b || !addingTo) return;

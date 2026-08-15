@@ -18,7 +18,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=2">
-<link rel="stylesheet" href="styles.css?v=22">
+<link rel="stylesheet" href="styles.css?v=24">
 <!-- Dark is the default, and this has to run in the <head>: set the attribute
      any later and a light frame paints first, which on a phone in a dim room is
      a flash in the eye. Inline and tiny for the same reason — an external file
@@ -111,6 +111,16 @@
     </div>
   </div>
   <p class="chart-empty" id="chartEmpty">Once a couple of people have added their dates, a chart of who overlaps appears here.</p>
+</section>
+
+<!-- ============================================================ pickups -->
+<!-- Read-only. It comes straight from the arrival dates people have already
+     entered, so there is nothing extra for anyone to keep up to date. -->
+<section class="sec lifts-sec reveal" id="liftsSec" hidden>
+  <p class="eyebrow">Getting here</p>
+  <h2 class="big">Who needs collecting.</h2>
+  <div id="liftsList"></div>
+  <p class="muted" id="liftsNote"></p>
 </section>
 
 <div class="band chair reveal">
@@ -221,6 +231,21 @@
     <label id="hhLabel">Family</label>
     <div class="payers" id="fHouse" role="group" aria-labelledby="hhLabel"></div>
     <input id="fHouseName" type="text" maxlength="30" placeholder="Family name" autocomplete="off" hidden>
+    <!-- Asked here because arriving is the one thing you already know when you
+         put your dates in, and nobody will come back later to fill it in. -->
+    <label id="liftLabel">Getting here</label>
+    <div class="payers" id="fLift" role="group" aria-labelledby="liftLabel">
+      <button type="button" class="who-chip on" data-lift="">Making my own way</button>
+      <button type="button" class="who-chip" data-lift="yes">Need picking up</button>
+    </div>
+    <div id="fLiftWhere" hidden>
+      <div class="payers" id="fFrom" role="group" aria-label="Where from"></div>
+      <input id="fFromOther" type="text" maxlength="40" placeholder="Where from" autocomplete="off" hidden>
+      <div class="lift-when">
+        <label for="fAt">Getting in about</label>
+        <input id="fAt" type="time">
+      </div>
+    </div>
     <label id="pickLabel">Your icon</label>
     <div class="picker" id="picker" role="group" aria-labelledby="pickLabel"></div>
     <div class="row">
@@ -296,7 +321,11 @@ function load(){
     /* Must be carried, not dropped: this list is what the save path rebuilds a
        person from, so losing it here would quietly erase somebody's family the
        next time they edited their dates. */
-    household: (p.household || '').trim()
+    household: (p.household || '').trim(),
+    /* Same reason as household: the save path rebuilds the record from this
+       list, so a field dropped here is erased the next time anyone edits. */
+    pickupFrom: (p.pickupFrom || '').trim(),
+    pickupAt: (p.pickupAt || '').trim()
   }));
 }
 
@@ -536,6 +565,73 @@ function todayLocal(){
 const longNight  = day => DOWL[dowIdx(D(day))] + ' ' + D(day).getUTCDate() + ' ' + MON[D(day).getUTCMonth()];
 const shortNight = day => DOW[dowIdx(D(day))] + ' ' + D(day).getUTCDate() + ' ' + MON[D(day).getUTCMonth()];
 
+/* "about four-ish" — a time from a phone, written the way somebody would say
+   it. 16:00 becomes 4pm, 16:30 becomes 4.30pm (a dot, not a colon: UK). */
+function sayTime(hhmm){
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || '');
+  if (!m) return '';
+  const h = +m[1], mins = m[2];
+  const suffix = h < 12 ? 'am' : 'pm';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return h12 + (mins === '00' ? '' : '.' + mins) + suffix;
+}
+
+/* The next three days that actually have somebody arriving, counting from
+   today. Three *calendar* days would be blank for the next year and then blank
+   again on any quiet day mid-trip; three days with pickups in them is the same
+   thing during the week that matters and useful the rest of the time. */
+function nextLifts(list, todayISO, limitDays){
+  const wanted = list
+    .filter(p => p.pickupFrom && p.from && p.from >= todayISO)
+    .sort((a, b) => a.from.localeCompare(b.from) ||
+                    String(a.pickupAt).localeCompare(String(b.pickupAt)) ||
+                    a.name.localeCompare(b.name));
+  const days = [];
+  for (const p of wanted) {
+    let d = days.find(x => x.day === p.from);
+    if (!d) {
+      if (days.length === limitDays) break;
+      d = { day: p.from, people: [] };
+      days.push(d);
+    }
+    d.people.push(p);
+  }
+  return days;
+}
+
+function renderLifts(){
+  const today = todayLocal();
+  const days = nextLifts(people, today, 3);
+  const anyAtAll = people.some(p => p.pickupFrom);
+  $('liftsSec').hidden = !anyAtAll;
+  if (!anyAtAll) return;
+
+  if (!days.length) {
+    $('liftsList').innerHTML = '';
+    $('liftsNote').textContent = 'Everybody with a lift booked has already arrived.';
+    return;
+  }
+
+  const tomorrow = iso(addDays(new Date(today + 'T12:00:00Z'), 1));
+  const label = d => d === today ? 'Today' : d === tomorrow ? 'Tomorrow' : longNight(d);
+
+  $('liftsList').innerHTML = days.map(d => `
+    <div class="lift-day">
+      <div class="lift-when-head">${label(d.day)}</div>
+      ${d.people.map(p => `
+        <div class="lift">
+          <span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>
+          <span class="lift-who">${esc(p.name)}</span>
+          <span class="lift-where">${esc(p.pickupFrom)}${p.pickupAt ? ' · ' + sayTime(p.pickupAt) : ''}</span>
+        </div>`).join('')}
+    </div>`).join('');
+
+  const n = days.reduce((t, d) => t + d.people.length, 0);
+  $('liftsNote').textContent = n === 1
+    ? 'One person to collect. Add your own dates above if you need a lift.'
+    : `${n} people to collect. Add your own dates above if you need a lift.`;
+}
+
 function renderCooks(){
   const roster = people.filter(p => p.from && p.to);
   $('cookSec').hidden = roster.length === 0;
@@ -595,7 +691,7 @@ function renderCooks(){
   }
 }
 
-function render(){ renderGrid(); renderWho(); renderFolk(); renderChart(); renderSheet(); renderCooks(); }
+function render(){ renderGrid(); renderWho(); renderFolk(); renderChart(); renderSheet(); renderCooks(); renderLifts(); }
 
 /* ---------------------------------------------------------------- events */
 $('grid').addEventListener('click', e => {
@@ -664,11 +760,61 @@ function renderHouses(){
   $('fHouseName').hidden = chosen !== '__new';
 }
 
+/* The realistic ways in. Bergerac and Bordeaux are the airports people
+   actually fly to; Angoulême and Périgueux are the TGV/train arrivals; Ribérac
+   is the local one for anyone already in France. "Somewhere else" is a text box
+   rather than a longer list nobody reads. */
+const LIFT_FROM = ['Bergerac', 'Bordeaux', 'Angoulême', 'Limoges', 'Périgueux', 'Ribérac'];
+
+function renderLift(){
+  const wants = Boolean(draft.pickupFrom || draft.wantsLift);
+  [...$('fLift').children].forEach(b => b.classList.toggle('on', (b.dataset.lift === 'yes') === wants));
+  $('fLiftWhere').hidden = !wants;
+  if (!wants) return;
+
+  const from = draft.pickupFrom || '';
+  const known = LIFT_FROM.includes(from);
+  // Anything not in the list — including a place typed last time and loaded
+  // back — is "somewhere else" with the box already filled in.
+  const custom = Boolean(from) && !known && from !== '__other';
+  const showBox = from === '__other' || custom;
+
+  const chip = (val, text, extra, on) =>
+    `<button type="button" class="who-chip${extra || ''}${on ? ' on' : ''}" data-from="${esc(val)}">${text}</button>`;
+  $('fFrom').innerHTML =
+    LIFT_FROM.map(x => chip(x, esc(x), '', from === x)).join('') +
+    chip('__other', '<span class="plus">＋</span>Somewhere else', ' newp', showBox);
+
+  $('fFromOther').hidden = !showBox;
+  if (custom) $('fFromOther').value = from;
+  $('fAt').value = draft.pickupAt || '';
+}
+
+$('fLift').addEventListener('click', e => {
+  const b = e.target.closest('.who-chip');
+  if (!b) return;
+  draft.wantsLift = b.dataset.lift === 'yes';
+  if (!draft.wantsLift) { draft.pickupFrom = ''; draft.pickupAt = ''; }
+  renderLift();
+});
+
+$('fFrom').addEventListener('click', e => {
+  const b = e.target.closest('.who-chip');
+  if (!b) return;
+  draft.pickupFrom = b.dataset.from;
+  renderLift();
+  if (draft.pickupFrom === '__other') $('fFromOther').focus();
+});
+$('fFromOther').addEventListener('input', () => { draft.pickupFrom = '__other'; });
+$('fAt').addEventListener('change', () => { draft.pickupAt = $('fAt').value; });
+
 function startDraft(d){
   draft = d; mode = 'picking'; hover = null; focus = null;
   renderPicker(); renderHouses(); render();
   $('name').value = d.name;
   $('fHouseName').value = '';
+  $('fFromOther').value = '';
+  renderLift();
   clearOfSheet();
 }
 
@@ -681,7 +827,8 @@ $('fHouse').addEventListener('click', e => {
 });
 
 $('add').addEventListener('click', () => {
-  startDraft({ name:'', icon: ICONS[people.length % ICONS.length][0], from:null, to:null, household:'' });
+  startDraft({ name:'', icon: ICONS[people.length % ICONS.length][0], from:null, to:null,
+               household:'', pickupFrom:'', pickupAt:'' });
 });
 
 $('folk').addEventListener('click', e => {
@@ -689,6 +836,7 @@ $('folk').addEventListener('click', e => {
   if (!chip) return;
   const p = people.find(x => x.id === chip.dataset.id);
   if (p) startDraft({ id:p.id, name:p.name, icon:p.icon, from:p.from, to:p.to,
+                      pickupFrom: p.pickupFrom || '', pickupAt: p.pickupAt || '',
                       household: (p.household || '').trim() });
 });
 
@@ -730,16 +878,37 @@ $('dTo').addEventListener('change', e => setEnd('to', e.target.value));
 
 $('cancel').addEventListener('click', () => { mode='idle'; draft=null; hover=null; render(); });
 
+/* Tapping away closes the dates sheet too — but NOT with a scrim, unlike the
+   kitty and rota sheets. This is the one sheet you use while looking at what
+   is behind it: the calendar is part of the input, and covering it would break
+   the only way to pick your dates. So instead: anything outside the sheet, the
+   calendar and the action bar counts as Cancel. Listens on pointerdown rather
+   than click, so a drag that starts on the hero and ends on the sheet doesn't
+   dismiss it. */
+document.addEventListener('pointerdown', e => {
+  if (mode !== 'picking') return;
+  if (e.target.closest('#sheet, .cal, #grid, .bar, #folk')) return;
+  $('cancel').click();
+});
+
 $('save').addEventListener('click', () => {
   // "__new" means whatever they typed in the box; anything else is either an
   // existing family or '' for nobody. Never null — '' is the one absent value.
   const house = draft.household === '__new'
     ? $('fHouseName').value.trim()
     : (draft.household || '').trim();
+  // "__other" means whatever is in the box. A pickup with no place named is
+  // not a pickup — store nothing rather than a time attached to nowhere.
+  let liftFrom = draft.pickupFrom === '__other'
+    ? $('fFromOther').value.trim()
+    : (draft.pickupFrom || '').trim();
+  let liftAt = liftFrom ? (draft.pickupAt || '').trim() : '';
+
   const rec = {
     id: draft.id || Sync.newId(),
     name: draft.name.trim(), icon: draft.icon, from: draft.from, to: draft.to,
-    household: house
+    household: house,
+    pickupFrom: liftFrom, pickupAt: liftAt
   };
   // Saves locally at once and queues for the server; the entry is safe even if
   // the line is down.
