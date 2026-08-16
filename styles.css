@@ -179,7 +179,7 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 .print figcaption{font:italic 400 12px/1.35 var(--serif);color:#5d5647;padding:8px 2px 2px;text-align:center}
 @media (max-width:600px){
   .sheet3{grid-template-columns:1fr 1fr;gap:12px}
-  .print:nth-child(3){grid-column:1/-1;max-width:62%;margin:0 auto;transform:rotate(1.4deg)}
+  .print:nth-child(3){grid-column:1/-1;width:62%;margin:0 auto;transform:rotate(1.4deg)}
   .print figcaption{font-size:11px}
 }
 
