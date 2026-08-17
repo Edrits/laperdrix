@@ -439,6 +439,10 @@ body.picking .bar{display:none}
 
 .kitty-page{background:var(--bg)}
 .kitty-page .sec{padding-inline:24px}
+/* Clear the fixed action bar. Without this the last content on the page —
+   the "Start again" button inside its disclosure — sits underneath the
+   hovering Add spend / Pay in bar and cannot be tapped. */
+.kitty-page main{padding-bottom:calc(96px + var(--safe-b))}
 
 /* The action bar is hidden by default and revealed by .show, because on the
    landing page an observer keeps it out of the way over the hero. There is no

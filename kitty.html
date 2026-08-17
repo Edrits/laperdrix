@@ -9,7 +9,7 @@
 <meta name="theme-color" id="tc" content="#171b14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="styles.css?v=26">
+<link rel="stylesheet" href="styles.css?v=27">
 <!-- In the <head> and inline, so the attribute lands before the first paint.
      See the same block in index.html. -->
 <script>
@@ -689,6 +689,10 @@ $('fAmount').addEventListener('input', updateForm);
 $('fDetail').addEventListener('input', () => { draft.what = $('fDetail').value; });
 $('fNewName').addEventListener('input', updateForm);
 $('fWhen').addEventListener('change', updateForm);
+/* Open the native calendar on the whole field, not just its little icon —
+   on a Mac the icon alone is easy to miss, and showPicker() makes tapping
+   anywhere on the field bring the calendar up on every device that has it. */
+$('fWhen').addEventListener('click', () => { try { $('fWhen').showPicker(); } catch {} });
 
 $('fCcy').addEventListener('click', e => {
   const b = e.target.closest('.ccy-b');
