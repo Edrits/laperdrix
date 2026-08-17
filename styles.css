@@ -485,6 +485,9 @@ body.picking .bar{display:none}
 
 /* ------------------------------------------------------------------ pot */
 .pot-sec{padding-block:14px 0}
+/* A small wink under the heading. Tucks up close beneath the eyebrow and keeps
+   out of the big number's way. */
+.kitty-quip{font:italic 400 13.5px/1.4 var(--serif);color:var(--mut);margin:-10px 0 14px}
 .pot-big{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
 .pot-local{
   font:600 clamp(34px,9vw,52px)/1 var(--serif);color:var(--accent);
