@@ -47,6 +47,7 @@
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
 
   --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
 }
 
 :root[data-theme="dark"]{
@@ -130,7 +131,7 @@ body::before{
 }
 @keyframes fall{0%,100%{transform:scaleY(.35);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}}
 
-.themes{position:absolute;top:16px;right:16px;z-index:4;display:flex;gap:6px}
+.themes{position:absolute;top:calc(16px + var(--safe-t));right:16px;z-index:4;display:flex;gap:6px}
 .themes button{
   font:inherit;font-size:11px;padding:6px 11px;border-radius:99px;cursor:pointer;
   border:1px solid rgba(242,236,224,.3);background:rgba(14,18,12,.42);color:#f2ece0;
@@ -231,17 +232,17 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 .day .num{font:600 14px/1 var(--serif);font-variant-numeric:tabular-nums}
 .day .mon{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-top:-1px}
 .day.has{border-color:color-mix(in srgb,var(--lichen) 55%,var(--hair))}
-.day.focus{background:var(--accent);border-color:transparent;color:#fff}
-.day.focus .mon{color:rgba(255,255,255,.75)}
+.day.focus{background:var(--accent);border-color:transparent;color:var(--bg)}
+.day.focus .mon{color:var(--bg);opacity:.72}
 .day.inrange{background:color-mix(in srgb,var(--accent) 16%,var(--surface));border-color:transparent}
 .day.edge-a{border-top-left-radius:14px;border-bottom-left-radius:14px}
 .day.edge-b{border-top-right-radius:14px;border-bottom-right-radius:14px}
-.day.pick{background:var(--accent);color:#fff}
-.day.pick .mon{color:rgba(255,255,255,.75)}
+.day.pick{background:var(--accent);color:var(--bg)}
+.day.pick .mon{color:var(--bg);opacity:.72}
 .dots{display:flex;gap:2px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:auto}
 .dots .dot{width:5px;height:5px;border-radius:99px;display:block}
 .dots .more{font-style:normal;font-size:8px;color:var(--mut);font-variant-numeric:tabular-nums}
-.day.focus .dots .more,.day.pick .dots .more{color:rgba(255,255,255,.8)}
+.day.focus .dots .more,.day.pick .dots .more{color:var(--bg);opacity:.8}
 
 .who{margin:16px 0 0;font-size:14px;color:var(--mut);min-height:1.5em}
 .who b{color:var(--tx)}
@@ -458,7 +459,7 @@ body.picking .bar{display:none}
 
 .ktop{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
-  max-width:940px;margin:0 auto;padding:16px 24px 4px;
+  max-width:940px;margin:0 auto;padding:calc(16px + var(--safe-t)) 24px 4px;
 }
 .back{
   display:inline-flex;align-items:center;gap:7px;color:var(--mut);
@@ -594,7 +595,7 @@ body.picking .bar{display:none}
 .set-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 0}
 .set-row label{font-size:14px;color:var(--tx)}
 .set-row select,.set-row input{
-  font:inherit;font-size:14px;padding:8px 10px;border-radius:9px;
+  font:inherit;font-size:16px;padding:8px 10px;border-radius:9px;
   background:var(--surface);color:var(--tx);border:1px solid var(--hair);
 }
 .set-note{margin:4px 0 0;font-size:11.5px;color:var(--mut)}
@@ -937,7 +938,7 @@ body.dragging .cook{cursor:grabbing}
    Top-left on every page, opposite the theme switcher. Over the hero they take
    the same translucent treatment the theme buttons do, because they sit on a
    photograph; on the inner pages they're a quiet outline next to the back link. */
-.hero-nav{position:absolute;top:16px;left:16px;z-index:4;display:flex;gap:6px}
+.hero-nav{position:absolute;top:calc(16px + var(--safe-t));left:16px;z-index:4;display:flex;gap:6px}
 .hero-nav a{
   font:500 11px/1 var(--sans);padding:9px 13px;border-radius:99px;
   border:1px solid rgba(242,236,224,.3);background:rgba(14,18,12,.42);color:#f2ece0;

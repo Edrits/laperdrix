@@ -9,7 +9,7 @@
 <meta name="theme-color" id="tc" content="#171b14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="styles.css?v=29">
+<link rel="stylesheet" href="styles.css?v=30">
 <!-- In the <head> and inline, so the attribute lands before the first paint.
      See the same block in index.html. -->
 <script>
@@ -594,25 +594,37 @@ function renderTags(){
     `<button type="button" class="pill${draft.category === t ? ' on' : ''}" data-tag="${esc(t)}">${esc(t)}</button>`).join('');
 }
 
+/* Editing an entry reuses ITS OWN rate, never today's: amountHome is fixed at
+   save time so a later change to the exchange rate can't quietly rewrite an old
+   spend. New entries use the current rate. */
+const activeRate = () => (draft && draft.id && draft.fxRateUsed ? Number(draft.fxRateUsed) : Number(conf.fxRate));
+
 function updateForm(){
   const parsed = Money.parseAmount($('fAmount').value);
-  const rate = Number(conf.fxRate);
+  const rate = activeRate();
   let conv = '';
   if (parsed !== null) {
     conv = draft.currency === 'EUR'
       ? `≈ ${fmtH(Money.toHome(parsed, rate))}`
       : `≈ ${fmtL(Money.toLocal(parsed, rate))}`;
   } else if ($('fAmount').value.trim()) {
-    conv = "Can't read that. Try 12,50";
+    conv = "Can't read that. Try 12.50 or 12,50";
   }
   $('fConv').textContent = conv;
 
   const when = $('fWhen').value || todayISO();
-  $('fPhase').textContent = phaseOf(when) === 'pre_trip' ? 'Counted as before we go.' : 'Counted as out there.';
-
   const payerOk = draft.paidBy === '__new' ? $('fNewName').value.trim().length > 0 : Boolean(draft.paidBy);
   const isPayin = draft.entryType === 'payin';
   $('fSave').disabled = parsed === null || parsed === 0 || !payerOk || (!isPayin && !draft.category);
+
+  /* Say what is still missing, so a greyed-out Save never reads as broken. The
+     amount line already speaks for itself, so only nudge once there is one. */
+  let need = '';
+  if (parsed !== null && parsed !== 0) {
+    if (!payerOk) need = draft.paidBy === '__new' ? 'Add their name to save.' : 'Choose who paid.';
+    else if (!isPayin && !draft.category) need = 'Pick what it was for.';
+  }
+  $('fPhase').textContent = need || (phaseOf(when) === 'pre_trip' ? 'Counted as before we go.' : 'Counted as out there.');
 }
 
 /* Nothing in here may await or defer: the Add button focuses the amount field
@@ -744,6 +756,7 @@ $('fTags').addEventListener('click', e => {
 });
 
 $('fSave').addEventListener('click', () => {
+  if (!draft) return;   // a fast second tap lands after the sheet closed and draft is null
   const typed = Money.parseAmount($('fAmount').value);
   const isPayin = draft.entryType === 'payin';
   if (typed === null || typed === 0) return;
@@ -773,7 +786,7 @@ $('fSave').addEventListener('click', () => {
     }
   }
 
-  const rate = Number(conf.fxRate);
+  const rate = activeRate();     // an edit keeps the entry's own rate; see activeRate
   const currency = draft.currency;
   const spentOn = $('fWhen').value || todayISO();
 
@@ -803,6 +816,7 @@ $('fSave').addEventListener('click', () => {
 });
 
 $('fDelete').addEventListener('click', () => {
+  if (!draft) return;
   Sync.removeExpense(draft.id);
   expenses = Sync.expenses();
   closeForm();

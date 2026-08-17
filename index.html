@@ -18,7 +18,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=2">
-<link rel="stylesheet" href="styles.css?v=29">
+<link rel="stylesheet" href="styles.css?v=30">
 <!-- Dark is the default, and this has to run in the <head>: set the attribute
      any later and a light frame paints first, which on a phone in a dim room is
      a flash in the eye. Inline and tiny for the same reason — an external file
@@ -543,9 +543,10 @@ function renderSheet(){
   $('sheetTitle').textContent = draft.id ? 'Your dates' : 'Add your dates';
   $('remove').hidden = !draft.id;
   $('hint').textContent =
-    !draft.from ? 'Pick the day you arrive, below or on the calendar.' :
-    !draft.to   ? 'Now the day you leave.' :
-                  nights(draft) + '. Change either date, or tap the calendar again.';
+    !draft.from        ? 'Pick the day you arrive, below or on the calendar.' :
+    !draft.to          ? 'Now the day you leave.' :
+    !draft.name.trim() ? 'Add your name to save.' :
+                         nights(draft) + '. Change either date, or tap the calendar again.';
   /* Kept in step with the calendar, which is the other way in to the same two
      values. Assigning the same string back is a no-op, so this is safe to run
      on every render, including while a native picker is open. */
@@ -899,19 +900,34 @@ $('cancel').addEventListener('click', () => { mode='idle'; draft=null; hover=nul
    calendar and the action bar counts as Cancel. Listens on pointerdown rather
    than click, so a drag that starts on the hero and ends on the sheet doesn't
    dismiss it. */
+/* Tap-away closes the dates sheet, but it must be a genuine TAP. This sheet is
+   used while looking at the calendar behind it, so a finger going down to pan
+   or scroll the page must not bin a half-finished set of dates. We remember
+   where a candidate tap started, and only cancel if the finger barely moved by
+   the time it lifts. */
+let awayStart = null;
+const inSafeZone = t => t.closest('#sheet, .cal, #grid, .bar, #folk');
 document.addEventListener('pointerdown', e => {
+  awayStart = null;
   if (mode !== 'picking') return;
-  // The "Take yourself off?" confirm sits on top while still in picking mode,
-  // and brings its own dismissal: its scrim, its two buttons, and Escape all
-  // route through closeRemove. While it is up this handler must stand down
-  // completely, or a tap meant for it reaches through and cancels the whole
-  // edit underneath. Guarding only #rmSheet left the scrim doing exactly that.
+  // The "Take yourself off?" confirm sits on top while still in picking mode
+  // and brings its own dismissal (scrim, buttons, Escape → closeRemove). While
+  // it is up this handler stands down completely, or a tap meant for it reaches
+  // through and cancels the edit underneath.
   if ($('rmSheet').classList.contains('open')) return;
-  if (e.target.closest('#sheet, .cal, #grid, .bar, #folk')) return;
-  $('cancel').click();
+  if (inSafeZone(e.target)) return;
+  awayStart = { x: e.clientX, y: e.clientY };
+});
+document.addEventListener('pointerup', e => {
+  const s = awayStart; awayStart = null;
+  if (!s || mode !== 'picking') return;
+  if ($('rmSheet').classList.contains('open')) return;
+  if (inSafeZone(e.target)) return;
+  if (Math.hypot(e.clientX - s.x, e.clientY - s.y) < 10) $('cancel').click();
 });
 
 $('save').addEventListener('click', () => {
+  if (!draft) return;   // a fast second tap arrives after the sheet closed
   // "__new" means whatever they typed in the box; anything else is either an
   // existing family or '' for nobody. Never null — '' is the one absent value.
   const house = draft.household === '__new'
