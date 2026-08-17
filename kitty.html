@@ -104,8 +104,8 @@
     <details class="quiet" id="resetBox" hidden>
       <summary>Start again</summary>
       <div class="quiet-in">
-        <p class="set-note">Clears the spending and leaves everybody's name and icon alone.</p>
-        <button class="btn danger wide" id="resetBtn">Clear every spend</button>
+        <p class="set-note">Empties the whole kitty, spending and pay-ins, and leaves everybody's name and icon alone.</p>
+        <button class="btn danger wide" id="resetBtn">Clear the whole kitty</button>
       </div>
     </details>
   </section>
@@ -181,7 +181,7 @@
 <div class="scrim" id="scrim"></div>
 <div class="sheet confirm" id="confirmSheet" role="dialog" aria-modal="true" aria-labelledby="cfTitle">
   <div class="in2">
-    <h2 id="cfTitle">Clear every spend?</h2>
+    <h2 id="cfTitle">Clear the whole kitty?</h2>
     <p class="cf-body" id="cfBody"></p>
     <div class="row">
       <button class="btn" id="cfCancel">Keep them</button>
@@ -490,7 +490,7 @@ function render(){
      button that empties the whole kitty at the foot of a screen showing part of
      it: the confirm's count never matched what you were looking at. Now the one
      view it appears on is the one showing everything it will take. */
-  $('resetBox').hidden = expenses.filter(e => e.entryType !== 'payin').length === 0 || phase !== 'all';
+  $('resetBox').hidden = expenses.length === 0 || phase !== 'all';
 }
 
 /* ------------------------------------------------------------ start again
@@ -503,12 +503,21 @@ function render(){
    localStorage would look like it had worked and then have the next pull()
    quietly put every entry back. */
 function openConfirm(){
+  if (!expenses.length) return;
   const spends = expenses.filter(e => e.entryType !== 'payin');
-  const n = spends.length;
-  if (!n) return;
+  const pays   = expenses.filter(e => e.entryType === 'payin');
+  const part = (list, spendWord) => {
+    const c = list.length;
+    return `<b>${c} ${c === 1 ? spendWord[0] : spendWord[1]}</b> (${fmtL(Money.total(list, 'amountLocal'))})`;
+  };
+  // Name the spends and the pay-ins separately, so it is plain that the pot is
+  // going too — "the lot" really is the lot.
+  const bits = [];
+  if (spends.length) bits.push(part(spends, ['spend', 'spends']));
+  if (pays.length)   bits.push(part(pays,   ['pay-in', 'pay-ins']));
   $('cfBody').innerHTML =
-    `This removes <b>${n} ${n === 1 ? 'entry' : 'entries'}</b>, <b>${fmtL(Money.total(spends, 'amountLocal'))}</b> ` +
-    `in total, for everyone on every device. Pay-ins into the pot, and everybody's name and icon, stay.`;
+    `This empties the whole kitty: ${bits.join(' and ')}, for everyone on every device. ` +
+    `Everybody's name and icon stay.`;
   $('confirmSheet').classList.add('open');
   $('scrim').classList.add('open');
 }
@@ -522,9 +531,9 @@ $('cfCancel').addEventListener('click', closeConfirm);
 $('scrim').addEventListener('click', closeConfirm);   // tapping away is a cancel
 $('cfGo').addEventListener('click', () => {
   // Snapshot the ids first: removeExpense rewrites the stored list each time,
-  // so iterating the live array would skip every other entry. Pay-ins are left
-  // alone — the pot is not "the spending".
-  for (const id of expenses.filter(e => e.entryType !== 'payin').map(e => e.id)) Sync.removeExpense(id);
+  // so iterating the live array would skip every other entry. Everything goes,
+  // pay-ins included — "clear the lot" empties the whole kitty.
+  for (const id of expenses.map(e => e.id)) Sync.removeExpense(id);
   expenses = Sync.expenses();
   closeConfirm();
   render();
