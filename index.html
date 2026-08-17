@@ -18,7 +18,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=2">
-<link rel="stylesheet" href="styles.css?v=28">
+<link rel="stylesheet" href="styles.css?v=29">
 <!-- Dark is the default, and this has to run in the <head>: set the attribute
      any later and a light frame paints first, which on a phone in a dim room is
      a flash in the eye. Inline and tiny for the same reason — an external file
@@ -454,19 +454,26 @@ function renderFolk(){
   const el = $('folk');
   el.innerHTML = '';
   if (mode === 'picking') return;
-  if (!people.length){
+  /* Named but dateless — created from the kitty when they paid for a shop, and
+     not yet on the calendar. Shown here so they can be tapped to add their
+     dates; kept out of the presence chart, which only knows real stays. */
+  const undated = Sync.people().filter(p => p && p.name && !(p.from && p.to));
+  if (!people.length && !undated.length){
     el.innerHTML = '<p class="empty">Nobody has added their dates yet. Tap <b>Add your dates</b> below to be the first.</p>';
     return;
   }
-  people.forEach(p => {
+  const chip = (p, when, todo) => {
     const b = document.createElement('button');
-    b.className = 'chip';
+    b.className = 'chip' + (todo ? ' todo' : '');
     b.type = 'button';
     b.dataset.id = p.id;
-    b.innerHTML = '<span class="av" style="background:'+colourOf(p.icon)+'">'+iconOf(p.icon)+'</span>' +
-                  '<span>'+esc(p.name)+'</span><span class="when">'+spanLabel(p)+'</span>';
+    const icon = p.icon || ICONS[0][0];
+    b.innerHTML = '<span class="av" style="background:'+colourOf(icon)+'">'+iconOf(icon)+'</span>' +
+                  '<span>'+esc(p.name)+'</span><span class="when'+(todo ? ' todo' : '')+'">'+when+'</span>';
     el.appendChild(b);
-  });
+  };
+  people.forEach(p => chip(p, spanLabel(p), false));
+  undated.forEach(p => chip(p, 'Please add your dates', true));
 }
 
 /* ------------------------------------------------- presence chart
@@ -834,8 +841,11 @@ $('add').addEventListener('click', () => {
 $('folk').addEventListener('click', e => {
   const chip = e.target.closest('.chip');
   if (!chip) return;
-  const p = people.find(x => x.id === chip.dataset.id);
-  if (p) startDraft({ id:p.id, name:p.name, icon:p.icon, from:p.from, to:p.to,
+  // Dateless people (added from the kitty) are not in `people`, so fall back to
+  // the raw list to find them — tapping their chip is how they add their dates.
+  const p = people.find(x => x.id === chip.dataset.id)
+         || Sync.people().find(x => x && x.id === chip.dataset.id);
+  if (p) startDraft({ id:p.id, name:p.name, icon:p.icon || ICONS[0][0], from:p.from || null, to:p.to || null,
                       pickupFrom: p.pickupFrom || '', pickupAt: p.pickupAt || '',
                       household: (p.household || '').trim() });
 });

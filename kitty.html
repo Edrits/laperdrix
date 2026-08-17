@@ -9,7 +9,7 @@
 <meta name="theme-color" id="tc" content="#171b14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="styles.css?v=28">
+<link rel="stylesheet" href="styles.css?v=29">
 <!-- In the <head> and inline, so the attribute lands before the first paint.
      See the same block in index.html. -->
 <script>
@@ -750,8 +750,9 @@ $('fSave').addEventListener('click', () => {
   if (!isPayin && !draft.category) return;
 
   // An unknown payer is just a name. Create the person here rather than sending
-  // anyone off to make a profile first — they land on the calendar spanning the
-  // whole fortnight and can narrow their dates on the front page later.
+  // anyone off to make a profile first. They are created WITHOUT dates: putting
+  // them on the whole fortnight would be a false claim on the presence chart.
+  // Instead they show on the front page as a name asking to add their dates.
   let payer = draft.paidBy;
   if (payer === '__new') {
     const name = $('fNewName').value.trim();
@@ -765,7 +766,7 @@ $('fSave').addEventListener('click', () => {
         ? $('fHouseName').value.trim()
         : (draft.household || '');
       const rec = { id: Sync.newId(), name, icon: freeIcon(),
-                    from: TRIP.start, to: TRIP.end, household: house };
+                    from: null, to: null, household: house };
       Sync.savePerson(rec);
       people = loadPeople();
       payer = rec.id;
