@@ -364,6 +364,8 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 }
 .bar.show{opacity:1;transform:none;visibility:visible}
 .bar .btn{pointer-events:auto}
+/* Two buttons at the foot — Pay in beside Add spend — sat side by side. */
+.bar-two{gap:10px}
 /* The landing page's button floats free instead. Without the fade behind it the
    button has to carry its own separation from whatever photograph is passing
    underneath, hence the shadow — the pill itself is solid accent, which stays
@@ -486,6 +488,21 @@ body.picking .bar{display:none}
 }
 .pot-home{font-size:14px;color:var(--mut);font-variant-numeric:tabular-nums}
 .pot-cap{margin:7px 0 0;font-size:12.5px;color:var(--mut)}
+/* When the pot is overdrawn the headline goes to the warning colour — the one
+   place a red number is the honest thing to show. */
+.pot-local.over{color:var(--danger)}
+
+/* Who has paid into the pot, listed under the headline. */
+.payins{display:flex;flex-direction:column;gap:2px;margin-top:12px}
+.payin-row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;
+  padding:9px 0;background:none;border:0;border-bottom:1px solid var(--hair);
+  color:var(--tx);font:inherit;cursor:pointer;
+}
+.payin-row:last-child{border-bottom:0}
+.payin-who{display:flex;align-items:center;gap:9px;font-size:13.5px;min-width:0}
+.payin-who .av{flex:none}
+.payin-amt{font:600 14px/1.2 var(--sans);color:var(--accent);font-variant-numeric:tabular-nums;flex:none}
 
 .seg{display:flex;gap:4px;margin:20px 0 0;background:var(--surface);
   border:1px solid var(--hair);border-radius:99px;padding:4px}
@@ -536,6 +553,8 @@ body.picking .bar{display:none}
   font-size:10px;letter-spacing:.04em;padding:2px 7px;border-radius:99px;
   background:var(--surface);border:1px solid var(--hair);color:var(--mut);
 }
+/* A spend that is tracked but deliberately not drawn from the shared pot. */
+.tag.off{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,var(--hair))}
 .eamt{text-align:right;flex:none;display:flex;flex-direction:column;gap:1px}
 .eloc{font:600 15px/1.2 var(--sans);font-variant-numeric:tabular-nums}
 .ehome{font-size:11.5px;color:var(--mut);font-variant-numeric:tabular-nums}

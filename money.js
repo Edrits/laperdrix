@@ -417,9 +417,51 @@
     }, 0));
   }
 
+  /* ---------------------------------------------------------------- the pot
+
+     The kitty as a communal float: families pay money in, and spending draws
+     it down. A pay-in is an entry with entryType === 'payin'; everything else
+     is a spend. A spend draws the pot unless fromKitty === false — a cost the
+     group is tracking but has agreed not to take from the shared money, like
+     a round of drinks the drinkers are covering between themselves.
+
+     Sums are kept in both currencies, exactly as spendByPerson does, because
+     the kitty leads on the euro figure and shows the home one beneath. Mixing
+     currencies in one sum is the same rough assumption the rest of the page
+     already makes; nothing here is more precise than the data it is given.
+
+     remaining = paid in − drawn from the pot. It is allowed to go negative and
+     is left that way, never clamped: a pot that is €40 overdrawn is a fact the
+     group wants to see, not something to hide behind a zero.
+  */
+  function pot(entries) {
+    const amt = (e, f) => { const v = e[f]; return typeof v === 'number' && isFinite(v) ? v : 0; };
+    let inL = 0, inH = 0, inN = 0;
+    let drawnL = 0, drawnH = 0;
+    let offL = 0, offH = 0;
+    let spendN = 0;
+    for (const e of entries || []) {
+      if (!e) continue;
+      if (e.entryType === 'payin') {
+        inL += amt(e, 'amountLocal'); inH += amt(e, 'amountHome'); inN++;
+        continue;
+      }
+      spendN++;
+      if (e.fromKitty === false) { offL += amt(e, 'amountLocal'); offH += amt(e, 'amountHome'); }
+      else { drawnL += amt(e, 'amountLocal'); drawnH += amt(e, 'amountHome'); }
+    }
+    return {
+      paidInLocal: round2(inL), paidInHome: round2(inH), paidInCount: inN,
+      drawnLocal: round2(drawnL), drawnHome: round2(drawnH),
+      offLocal: round2(offL), offHome: round2(offH),
+      spendCount: spendN,
+      remainingLocal: round2(inL - drawnL), remainingHome: round2(inH - drawnH),
+    };
+  }
+
   global.Money = {
     round2, parseAmount, toHome, toLocal, formatMoney,
     beneficiariesOf, summarise, levellingTransfers, spendByPerson, total,
-    householdsOf, spendByHousehold, summariseHouseholds,
+    householdsOf, spendByHousehold, summariseHouseholds, pot,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

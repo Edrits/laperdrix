@@ -9,7 +9,7 @@
 <meta name="theme-color" id="tc" content="#171b14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="styles.css?v=25">
+<link rel="stylesheet" href="styles.css?v=26">
 <!-- In the <head> and inline, so the attribute lands before the first paint.
      See the same block in index.html. -->
 <script>
@@ -43,6 +43,7 @@
       <span class="pot-home" id="potHome"></span>
     </div>
     <p class="pot-cap" id="potCap"></p>
+    <div class="payins" id="payinList" hidden></div>
   </section>
 
   <!-- These filter the whole page below them — chart, entries and all. -->
@@ -110,7 +111,10 @@
   </section>
 </main>
 
-<div class="bar"><button class="btn" id="addBtn">＋ Add spend</button></div>
+<div class="bar bar-two">
+  <button class="btn ghost" id="payInBtn">Pay in</button>
+  <button class="btn" id="addBtn">＋ Add spend</button>
+</div>
 
 <!-- ------------------------------------------------------------ the form -->
 <!-- Tapping anywhere off the form is the same as Cancel. Nothing behind this
@@ -146,6 +150,17 @@
     <div class="tags" id="fTags" role="group" aria-labelledby="tagLabel"></div>
     <input id="fDetail" type="text" maxlength="60" placeholder="Anything worth adding (optional)" autocomplete="off">
 
+    <!-- Shown only once the kitty is a real pot (somebody has paid in). Lets a
+         spend be tracked without drawing the shared money down, for costs like
+         alcohol that not everyone is in on. Alcohol defaults it to "no". -->
+    <div id="fKittyWrap" hidden>
+      <label id="kittyLabel">Comes out of the kitty?</label>
+      <div class="payers" id="fKitty" role="group" aria-labelledby="kittyLabel">
+        <button type="button" class="who-chip on" data-kitty="yes">Yes, from the kitty</button>
+        <button type="button" class="who-chip" data-kitty="no">No, just track it</button>
+      </div>
+    </div>
+
     <label for="fWhen">When</label>
     <input id="fWhen" type="date">
     <p class="conv" id="fPhase"></p>
@@ -177,7 +192,7 @@
 
 <script src="icons.js?v=6"></script>
 <script src="sync.js?v=3"></script>
-<script src="money.js?v=3"></script>
+<script src="money.js?v=4"></script>
 <script>
 /* =========================================================================
    The kitty.
@@ -215,7 +230,7 @@ const K_CONF = 'laperdrix.kitty.v1';
 /* Tags rather than free text: a list you can tap is faster than typing on a
    phone, and it makes the spending groupable later. The detail field is always
    there for anything a tag doesn't cover. */
-const TAGS = ['Food shop', 'Restaurant', 'Drinks', 'Market', 'Fuel', 'Tolls',
+const TAGS = ['Food shop', 'Restaurant', 'Drinks', 'Alcohol', 'Market', 'Fuel', 'Tolls',
               'Activities', 'The house', 'Travel', 'Other'];
 
 const $ = id => document.getElementById(id);
@@ -283,16 +298,54 @@ function freeIcon(){
 
 /* ------------------------------------------------------------ rendering */
 
-const visible = () => expenses.filter(e => phase === 'all' || e.phase === phase);
+/* Spends only, filtered by phase. Pay-ins are money INTO the pot, not spending,
+   so they never appear in the chart, the entries or the levelling below. */
+const visible = () => expenses.filter(e => e.entryType !== 'payin' && (phase === 'all' || e.phase === phase));
+/* Pay-ins are a whole-trip fact, so they ignore the phase filter. */
+const payins  = () => expenses.filter(e => e.entryType === 'payin');
 
 function renderPot(){
-  const list = visible();
-  const payers = new Set(list.map(e => e.paidBy).filter(id => personById(id))).size;
-  $('potLocal').textContent = fmtL(Money.total(list, 'amountLocal'));
-  $('potHome').textContent = list.length ? '≈ ' + fmtH(Money.total(list, 'amountHome')) : '';
-  $('potCap').textContent = list.length
-    ? `${list.length} ${list.length === 1 ? 'entry' : 'entries'} · ${payers} ${payers === 1 ? 'person' : 'people'} chipping in`
-    : 'Nothing in it yet';
+  const p = Money.pot(expenses);          // the pot is global; the phase filter is for spending below
+  if (p.paidInCount > 0){
+    // A pot exists: lead on what is left.
+    $('potLocal').textContent = fmtL(p.remainingLocal);
+    $('potHome').textContent = '≈ ' + fmtH(p.remainingHome);
+    let cap = `${fmtL(p.paidInLocal)} in · ${fmtL(p.drawnLocal)} spent from the kitty`;
+    if (p.offLocal) cap += ` · ${fmtL(p.offLocal)} tracked outside it`;
+    $('potCap').textContent = cap;
+    $('potLocal').classList.toggle('over', p.remainingLocal < 0);
+  } else {
+    // No pot yet: the old behaviour, total spent so far on the filtered view.
+    const list = visible();
+    const payers = new Set(list.map(e => e.paidBy).filter(id => personById(id))).size;
+    $('potLocal').textContent = fmtL(Money.total(list, 'amountLocal'));
+    $('potHome').textContent = list.length ? '≈ ' + fmtH(Money.total(list, 'amountHome')) : '';
+    $('potCap').textContent = list.length
+      ? `${list.length} ${list.length === 1 ? 'entry' : 'entries'} · ${payers} ${payers === 1 ? 'person' : 'people'} chipping in`
+      : 'Nothing in it yet';
+    $('potLocal').classList.remove('over');
+  }
+  renderPayins();
+}
+
+/* The compact list of who has paid into the pot, under the headline figure.
+   Tapping one opens it for editing, the same as a spend. */
+function renderPayins(){
+  const el = $('payinList');
+  if (!el) return;
+  const list = payins().slice().sort((a, b) =>
+    String(b.spentOn).localeCompare(String(a.spentOn)) || (b.createdAt || 0) - (a.createdAt || 0));
+  if (!list.length){ el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.innerHTML = list.map(e => {
+    const p = personById(e.paidBy);
+    const fam = p && p.household ? ` (${esc(p.household)})` : '';
+    const who = p ? esc(p.name) + fam : 'someone who has left';
+    return `<button class="payin-row" data-id="${esc(e.id)}">
+      <span class="payin-who"><span class="av sm" style="background:${p ? colourOf(p.icon) : 'var(--mut)'}">${p ? iconOf(p.icon) : ''}</span>${who} paid in</span>
+      <span class="payin-amt">${fmtL(e.amountLocal)}</span>
+    </button>`;
+  }).join('');
 }
 
 /* The centrepiece. Everyone with a profile gets a row, including people who
@@ -374,11 +427,12 @@ function renderSpend(){
       const payer = personById(e.paidBy);
       const some = e.beneficiaries && e.beneficiaries.length
         ? `<span class="tag">${e.beneficiaries.length} of ${people.filter(p=>p.counts).length}</span>` : '';
+      const off = e.fromKitty === false ? `<span class="tag off">not from the kitty</span>` : '';
       const detail = e.what ? esc(e.what) + ' · ' : '';
       return `<button class="erow" data-id="${esc(e.id)}">
         <span class="eav" style="background:${payer ? colourOf(payer.icon) : 'var(--mut)'}">${payer ? iconOf(payer.icon) : ''}</span>
         <span class="emain">
-          <span class="edesc">${esc(e.category || e.what || 'Spending')} ${some}</span>
+          <span class="edesc">${esc(e.category || e.what || 'Spending')} ${some}${off}</span>
           <span class="emeta">${detail}${payer ? esc(payer.name) : 'someone who has left'}</span>
         </span>
         <span class="eamt">
@@ -436,7 +490,7 @@ function render(){
      button that empties the whole kitty at the foot of a screen showing part of
      it: the confirm's count never matched what you were looking at. Now the one
      view it appears on is the one showing everything it will take. */
-  $('resetBox').hidden = expenses.length === 0 || phase !== 'all';
+  $('resetBox').hidden = expenses.filter(e => e.entryType !== 'payin').length === 0 || phase !== 'all';
 }
 
 /* ------------------------------------------------------------ start again
@@ -449,11 +503,12 @@ function render(){
    localStorage would look like it had worked and then have the next pull()
    quietly put every entry back. */
 function openConfirm(){
-  const n = expenses.length;
+  const spends = expenses.filter(e => e.entryType !== 'payin');
+  const n = spends.length;
   if (!n) return;
   $('cfBody').innerHTML =
-    `This removes <b>${n} ${n === 1 ? 'entry' : 'entries'}</b>, <b>${fmtL(Money.total(expenses, 'amountLocal'))}</b> ` +
-    `in total, for everyone on every device. The people and their icons stay.`;
+    `This removes <b>${n} ${n === 1 ? 'entry' : 'entries'}</b>, <b>${fmtL(Money.total(spends, 'amountLocal'))}</b> ` +
+    `in total, for everyone on every device. Pay-ins into the pot, and everybody's name and icon, stay.`;
   $('confirmSheet').classList.add('open');
   $('scrim').classList.add('open');
 }
@@ -467,8 +522,9 @@ $('cfCancel').addEventListener('click', closeConfirm);
 $('scrim').addEventListener('click', closeConfirm);   // tapping away is a cancel
 $('cfGo').addEventListener('click', () => {
   // Snapshot the ids first: removeExpense rewrites the stored list each time,
-  // so iterating the live array would skip every other entry.
-  for (const id of expenses.map(e => e.id)) Sync.removeExpense(id);
+  // so iterating the live array would skip every other entry. Pay-ins are left
+  // alone — the pot is not "the spending".
+  for (const id of expenses.filter(e => e.entryType !== 'payin').map(e => e.id)) Sync.removeExpense(id);
   expenses = Sync.expenses();
   closeConfirm();
   render();
@@ -545,30 +601,50 @@ function updateForm(){
   $('fPhase').textContent = phaseOf(when) === 'pre_trip' ? 'Counted as before we go.' : 'Counted as out there.';
 
   const payerOk = draft.paidBy === '__new' ? $('fNewName').value.trim().length > 0 : Boolean(draft.paidBy);
-  $('fSave').disabled = parsed === null || parsed === 0 || !payerOk || !draft.category;
+  const isPayin = draft.entryType === 'payin';
+  $('fSave').disabled = parsed === null || parsed === 0 || !payerOk || (!isPayin && !draft.category);
 }
 
 /* Nothing in here may await or defer: the Add button focuses the amount field
    the instant this returns, and iOS only raises the keypad for a focus() that
    happens inside the tap's own task. */
-function openForm(existing){
+/* The one sheet does both jobs. A pay-in drops the "what for", the detail and
+   the kitty toggle, and relabels the payer and the title. */
+function applyMode(){
+  const isPayin = draft.entryType === 'payin';
+  $('fTitle').textContent = isPayin
+    ? (draft.id ? 'Edit pay-in' : 'Pay into the kitty')
+    : (draft.id ? 'Edit spend' : 'Add spend');
+  $('payLabel').textContent = isPayin ? 'Who paid in' : 'Who paid';
+  $('tagLabel').hidden = isPayin;
+  $('fTags').hidden = isPayin;
+  $('fDetail').hidden = isPayin;
+  // The toggle is only meaningful for a spend, and only once a pot exists to
+  // draw from — before the first pay-in there is nothing for it to mean.
+  $('fKittyWrap').hidden = isPayin || payins().length === 0;
+  const yes = draft.fromKitty !== false;
+  [...$('fKitty').children].forEach(b => b.classList.toggle('on', (b.dataset.kitty === 'yes') === yes));
+}
+
+function openForm(existing, kind){
   people = loadPeople();
   const lastPayer = read(K_ME, null);
   draft = existing ? Object.assign({}, existing) : {
-    id: null, category: null, what: '', currency: 'EUR',
+    id: null, entryType: kind === 'payin' ? 'payin' : 'spend',
+    category: null, what: '', currency: 'EUR', fromKitty: true,
     paidBy: personById(lastPayer) ? lastPayer : (people[0] ? people[0].id : '__new'),
     spentOn: todayISO(),
     household: '',
   };
+  if (!draft.entryType) draft.entryType = 'spend';   // old records predate the field
 
-  $('fTitle').textContent = existing ? 'Edit spend' : 'Add spend';
   $('fDelete').hidden = !existing;
   $('fAmount').value = existing ? String(existing.currency === 'GBP' ? existing.amountHome : existing.amountLocal) : '';
   $('fDetail').value = draft.what || '';
   $('fWhen').value = draft.spentOn;
   $('fNewName').value = '';
   [...$('fCcy').children].forEach(b => b.classList.toggle('on', b.dataset.ccy === draft.currency));
-  renderPayers(); renderTags();
+  renderPayers(); renderTags(); applyMode();
   updateForm();
 
   $('sheet').classList.add('open');
@@ -586,10 +662,26 @@ function closeForm(){
 }
 
 $('addBtn').addEventListener('click', () => {
-  openForm(null);
+  openForm(null, 'spend');
   /* Synchronous, in the gesture's own task, and after the sheet is open —
      defer it by so much as a rAF and the field focuses with no keypad. */
   $('fAmount').focus();
+});
+$('payInBtn').addEventListener('click', () => {
+  openForm(null, 'payin');
+  $('fAmount').focus();
+});
+$('payinList').addEventListener('click', e => {
+  const row = e.target.closest('.payin-row');
+  if (!row) return;
+  const found = expenses.find(x => x.id === row.dataset.id);
+  if (found) openForm(found);
+});
+$('fKitty').addEventListener('click', e => {
+  const b = e.target.closest('.who-chip');
+  if (!b) return;
+  draft.fromKitty = b.dataset.kitty === 'yes';
+  [...$('fKitty').children].forEach(x => x.classList.toggle('on', x === b));
 });
 $('fCancel').addEventListener('click', closeForm);
 $('formScrim').addEventListener('click', closeForm);   // tapping away cancels
@@ -629,13 +721,19 @@ $('fTags').addEventListener('click', e => {
   const b = e.target.closest('.pill');
   if (!b) return;
   draft.category = b.dataset.tag;
+  // Alcohol is the reason the toggle exists: default it to not drawing the pot.
+  // Anything else leaves the current choice alone.
+  if (b.dataset.tag === 'Alcohol') draft.fromKitty = false;
   renderTags();
+  applyMode();
   updateForm();
 });
 
 $('fSave').addEventListener('click', () => {
   const typed = Money.parseAmount($('fAmount').value);
-  if (typed === null || typed === 0 || !draft.category) return;
+  const isPayin = draft.entryType === 'payin';
+  if (typed === null || typed === 0) return;
+  if (!isPayin && !draft.category) return;
 
   // An unknown payer is just a name. Create the person here rather than sending
   // anyone off to make a profile first — they land on the calendar spanning the
@@ -668,7 +766,9 @@ $('fSave').addEventListener('click', () => {
   // never rewrites what an old entry cost.
   const rec = {
     id: draft.id || Sync.newId(),
-    category: draft.category,
+    entryType: isPayin ? 'payin' : 'spend',
+    category: isPayin ? null : draft.category,
+    fromKitty: isPayin ? true : (draft.fromKitty !== false),
     what: $('fDetail').value.trim(),
     paidBy: payer,
     spentOn,

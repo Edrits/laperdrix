@@ -180,6 +180,14 @@ create table if not exists expenses (
   note                    text,
   phase                   expense_phase not null default 'on_trip',
 
+  -- The kitty as a communal pot. 'payin' marks a family putting money in;
+  -- everything else is a spend. from_kitty = false is a spend the group tracks
+  -- but does not draw from the shared money (alcohol, say, which not everyone
+  -- is in on). Both default to the old behaviour, so existing rows are a
+  -- spend that draws the pot, unchanged.
+  entry_type              text not null default 'spend',
+  from_kitty              boolean not null default true,
+
   paid_by_member_id       uuid references members(id) on delete set null,
   created_by_member_id    uuid references members(id) on delete set null,
 
@@ -206,6 +214,12 @@ create table if not exists expenses (
 create index if not exists expenses_trip_date_idx on expenses (trip_id, spent_on desc);
 create index if not exists expenses_trip_phase_idx on expenses (trip_id, phase);
 create index if not exists expenses_payer_idx on expenses (paid_by_member_id);
+
+-- Added 2026-08: the kitty as a communal pot (see the column comments above).
+-- Additive and defaulted, so live rows are untouched. Run these against the
+-- live database, then `notify pgrst, 'reload schema'`, then re-paste worker.js.
+alter table expenses add column if not exists entry_type text not null default 'spend';
+alter table expenses add column if not exists from_kitty boolean not null default true;
 
 -- ---------------------------------------------------------------- extractions
 

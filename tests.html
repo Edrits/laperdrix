@@ -648,6 +648,43 @@ group('nightFor — what the front page asks');
   eq(R.nightFor(rota, '2030-01-01'), null,             'nothing, once it is over');
 }
 
+/* ----------------------------------------------------------------- pot */
+group('pot — the communal float families pay into and spend down');
+{
+  const entries = [
+    { entryType: 'payin', amountLocal: 500, amountHome: 425 },
+    { entryType: 'payin', amountLocal: 350, amountHome: 297.5 },
+    { amountLocal: 120, amountHome: 102 },                    // spend, draws the pot (fromKitty undefined)
+    { fromKitty: true,  amountLocal: 30,  amountHome: 25.5 }, // spend, draws the pot
+    { fromKitty: false, amountLocal: 60,  amountHome: 51 },   // alcohol: tracked, but NOT from the pot
+  ];
+  const P = M.pot(entries);
+  eq(P.paidInLocal, 850,   'paid in = 500 + 350');
+  eq(P.paidInCount, 2,     'two pay-ins counted');
+  eq(P.drawnLocal, 150,    'drawn from the pot = 120 + 30; the off-pot 60 is excluded');
+  eq(P.offLocal, 60,       'off-pot spend is tracked on its own');
+  eq(P.spendCount, 3,      'three spends (pay-ins are not spends)');
+  eq(P.remainingLocal, 700,'remaining = 850 − 150');
+  eq(P.remainingHome, 595, 'remaining in the home currency = 722.50 − 127.50');
+
+  const over = M.pot([
+    { entryType: 'payin', amountLocal: 100, amountHome: 85 },
+    { amountLocal: 140, amountHome: 119 },
+  ]);
+  eq(over.remainingLocal, -40, 'an overdrawn pot goes negative rather than clamping to 0');
+
+  const empty = M.pot([]);
+  eq(empty.remainingLocal, 0, 'an empty pot is 0');
+  eq(empty.paidInCount, 0,    'and has no pay-ins');
+
+  // A refund (negative spend) still just draws a negative amount from the pot.
+  const refund = M.pot([
+    { entryType: 'payin', amountLocal: 200, amountHome: 170 },
+    { amountLocal: -25, amountHome: -21.25 },
+  ]);
+  eq(refund.remainingLocal, 225, 'a refund adds back to the pot');
+}
+
 /* ------------------------------------------------------------------ done */
 const s = document.getElementById('summary');
 s.className = 'sum ' + (fail ? 'bad' : 'ok');
