@@ -9,7 +9,7 @@
 <meta name="theme-color" id="tc" content="#171b14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="styles.css?v=30">
+<link rel="stylesheet" href="styles.css?v=31">
 <!-- In the <head> and inline, so the attribute lands before the first paint.
      See the same block in index.html. -->
 <script>
@@ -583,7 +583,7 @@ function renderHouses(){
   const chip = (val, text, extra) =>
     `<button type="button" class="who-chip${extra || ''}${chosen === val ? ' on' : ''}" data-hh="${esc(val)}">${text}</button>`;
   $('fHouse').innerHTML =
-    chip('', 'Cavalier seul') +
+    chip('', 'Cavalier seul <span class="gloss">just me</span>') +
     familyNames().map(h => chip(h, esc(h))).join('') +
     chip('__new', '<span class="plus">＋</span>New family', ' newp');
   $('fHouseName').hidden = chosen !== '__new';

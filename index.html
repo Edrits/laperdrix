@@ -18,7 +18,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=2">
-<link rel="stylesheet" href="styles.css?v=30">
+<link rel="stylesheet" href="styles.css?v=31">
 <!-- Dark is the default, and this has to run in the <head>: set the attribute
      any later and a light frame paints first, which on a phone in a dim room is
      a flash in the eye. Inline and tiny for the same reason — an external file
@@ -762,7 +762,7 @@ function renderHouses(){
   const chip = (val, text, extra) =>
     `<button type="button" class="who-chip${extra || ''}${chosen === val ? ' on' : ''}" data-hh="${esc(val)}">${text}</button>`;
   $('fHouse').innerHTML =
-    chip('', 'Cavalier seul') +
+    chip('', 'Cavalier seul <span class="gloss">just me</span>') +
     familyNames().map(h => chip(h, esc(h))).join('') +
     chip('__new', '<span class="plus">＋</span>New family', ' newp');
   $('fHouseName').hidden = chosen !== '__new';
