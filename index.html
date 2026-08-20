@@ -17,8 +17,8 @@
      happily serve a stale stylesheet and you'll debug a fix you already made. -->
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
-<link rel="stylesheet" href="photos.css?v=2">
-<link rel="stylesheet" href="styles.css?v=34">
+<link rel="stylesheet" href="photos.css?v=3">
+<link rel="stylesheet" href="styles.css?v=35">
 <!-- Dark is the default, and this has to run in the <head>: set the attribute
      any later and a light frame paints first, which on a phone in a dim room is
      a flash in the eye. Inline and tiny for the same reason — an external file
@@ -35,8 +35,8 @@
 
 <!-- ============================================================ hero -->
 <header class="hero">
-  <div class="plate" role="img" aria-label="Photographs of La Perdrix: the group in the garden, the lake, terracotta heads, hens in the shade">
-    <span></span><span></span><span></span><span></span>
+  <div class="plate" role="img" aria-label="Photographs of La Perdrix: the group in the garden, the lake, terracotta heads, hens in the shade, the house in golden light, and the pool at sunset">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
   </div>
   <span class="wash"></span>
   <!-- Straight to the two things you actually come back for, without scrolling
@@ -186,8 +186,8 @@
   </a>
 </section>
 
-<div class="band window reveal">
-  <div class="cap"><small>Look up</small><p>Limestone, ivy, and one shuttered window set straight into the rock.</p></div>
+<div class="band garden reveal">
+  <div class="cap"><small>Out through the vines</small><p>The flagstones, the vine shade, and the dog keeping an eye on the garden.</p></div>
 </div>
 
 <!-- ============================================================ the kitty, behind a click -->
@@ -1072,7 +1072,7 @@ summariseKitty();
 /* ------------------------------------------------- the photographs
    Fetching and the signed-URL dance live in photos.js, shared with rota.html.
    This page shows the lot; the rota only needs its own backdrop. */
-Photos.load(['group', 'lake', 'abbey', 'chair', 'mirror', 'heads', 'hens', 'window']);
+Photos.load(['group', 'lake', 'abbey', 'chair', 'mirror', 'heads', 'hens', 'garden', 'house', 'pool']);
 
 /* ---------------------------------------------------------------- theme
    Dark unless somebody has chosen light. The attribute is already on <html>

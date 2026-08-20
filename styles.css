@@ -92,15 +92,21 @@ body::before{
 .plate{position:absolute;inset:0;z-index:0}
 .plate span{
   position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;
-  filter:brightness(.8) saturate(.95) contrast(1.05);animation:cycle 34s infinite;
+  filter:brightness(.8) saturate(.95) contrast(1.05);animation:cycle 51s infinite;
 }
+/* Six now, not four. The cycle grew 34s -> 51s to keep the same 8.5s slot per
+   image, and the keyframe percentages below were rescaled to the longer cycle
+   so each photograph holds and cross-fades over exactly the same wall-clock time
+   as before. Delays stay 8.5s apart. */
 .plate span:nth-child(1){background-image:var(--ph-group);background-position:center 26%;animation-delay:0s}
 .plate span:nth-child(2){background-image:var(--ph-lake);animation-delay:8.5s}
 .plate span:nth-child(3){background-image:var(--ph-heads);animation-delay:17s}
 .plate span:nth-child(4){background-image:var(--ph-hens);animation-delay:25.5s}
+.plate span:nth-child(5){background-image:var(--ph-house);animation-delay:34s}
+.plate span:nth-child(6){background-image:var(--ph-pool);animation-delay:42.5s}
 @keyframes cycle{
-  0%{opacity:0;transform:scale(1.02)} 4%{opacity:1} 25%{opacity:1} 31%{opacity:0}
-  31.01%{transform:scale(1.02)} 100%{opacity:0;transform:scale(1.11)}
+  0%{opacity:0;transform:scale(1.02)} 2.67%{opacity:1} 16.67%{opacity:1} 20.67%{opacity:0}
+  20.68%{transform:scale(1.02)} 100%{opacity:0;transform:scale(1.11)}
 }
 .wash{
   position:absolute;inset:0;z-index:1;
@@ -242,7 +248,7 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 }
 .band.abbey{background-image:var(--ph-abbey)}
 .band.chair{background-image:var(--ph-chair)}
-.band.window{background-image:var(--ph-window)}
+.band.garden{background-image:var(--ph-garden)}
 /* The rota's backdrop. Slightly above centre: the band is a wide slice, and
    dead centre puts the crop on bare tablecloth. This keeps the awning, the
    laid table and the pots all in frame from a phone up to a desktop. */
