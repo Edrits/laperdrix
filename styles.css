@@ -559,9 +559,18 @@ body.picking .bar{display:none}
 
 /* ------------------------------------------------------------------ pot */
 .pot-sec{padding-block:14px 0}
-/* A small wink under the heading. Tucks up close beneath the eyebrow and keeps
-   out of the big number's way. */
-.kitty-quip{font:italic 400 13.5px/1.4 var(--serif);color:var(--mut);margin:-10px 0 14px}
+/* The panel around everything the kitty reports: the quip, the headline, the
+   caption and the pay-ins. A light border and a half-step of surface is enough
+   to say "this is the display" without the page growing another box — the total
+   was previously loose type on the page background, indistinguishable from the
+   filters and the chart heading below it. */
+.pot-card{
+  border:1px solid var(--hair);border-radius:16px;background:var(--surface);
+  padding:15px 17px 17px;margin-top:12px;
+}
+/* A small wink under the heading. Inside the panel it no longer has to tuck up
+   under the eyebrow, so the negative pull comes off. */
+.kitty-quip{font:italic 400 13.5px/1.4 var(--serif);color:var(--mut);margin:0 0 10px}
 .pot-big{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
 .pot-local{
   font:600 clamp(34px,9vw,52px)/1 var(--serif);color:var(--accent);

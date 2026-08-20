@@ -9,7 +9,7 @@
 <meta name="theme-color" id="tc" content="#171b14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="styles.css?v=36">
+<link rel="stylesheet" href="styles.css?v=37">
 <!-- In the <head> and inline, so the attribute lands before the first paint.
      See the same block in index.html. -->
 <script>
@@ -38,13 +38,19 @@
 <main>
   <section class="sec pot-sec">
     <p class="eyebrow">The kitty</p>
-    <p class="kitty-quip">Allez, on va à Intermarché.</p>
-    <div class="pot-big">
-      <span class="pot-local" id="potLocal">—</span>
-      <span class="pot-home" id="potHome"></span>
+    <!-- Everything the kitty *reports* sits inside one bordered panel, so it
+         reads as a display rather than as more of the page. What you can act on
+         is then unambiguous: the filters below it, and the two buttons at the
+         foot of the screen. -->
+    <div class="pot-card">
+      <p class="kitty-quip">Allez, on va à Intermarché.</p>
+      <div class="pot-big">
+        <span class="pot-local" id="potLocal">—</span>
+        <span class="pot-home" id="potHome"></span>
+      </div>
+      <p class="pot-cap" id="potCap"></p>
+      <div class="payins" id="payinList" hidden></div>
     </div>
-    <p class="pot-cap" id="potCap"></p>
-    <div class="payins" id="payinList" hidden></div>
   </section>
 
   <!-- These filter the whole page below them — chart, entries and all. -->
@@ -113,7 +119,7 @@
 </main>
 
 <div class="bar bar-two">
-  <button class="btn ghost" id="payInBtn">Pay in</button>
+  <button class="btn ghost" id="payInBtn">I've paid in</button>
   <button class="btn" id="addBtn">＋ Add spend</button>
 </div>
 
@@ -648,7 +654,7 @@ function updateForm(){
 function applyMode(){
   const isPayin = draft.entryType === 'payin';
   $('fTitle').textContent = isPayin
-    ? (draft.id ? 'Edit pay-in' : 'Pay into the kitty')
+    ? (draft.id ? 'Edit pay-in' : "I've paid in")
     : (draft.id ? 'Edit spend' : 'Add spend');
   $('payLabel').textContent = isPayin ? 'Who paid in' : 'Who paid';
   $('tagLabel').hidden = isPayin;

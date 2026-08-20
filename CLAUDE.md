@@ -229,6 +229,15 @@ sprite; a mismatch renders an empty circle with no error.
   carry `beneficiaries` still load and still render; nothing new can create them. Don't reintroduce
   either without Ed asking: each was removed because it was friction in a form that has to work
   one-handed in a supermarket.
+- **Kitty copy records, it never instructs.** Ed: the app must read as a tracker, not a payment
+  system. So the button is **"I've paid in"**, not "Pay in", and the sheet it opens is titled the
+  same; nothing anywhere tells somebody to pay, transfer or settle. Past tense for what has already
+  happened, and "Add spend" for what you are logging. This is the same rule as the framing at the
+  top of this file, applied to button and heading text.
+- **Everything the kitty reports lives inside `.pot-card`.** The quip, the headline figure, the
+  breakdown caption and the pay-in rows sit in one bordered panel, so the display is visibly one
+  thing and the controls (the filters below it, the two buttons at the foot) are visibly another.
+  Loose on the page background, the total read as just more text among the filters and headings.
 - `Money.spendByPerson()` is what the chart draws from. Everyone with a profile gets a row,
   including people who have spent nothing — an empty track is a fact worth showing, and it stops
   the chart reading as a leaderboard. A negative total gets a zero-width bar rather than a negative
