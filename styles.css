@@ -48,6 +48,11 @@
 
   --safe-b:env(safe-area-inset-bottom,0px);
   --safe-t:env(safe-area-inset-top,0px);
+
+  /* Height of the on-screen keyboard when it is up, 0 otherwise. Set by
+     focus.js from visualViewport; the input sheets lift by it so the field
+     you are typing into never hides behind the keypad. */
+  --kb:0px;
 }
 
 :root[data-theme="dark"]{
@@ -455,7 +460,7 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 .btn:disabled{opacity:.42;cursor:default}
 
 .sheet{
-  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  position:fixed;left:0;right:0;bottom:var(--kb);z-index:50;
   background:var(--surface);border-top:1px solid var(--hair);
   border-radius:16px 16px 0 0;box-shadow:0 -16px 40px -20px rgba(10,13,8,.7);
   transform:translateY(102%);transition:transform .3s cubic-bezier(.2,.8,.3,1);
@@ -725,7 +730,11 @@ body.picking .bar{display:none}
 /* The add-spend sheet grew a payer row and ten tags. On a tall phone it fits;
    on a 667px one it would run off the bottom with Save unreachable and no way
    to scroll. Cap it and let the inside scroll instead. */
-.sheet .in2{max-height:92svh;overflow-y:auto;overscroll-behavior:contain}
+/* When the keypad is up (--kb > 0), the sheet has lifted above it, so the
+   scroll area must shrink to what is left on screen or the top fields, the
+   amount field included, would sit above the visible strip with no way to
+   reach them. min() keeps the plain 92svh whenever no keypad is showing. */
+.sheet .in2{max-height:min(92svh, calc(100svh - var(--kb) - 12px));overflow-y:auto;overscroll-behavior:contain}
 
 /* The dates sheet is the exception: it is the one sheet you use WHILE looking
    at what is behind it. At 92svh it covered the calendar it was asking you to

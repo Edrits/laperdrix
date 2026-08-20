@@ -76,4 +76,27 @@
   }
 
   global.Focus = { trap, release };
+
+  /* ---------------------------------------------------------------- keypad
+     Keep an open input sheet clear of the on-screen keyboard. A sheet is
+     position:fixed to bottom:0, which iOS pins to the LAYOUT viewport, and iOS
+     does not shrink that when the keypad opens. The sheet therefore stays put
+     and the field being typed into hides behind the keys, with no way to scroll
+     to it. visualViewport is the only thing that reports the keypad's height, so
+     we mirror it into a --kb custom property; styles.css lifts the sheet by it
+     and caps the sheet's scroll area to what is left on screen.
+
+     Passive and page-agnostic: with no keypad up, --kb is 0 and nothing moves.
+     The 40px floor keeps Safari's collapsing toolbar from reading as a keypad. */
+  const vv = global.visualViewport;
+  if (vv) {
+    const root = document.documentElement;
+    const syncKb = () => {
+      const kb = global.innerHeight - vv.height - vv.offsetTop;
+      root.style.setProperty('--kb', (kb > 40 ? Math.round(kb) : 0) + 'px');
+    };
+    vv.addEventListener('resize', syncKb);
+    vv.addEventListener('scroll', syncKb);
+    syncKb();
+  }
 })(window);

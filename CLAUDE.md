@@ -314,6 +314,14 @@ sprite; a mismatch renders an empty circle with no error.
   fell behind the sheet; opening the sheet from the button at the foot of the page left the calendar
   off the *top* of the screen with nothing to bring it back, so people got "tap the day you arrive"
   over a photograph.
+- **The input sheets ride above the keyboard via `--kb`, not `bottom:0`.** A `position:fixed`
+  sheet is pinned to the *layout* viewport, and iOS does not shrink that when the keypad opens, so
+  the sheet (and the amount field you are typing into) hid behind the keys with no way to scroll to
+  it. `focus.js` mirrors `visualViewport`'s keypad height into a `--kb` custom property; `.sheet`
+  lifts by `bottom:var(--kb)` and `.sheet .in2`'s `max-height` shrinks by it so the top fields stay
+  reachable. It is passive and page-agnostic (with no keypad, `--kb` is `0px` and nothing moves), so
+  don't reintroduce a bare `bottom:0` on `.sheet`. The `40px` floor stops Safari's collapsing
+  toolbar from reading as a keypad.
 
 ## Testing and checking
 
