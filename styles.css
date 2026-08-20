@@ -184,6 +184,47 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
   .print figcaption{font-size:11px}
 }
 
+/* ---------------------------------------------------------------- essay */
+/* The one block on the landing page written to be read at length, not glanced
+   at. A narrow measure so the lines don't run too wide, a drop cap to open, and
+   the closing line set apart in the accent. Colours come through --tx and
+   --accent, so it reads right in both themes without its own overrides. */
+.essay{padding-block:78px 0}
+/* The credit, sitting where an eyebrow would. "Words by" is the quiet part and
+   the name the loud one, with the same hairline rule the eyebrows carry. */
+.essay .byline{
+  display:flex;align-items:center;gap:12px;margin:0 0 24px;
+  font:italic 400 clamp(15px,2.2vw,17px)/1 var(--serif);color:var(--mut);
+}
+.essay .byline b{font-style:normal;font-weight:600;color:var(--tx);letter-spacing:.005em}
+.essay .byline::after{content:"";flex:1;height:1px;background:var(--hair)}
+.prose{max-width:34em;margin:0}
+/* Collapsed on load (added in JS, so no-JS shows it all). A mask fade rather
+   than a hard cut, and it works in alpha so it needs no per-theme colour. */
+.prose.clamped{
+  max-height:min(48svh,360px);overflow:hidden;
+  -webkit-mask-image:linear-gradient(to bottom,#000 58%,transparent);
+          mask-image:linear-gradient(to bottom,#000 58%,transparent);
+}
+.read-on{
+  display:inline-flex;align-items:center;gap:8px;margin-top:20px;
+  font:600 13px/1 var(--sans);letter-spacing:.04em;text-transform:uppercase;
+  color:var(--accent);background:none;border:0;padding:8px 0;cursor:pointer;
+}
+.read-on svg{width:16px;height:16px;transition:transform .3s ease}
+.read-on[aria-expanded="true"] svg{transform:rotate(180deg)}
+.prose p{font:400 clamp(16.5px,2.3vw,18.5px)/1.72 var(--serif);margin:0 0 1.1em}
+.prose p:last-child{margin-bottom:0}
+.prose .lead-p{font-size:clamp(18px,2.7vw,21px);line-height:1.56}
+.prose .lead-p::first-letter{
+  float:left;font:600 clamp(46px,10vw,64px)/.76 var(--serif);
+  color:var(--accent);padding:5px 10px 0 0;
+}
+.prose .sign{
+  font:italic 500 clamp(19px,3.1vw,24px)/1.42 var(--serif);
+  color:var(--accent);margin-top:1.15em;text-wrap:balance;
+}
+
 /* ---------------------------------------------------------------- photo bands */
 .band{
   position:relative;margin:82px 0 0;min-height:60svh;display:flex;align-items:flex-end;
@@ -268,6 +309,15 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 /* ---------------------------------------------------------------- presence chart */
 .chart{margin-top:30px;overflow-x:auto;padding-bottom:6px}
 .chart-in{min-width:640px}
+/* The presence chart is wider than a phone and scrolls sideways, and the back
+   half of the fortnight (exactly where the interesting overlaps are) sits off
+   the right edge with nothing to say it is there. A soft edge fade is the cue:
+   it appears only on the side that has more to see, and clears when you reach
+   the end. Mask, not an overlay, so it fades to the page behind it in either
+   theme. JS toggles the classes from the scroll position. */
+#chartWrap.fade-r{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 32px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 32px),transparent)}
+#chartWrap.fade-l{-webkit-mask-image:linear-gradient(to right,transparent,#000 32px);mask-image:linear-gradient(to right,transparent,#000 32px)}
+#chartWrap.fade-l.fade-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 32px,#000 calc(100% - 32px),transparent);mask-image:linear-gradient(to right,transparent,#000 32px,#000 calc(100% - 32px),transparent)}
 .scale,.tally,.prow{display:grid;grid-template-columns:104px repeat(var(--days),1fr);gap:2px}
 .scale{align-items:end;padding-bottom:7px;border-bottom:1px solid var(--hair);margin-bottom:5px}
 .scale i{font-style:normal;font-size:9px;text-align:center;color:var(--mut);line-height:1.25}
@@ -564,6 +614,11 @@ body.picking .bar{display:none}
 .emain{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
 .edesc{font-size:14.5px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .emeta{font-size:12px;color:var(--mut)}
+/* "waiting to share": a spend or pay-in saved on this phone but not yet on the
+   server. Deliberately the quietest thing on the row — italic, muted, no
+   colour, no icon. Present only on bad signal, and it removes itself the
+   instant the entry flushes. Silent when everything has landed. */
+.waiting{font-style:italic;color:var(--mut);opacity:.85}
 .tag{
   font-size:10px;letter-spacing:.04em;padding:2px 7px;border-radius:99px;
   background:var(--surface);border:1px solid var(--hair);color:var(--mut);

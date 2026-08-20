@@ -18,7 +18,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=2">
-<link rel="stylesheet" href="styles.css?v=31">
+<link rel="stylesheet" href="styles.css?v=34">
 <!-- Dark is the default, and this has to run in the <head>: set the attribute
      any later and a light frame paints first, which on a phone in a dim room is
      a flash in the eye. Inline and tiny for the same reason — an external file
@@ -64,7 +64,11 @@
   <div class="reveal">
     <p class="eyebrow">The place</p>
     <h2 class="big">A monastery with a swimming pool and too many walnut trees.</h2>
-    <p class="lede">Thirteenth century, gated, on the edge of the village. Three houses joined by a passage, a vine terrace that takes the afternoon shade, and a church steeple to watch the sun go behind. Johnny and Ingrid have lived here since 2007 and it is, by their own account, a little ramshackle.</p>
+    <!-- The boilerplate description that used to sit here is gone; Peter's essay
+         below does that job. In its place, the line his piece ends on, used here
+         as the standfirst so the top of the page and the foot of the essay ring
+         the same note. -->
+    <p class="lede">La Perdrix is our home away from home, only larger, stranger, sunnier, and with considerably more hats.</p>
     <p class="muted">Nothing to organise up here. Add your dates further down when you know them.</p>
   </div>
   <div class="sheet3 reveal">
@@ -81,6 +85,33 @@
       <figcaption></figcaption>
     </figure>
   </div>
+</section>
+
+<!-- ============================================================ in their words -->
+<!-- A longer read, written for the group by one of the regulars who writes for a
+     living. Text only on purpose: the contact sheet above and the photo bands to
+     either side carry the pictures, and this is the one place on the page meant to
+     be read rather than glanced at. Kept in the writer's own words; only the
+     house-style fixes (spelt-out "thirteenth century", no em dashes) are ours. -->
+<section class="sec essay reveal">
+  <p class="byline">Words by <b>Peter Kelly</b></p>
+  <!-- id + clamped-by-JS: the whole piece is in the page, so with no JavaScript
+       it simply shows in full. On load it is collapsed behind "Read the rest",
+       so the essay is there for anyone who wants it without dragging the scroll
+       for everyone who doesn't. -->
+  <div class="prose" id="prose">
+    <p class="lead-p">Every few years, we return to La Perdrix, an old converted monastery in the tiny French village of Saint-Martin-de-Ribérac. We've been coming here for decades, to the point that arriving no longer really feels like the beginning of a holiday. It feels like coming home.</p>
+    <p>La Perdrix is a beautiful, sprawling, slightly ramshackle place, the sort of house that seems to have accumulated rather than been decorated. Its rooms are filled with paintings, books, pottery, strange objects, old furniture and countless knick-knacks, each apparently with a story behind it. There is an extraordinary collection of hats, which inevitably migrate onto people's heads as evenings progress, and around almost every corner there is something peculiar or beautiful you could swear you had never noticed on the previous visit.</p>
+    <p>The building began life as a monastery in the thirteenth century, and something of that history remains in its thick walls, enormous rooms and wonderfully irregular layout. There are bedrooms seemingly everywhere, along with two swimming pools, rambling gardens and a huge art-studio space. From the house you look across towards the old village church, a view which makes the whole place feel suspended somewhere between the everyday and a much older France.</p>
+    <p>At its heart is the enormous dining table, big enough for around twenty-five people, sitting outside beneath a pergola engulfed in grapevines. This is where breakfasts drift into late mornings, where bottles and plates multiply over long lunches, and where everyone eventually reconvenes in the evening for the daily feast.</p>
+    <p>Johnny and Ingrid have lived at La Perdrix since 2007, and the place bears the imprint of the life they have made there: creative, eccentric, generous and gloriously unpolished. Nothing feels over-designed or precious. Things lean, creak, grow wild and occasionally require improvisation. That is part of its charm.</p>
+    <p>For us, though, La Perdrix is more than a beautiful house in France. It is a repository of family history. Every return folds another holiday into all the ones that came before it: different generations around the same table, familiar rooms redistributed among us, old jokes revived, new memories quietly attaching themselves to old ones. After so many years, it is difficult to separate the place itself from the people we have been there.</p>
+    <p class="sign">La Perdrix is our home away from home, only larger, stranger, sunnier, and with considerably more hats.</p>
+  </div>
+  <button class="read-on" id="essayMore" type="button" hidden aria-controls="prose" aria-expanded="false">
+    <span>Read the rest</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+  </button>
 </section>
 
 <div class="band abbey reveal">
@@ -277,7 +308,8 @@
 <!-- the icon sprite is injected by icons.js, shared with kitty.html -->
 
 <script src="icons.js?v=6"></script>
-<script src="sync.js?v=3"></script>
+<script src="sync.js?v=4"></script>
+<script src="focus.js?v=1"></script>
 <script src="photos.js?v=1"></script>
 <script src="rota.js?v=1"></script>
 <script>
@@ -519,6 +551,20 @@ function renderChart(){
       '<span class="nm"><i style="background:'+c+'">'+iconOf(p.icon)+'</i><span>'+esc(p.name)+'</span></span>' +
       '<span class="stay" style="background:'+c+';grid-column:'+(from+2)+' / span '+(to-from+1)+'"></span></div>';
   }).join('');
+
+  updateChartFade();
+}
+
+/* The soft edge fade that tells you the chart scrolls sideways, and which way.
+   Set from the scroll position: a fade on the right while there is more
+   fortnight off that edge, on the left once you have scrolled into it, and
+   neither when it all fits (a short trip, or a wide screen). See styles.css. */
+function updateChartFade(){
+  const w = $('chartWrap');
+  if (w.hidden) return;
+  const max = w.scrollWidth - w.clientWidth;
+  w.classList.toggle('fade-l', w.scrollLeft > 1);
+  w.classList.toggle('fade-r', w.scrollLeft < max - 1);
 }
 
 /* ---------------------------------------------------------------- sheet */
@@ -970,10 +1016,15 @@ function openRemove(){
       `You can always add yourself again.`;
   $('rmSheet').classList.add('open');
   $('rmScrim').classList.add('open');
+  // This confirm sits over the open dates sheet. Trap Tab within it and land on
+  // "Stay", so the destructive button is never the default. Focus goes back to
+  // "Remove me" on close.
+  Focus.trap($('rmSheet'), $('rmCancel'));
 }
 function closeRemove(){
   $('rmSheet').classList.remove('open');
   $('rmScrim').classList.remove('open');
+  Focus.release();
 }
 
 $('remove').addEventListener('click', openRemove);
@@ -1079,15 +1130,67 @@ Photos.load(['group', 'lake', 'abbey', 'chair', 'mirror', 'heads', 'hens', 'wind
   }, { rootMargin:'-20% 0px 0px 0px' }).observe(cal);
 })();
 
-/* ---------------------------------------------------------------- reveals */
+/* ------------------------------------------------- the essay, folded away
+   Peter's piece is long on purpose, so it loads collapsed with a "Read the
+   rest" button. Done here rather than in the markup so that with no JavaScript
+   the whole thing simply shows: the clamp and the button are both added now. */
+(function(){
+  const prose = $('prose'), btn = $('essayMore');
+  if (!prose || !btn) return;
+  prose.classList.add('clamped');
+  btn.hidden = false;
+  const label = btn.querySelector('span');
+  btn.addEventListener('click', () => {
+    const open = !prose.classList.toggle('clamped');   // toggle returns true when still clamped
+    btn.setAttribute('aria-expanded', String(open));
+    label.textContent = open ? 'Show less' : 'Read the rest';
+    /* Re-collapsing from the foot of the opened essay would leave you stranded
+       below the section; bring its top back up so "Show less" doesn't feel like
+       the page jumped away from you. */
+    if (!open) btn.closest('.essay').scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+})();
+
+/* ---------------------------------------------------------------- reveals
+   Sections fade in as they scroll into view. Lovely on the photo bands; the
+   catch is that the calendar and the presence chart are .reveal too, and they
+   are things you interact with — a fast scroll that lands before the observer's
+   callback runs, or an observer that never fires for an element, must never
+   leave real content sitting invisible. So the observer is primary, and a cheap
+   backstop reveals anything that is actually on screen and still hidden. It is
+   scoped to the viewport on purpose: the sections still below stay hidden and
+   unfold in their own time, so the effect is untouched — only the pathological
+   "reachable but blank" case is caught. */
 if ('IntersectionObserver' in window){
   const io = new IntersectionObserver(es => {
     es.forEach(e => { if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
   }, { rootMargin:'0px 0px -8% 0px', threshold:.05 });
-  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  const reveals = [...document.querySelectorAll('.reveal')];
+  reveals.forEach(el => io.observe(el));
+
+  const backstop = () => {
+    let hiddenBelow = false;
+    for (const el of reveals){
+      if (el.classList.contains('in')) continue;
+      const r = el.getBoundingClientRect();
+      // On screen (with a little slack) but not yet revealed: show it now.
+      if (r.top < window.innerHeight * 0.98 && r.bottom > 0){ el.classList.add('in'); io.unobserve(el); }
+      else hiddenBelow = true;
+    }
+    // Nothing left to guard: stop listening.
+    if (!hiddenBelow){ removeEventListener('scroll', backstop); removeEventListener('resize', backstop); }
+  };
+  addEventListener('scroll', backstop, { passive:true });
+  addEventListener('resize', backstop, { passive:true });
+  backstop();   // catch a first paint that is already scrolled or already tall enough
 } else {
   document.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
 }
+
+/* Keep the chart's edge fade honest as it is scrolled or the screen turns.
+   render() already refreshes it whenever the data changes. */
+$('chartWrap').addEventListener('scroll', updateChartFade, { passive:true });
+window.addEventListener('resize', updateChartFade);
 
 /* ---------------------------------------------------------------- go */
 renderRange(); renderCountdown(); renderDow(); render();

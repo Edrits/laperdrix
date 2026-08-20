@@ -9,7 +9,7 @@
 <meta name="theme-color" id="tc" content="#171b14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="styles.css?v=31">
+<link rel="stylesheet" href="styles.css?v=34">
 <!-- In the <head> and inline, so the attribute lands before the first paint.
      See the same block in index.html. -->
 <script>
@@ -192,7 +192,8 @@
 </div>
 
 <script src="icons.js?v=6"></script>
-<script src="sync.js?v=3"></script>
+<script src="sync.js?v=4"></script>
+<script src="focus.js?v=1"></script>
 <script src="money.js?v=4"></script>
 <script>
 /* =========================================================================
@@ -305,6 +306,13 @@ const visible = () => expenses.filter(e => e.entryType !== 'payin' && (phase ===
 /* Pay-ins are a whole-trip fact, so they ignore the phase filter. */
 const payins  = () => expenses.filter(e => e.entryType === 'payin');
 
+/* The ids saved on this phone but not yet on the server. Empty unless the app
+   is actually sharing (a token is set): with nobody to share with, "waiting to
+   share" would be a permanent, meaningless label on every entry in device-only
+   mode. So the whisper only exists when there is a group to reach. */
+const queuedSet = () => Sync.configured() ? new Set(Sync.queuedIds()) : new Set();
+const WAIT = ' · <i class="waiting">waiting to share</i>';
+
 function renderPot(){
   const p = Money.pot(expenses);          // the pot is global; the phase filter is for spending below
   if (p.paidInCount > 0){
@@ -338,12 +346,13 @@ function renderPayins(){
     String(b.spentOn).localeCompare(String(a.spentOn)) || (b.createdAt || 0) - (a.createdAt || 0));
   if (!list.length){ el.hidden = true; el.innerHTML = ''; return; }
   el.hidden = false;
+  const q = queuedSet();
   el.innerHTML = list.map(e => {
     const p = personById(e.paidBy);
     const fam = p && p.household ? ` (${esc(p.household)})` : '';
     const who = p ? esc(p.name) + fam : 'someone who has left';
     return `<button class="payin-row" data-id="${esc(e.id)}">
-      <span class="payin-who"><span class="av sm" style="background:${p ? colourOf(p.icon) : 'var(--mut)'}">${p ? iconOf(p.icon) : ''}</span>${who} paid in</span>
+      <span class="payin-who"><span class="av sm" style="background:${p ? colourOf(p.icon) : 'var(--mut)'}">${p ? iconOf(p.icon) : ''}</span>${who} paid in${q.has(e.id) ? WAIT : ''}</span>
       <span class="payin-amt">${fmtL(e.amountLocal)}</span>
     </button>`;
   }).join('');
@@ -423,6 +432,7 @@ function renderSpend(){
     byDay.get(e.spentOn).push(e);
   }
 
+  const q = queuedSet();
   $('spendList').innerHTML = [...byDay.entries()].map(([day, items]) => {
     const rows = items.map(e => {
       const payer = personById(e.paidBy);
@@ -434,7 +444,7 @@ function renderSpend(){
         <span class="eav" style="background:${payer ? colourOf(payer.icon) : 'var(--mut)'}">${payer ? iconOf(payer.icon) : ''}</span>
         <span class="emain">
           <span class="edesc">${esc(e.category || e.what || 'Spending')} ${some}${off}</span>
-          <span class="emeta">${detail}${payer ? esc(payer.name) : 'someone who has left'}</span>
+          <span class="emeta">${detail}${payer ? esc(payer.name) : 'someone who has left'}${q.has(e.id) ? WAIT : ''}</span>
         </span>
         <span class="eamt">
           <span class="eloc">${fmtL(e.amountLocal)}</span>
@@ -521,10 +531,13 @@ function openConfirm(){
     `Everybody's name and icon stay.`;
   $('confirmSheet').classList.add('open');
   $('scrim').classList.add('open');
+  // Land on "Keep them", not the destructive button, and hold Tab inside.
+  Focus.trap($('confirmSheet'), $('cfCancel'));
 }
 function closeConfirm(){
   $('confirmSheet').classList.remove('open');
   $('scrim').classList.remove('open');
+  Focus.release();
 }
 
 $('resetBtn').addEventListener('click', openConfirm);
@@ -673,6 +686,11 @@ function openForm(existing, kind){
   $('formScrim').classList.add('open');
   document.body.classList.add('picking');
   document.querySelector('.bar').hidden = true;
+  // Trap Tab inside the form and remember the trigger to hand focus back to.
+  // A new spend passes null: the caller focuses the amount field itself, which
+  // must happen inside the tap's own task or iOS won't raise the keypad. An
+  // edit has no such call, so land focus on Cancel — a safe, keypad-free start.
+  Focus.trap($('sheet'), existing ? $('fCancel') : null);
 }
 
 function closeForm(){
@@ -681,6 +699,7 @@ function closeForm(){
   document.body.classList.remove('picking');
   document.querySelector('.bar').hidden = false;
   draft = null;
+  Focus.release();
 }
 
 $('addBtn').addEventListener('click', () => {
@@ -885,6 +904,12 @@ $('rate').addEventListener('change', () => {
 })();
 
 render();
+
+/* The queue changed: an entry was just saved on this phone, or one finally
+   reached the server. Only the entry and pay-in lists carry the whisper, so
+   only they are redrawn — the chart is left alone, or every flush would set
+   its bars animating again. */
+window.addEventListener('laperdrix:sync', () => { renderSpend(); renderPayins(); });
 
 /* Pick up whatever anyone else has added. What's stored is already on screen. */
 (async function refresh(){

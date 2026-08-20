@@ -76,6 +76,13 @@
   const queue = () => read(K_QUEUE, []);
   const setQueue = q => write(K_QUEUE, q);
 
+  // Let a page know the queue changed, so a "waiting to share" whisper can
+  // appear the moment something is enqueued and clear itself the moment it
+  // flushes. Fired on both, and harmless on pages that don't listen.
+  function notify() {
+    try { global.dispatchEvent(new Event('laperdrix:sync')); } catch {}
+  }
+
   function enqueue(job) {
     const q = queue();
     // Collapse repeated edits of the same thing — only the last one matters,
@@ -83,6 +90,7 @@
     const i = q.findIndex(j => j.kind === job.kind && j.id === job.id);
     if (i >= 0) q[i] = job; else q.push(job);
     setQueue(q);
+    notify();
   }
 
   async function send(job) {
@@ -110,6 +118,7 @@
       ok ? sent++ : keep.push(job);
     }
     setQueue(keep);
+    if (sent) notify();          // something left this device; whispers can clear
     return { sent, left: keep.length };
   }
 
@@ -194,5 +203,8 @@
     savePerson, removePerson, saveExpense, removeExpense, saveSettings,
     pull, flush,
     pending: () => queue().length,
+    // The ids still waiting to reach the server. A page reads this to whisper
+    // "waiting to share" on the exact rows in question, and no others.
+    queuedIds: () => queue().map(j => j.id),
   };
 })(window);
