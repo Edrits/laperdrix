@@ -130,17 +130,28 @@ body::before{
   letter-spacing:-.02em;font-variant-numeric:tabular-nums;
 }
 .count span{font-size:15px;opacity:.86}
+/* The scroll cue: a warm ember drifting down a faint thread, the way a spark
+   leaves the one evening lamp. Decorative (aria-hidden). The hero is always
+   dark whatever the theme, so the amber is a literal colour like the hero's
+   own #f2ece0, not a theme token. */
 .cue{
-  position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:3;
-  display:flex;flex-direction:column;align-items:center;gap:5px;
-  font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:rgba(242,236,224,.6);
+  position:absolute;left:50%;bottom:20px;transform:translateX(-50%);z-index:3;
+  width:2px;height:56px;
 }
-.cue i{
-  display:block;width:1px;height:26px;
-  background:linear-gradient(rgba(242,236,224,.6),transparent);
-  animation:fall 2.4s ease-in-out infinite;
+.cue .thread{
+  position:absolute;inset:0;
+  background:linear-gradient(to bottom,transparent,rgba(232,178,92,.28),transparent);
 }
-@keyframes fall{0%,100%{transform:scaleY(.35);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}}
+.cue .ember{
+  position:absolute;left:50%;top:0;width:6px;height:6px;margin-left:-3px;border-radius:50%;
+  background:#e8b25c;box-shadow:0 0 8px 2px rgba(232,178,92,.7);
+  animation:drift 3.2s cubic-bezier(.4,0,.5,1) infinite;
+}
+@keyframes drift{
+  0%{transform:translateY(0) scale(.7);opacity:0}
+  18%{opacity:1} 82%{opacity:1}
+  100%{transform:translateY(50px) scale(1);opacity:0}
+}
 
 .themes{position:absolute;top:calc(16px + var(--safe-t));right:16px;z-index:4;display:flex;gap:6px}
 .themes button{
@@ -170,7 +181,7 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
   .reveal{opacity:1;transform:none;transition:none}
   .plate span{animation:none}
   .plate span:nth-child(1){opacity:1}
-  .cue i{animation:none}
+  .cue .ember{animation:none}
   .sheet{transition:none}
 }
 
