@@ -298,8 +298,12 @@ sprite; a mismatch renders an empty circle with no error.
   is exactly when a "who's cooking tonight" band is being looked at.
 - **Amount fields must stay `type="text"` with `inputmode="decimal"`.** `type="number"` rejects
   `12,50` outright in some locales, which loses French receipts at the keyboard rather than in the
-  parser. The phone keypad comes from `inputmode`, and the keyboard only *appears* if `focus()` is
-  called synchronously inside the tap's own task — iOS ignores a deferred one.
+  parser. The phone keypad comes from `inputmode`. The add-spend sheet **does not auto-focus the
+  amount** on open: raising the keypad as the sheet appeared made iOS scroll the form's insides to
+  the bottom, hiding the amount box behind the keys. The sheet opens fully visible with the amount at
+  the top, and tapping it raises the keypad while the sheet rides above it (see `--kb`). Don't add a
+  synchronous `focus()` back to reclaim the one-tap entry without testing the scroll on a real
+  iPhone.
 - **Dates can be typed as well as tapped, and the two must stay in step.** The dates sheet has
   Arrive/Leave `<input type="date">` bounded by `TRIP.start`/`TRIP.end`. Tapping the calendar fills
   them; setting them highlights the calendar. Reversed entries are swapped and out-of-range ones

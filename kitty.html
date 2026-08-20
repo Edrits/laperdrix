@@ -646,9 +646,6 @@ function updateForm(){
   $('fPhase').textContent = need || (phaseOf(when) === 'pre_trip' ? 'Counted as before we go.' : 'Counted as out there.');
 }
 
-/* Nothing in here may await or defer: the Add button focuses the amount field
-   the instant this returns, and iOS only raises the keypad for a focus() that
-   happens inside the tap's own task. */
 /* The one sheet does both jobs. A pay-in drops the "what for", the detail and
    the kitty toggle, and relabels the payer and the title. */
 function applyMode(){
@@ -693,10 +690,10 @@ function openForm(existing, kind){
   document.body.classList.add('picking');
   document.querySelector('.bar').hidden = true;
   // Trap Tab inside the form and remember the trigger to hand focus back to.
-  // A new spend passes null: the caller focuses the amount field itself, which
-  // must happen inside the tap's own task or iOS won't raise the keypad. An
-  // edit has no such call, so land focus on Cancel — a safe, keypad-free start.
-  Focus.trap($('sheet'), existing ? $('fCancel') : null);
+  // Focus lands on Cancel, not the amount field: a safe, keypad-free start that
+  // keeps focus inside the sheet (the Add button that opened it is now hidden).
+  // The keypad only comes up when someone taps the amount field themselves.
+  Focus.trap($('sheet'), $('fCancel'));
 }
 
 function closeForm(){
@@ -708,16 +705,13 @@ function closeForm(){
   Focus.release();
 }
 
-$('addBtn').addEventListener('click', () => {
-  openForm(null, 'spend');
-  /* Synchronous, in the gesture's own task, and after the sheet is open —
-     defer it by so much as a rAF and the field focuses with no keypad. */
-  $('fAmount').focus();
-});
-$('payInBtn').addEventListener('click', () => {
-  openForm(null, 'payin');
-  $('fAmount').focus();
-});
+/* No auto-focus on the amount field. Raising the keypad as the sheet opens made
+   iOS scroll the form's insides to the bottom, hiding the very amount box you
+   were meant to type into behind the keys. The sheet now opens fully visible
+   with the amount at the top; tapping it raises the keypad, and the sheet rides
+   above it (see --kb). One extra tap, but you can always see the number. */
+$('addBtn').addEventListener('click', () => openForm(null, 'spend'));
+$('payInBtn').addEventListener('click', () => openForm(null, 'payin'));
 $('payinList').addEventListener('click', e => {
   const row = e.target.closest('.payin-row');
   if (!row) return;
