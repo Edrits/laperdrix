@@ -216,7 +216,17 @@ function renderNights(){
   $('allHead').hidden = !has;
   $('loadBox').hidden = !has;
   $('sizeBox').hidden = !has;
-  if (!has) { $('nights').innerHTML = ''; return; }
+  if (!has) {
+    $('nights').innerHTML = '';
+    // Say WHY the button won't build anything yet. With nobody carrying dates
+    // there is no one to roster, and a button that silently does nothing reads
+    // as broken. This message doubles as a check: if it shows while the landing
+    // page's chart has people, the dates haven't reached this page.
+    $('noRota').innerHTML = people.length
+      ? `No rota yet. Tap <b>Build the rota</b> and one gets made from everybody's dates. Nothing happens until you ask, so people can keep adding themselves without it churning.`
+      : `No dates have come through yet, so there's nobody to put on a rota. Add arrive and leave dates on the <a href="index.html">landing page</a> and the rota builds from them. If they are already in on another device, give it a moment to sync, then reload.`;
+    return;
+  }
 
   const today = todayISO();
   $('nights').innerHTML = rota.map(n => {
