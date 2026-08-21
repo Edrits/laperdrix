@@ -271,21 +271,26 @@ sprite; a mismatch renders an empty circle with no error.
   selected, so under "Out there" it was a button that empties the whole kitty sitting at the foot of
   a screen showing part of it, with a confirm whose count didn't match what you could see. The one
   view it shows on is now the one showing everything it will take.
-- **The cooking rota only rebuilds when somebody presses the button.** Ed:
-  *"Only do it once asked (not as we go as people will slowly add dates in and then we'll have to
-  keep adding people if it does it too soon)."* Nothing on any page calls `Rota.buildRota()` to
-  *create* state — the stored state is only `{seed, pins, perCook}`, and the teams are derived from
-  it on every render. A new arrival changes the presence counts immediately but never silently
-  reshuffles tonight's team.
-- **Fairness is a share of your own nights, and it is urgency-weighted.** `rota.js` scores people by
-  turns still owed divided by nights they have left. The obvious version — rank by the share you've
-  cooked so far — shipped first and was wrong: a four-night guest cooked **zero** times while
-  everyone else cooked three, because nothing knew their stay was running out. There is a test
-  across 25 seeds pinning this. Don't "simplify" it back.
-- **A hand-edited night is pinned and survives a scramble.** Any drag, add or remove writes that
-  night into `pins`, and `buildRota` leaves pinned nights alone while still counting them towards
-  everyone's load. Pins that name somebody who has since changed their dates are dropped — rostering
-  an absent person is worse than an uneven rota.
+- **The rota is team based, not a per-night draw.** Ed scrapped the old fairness "scramble". You
+  make a handful of teams and they take turns cooking, one per night, wrapping round for the whole
+  fortnight (a strict round-robin: night `i` is handed to team `i % teams.length`). "Fair" is just
+  that everyone on a team cooks their team's nights. The old share-of-your-own-nights, urgency,
+  no-back-to-back and pinning logic is gone; don't reintroduce it.
+- **Teams are built by hand first and foremost.** The page shows blank teams you drag people into
+  (or tap a team's ＋). The one **Fill** button tops the blank ones up from the unassigned, dealing
+  each spare person into the smallest team so sizes even out — the only randomness, reshuffled on
+  every press. **Empty** clears them (behind a confirm). Team count is a stepper (default 4, 1–12),
+  and names are editable, defaulting to "Team 1", "Team 2"…
+- **A team cooks with whoever of it is actually there.** Presence is worked out per night; members
+  who have gone home or not yet arrived are greyed, not dropped, and the team keeps its turn
+  regardless (Ed's call — no skipping empty teams). Round the changeover weekend you re-balance by
+  hand; the rota never does it for you.
+- **The stored state is just `{ v: 2, teams: [{ id, name, members: [personId] }] }`.** Everything on
+  screen — the rotation, tonight's team, the night-by-night list — is derived from it by `rota.js`
+  (`schedule`, `nightFor`, `deal`, `load`), which is pure and tested. Nothing recomputes on its own;
+  teams change only when someone edits them. The default four blanks live only in memory until the
+  first edit, so a device that is only looking never overwrites another's real teams with empties.
+  `index.html`'s "who's on tonight" band reads the same shape through `Rota.schedule`.
 - **`settings` on the trip row is the generic bag for shared app state**, holding the rota. Put the
   next small shared setting in the JSON rather than adding another column: every new column costs a
   migration *and* a manual Worker paste, and they have to land in the right order.

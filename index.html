@@ -18,7 +18,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=3">
-<link rel="stylesheet" href="styles.css?v=40">
+<link rel="stylesheet" href="styles.css?v=41">
 <!-- Dark is the default, and this has to run in the <head>: set the attribute
      any later and a light frame paints first, which on a phone in a dim room is
      a flash in the eye. Inline and tiny for the same reason — an external file
@@ -318,7 +318,7 @@
 <script src="sync.js?v=4"></script>
 <script src="focus.js?v=2"></script>
 <script src="photos.js?v=1"></script>
-<script src="rota.js?v=1"></script>
+<script src="rota.js?v=2"></script>
 <script>
 /* ======================================================================= trip
    The only thing to change when the dates move. Everything on the page is
@@ -705,48 +705,53 @@ function renderCooks(){
   $('cookNext').innerHTML = '';
 
   const conf = (Sync.settings() || {}).rota;
-  if (!conf) {
-    /* Both of these used to restate the blurb now sitting under the title.
-       Say the thing the blurb doesn't: why the page is empty. */
-    $('cookWhen').textContent = 'Not built yet';
+  const teams = (conf && Array.isArray(conf.teams)) ? conf.teams : [];
+  const teamLabel = (t, i) => t.name || ('Team ' + (i + 1));
+  if (!teams.some(t => Array.isArray(t.members) && t.members.length)) {
+    /* No teams built (or the old pre-teams shape). Say the thing the blurb
+       under the title doesn't: why the band is empty. */
+    $('cookWhen').textContent = 'No teams yet';
     $('cookTeam').innerHTML = '';
     $('cookNote').textContent =
-      'Nothing gets built until somebody asks for it, so people can keep adding their dates.';
-    $('rotaLinkText').textContent = 'Make one';
+      'Nobody has been put in a team yet. They get built by hand over on the rota.';
+    $('rotaLinkText').textContent = 'Build the teams';
     return;
   }
 
   const nights = Rota.cookNights(TRIP.start, TRIP.end);
-  const rota = Rota.buildRota(roster, nights, {
-    seed: conf.seed, pins: conf.pins || {}, perCook: conf.perCook || 6,
-  });
+  const sched = Rota.schedule(teams, nights, roster);
   const today = todayLocal();
-  const night = Rota.nightFor(rota, today);
+  const night = Rota.nightFor(sched, today);
   $('rotaLinkText').textContent = 'The whole fortnight';
 
-  if (!night || !night.team.length) {
-    $('cookWhen').textContent = 'Nobody on tonight';
+  if (!night || !night.team) {
+    $('cookWhen').textContent = 'Nothing on tonight';
     $('cookTeam').innerHTML = '';
-    $('cookNote').textContent = 'Either the fortnight is over, or nobody has dates covering it.';
+    $('cookNote').textContent = 'The fortnight is over, or nobody has dates covering it.';
     return;
   }
 
+  const label = teamLabel(night.team, night.teamIndex);
   $('cookWhen').textContent = night.day === today ? 'Tonight' : longNight(night.day);
-  $('cookTeam').innerHTML = night.team.map(id => {
-    const p = roster.find(x => x.id === id);
-    return p ? `<span class="cook"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</span>` : '';
-  }).join('');
-  $('cookNote').textContent = (night.day === today ? 'Cooking for ' : 'Next one on. Cooking for ')
-    + night.present.length + '.';
+  if (night.present.length) {
+    $('cookTeam').innerHTML = night.present.map(id => {
+      const p = roster.find(x => x.id === id);
+      return p ? `<span class="cook"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</span>` : '';
+    }).join('');
+    $('cookNote').textContent = (night.day === today ? label + ' are on. Cooking for ' : label + ' are up next. Cooking for ')
+      + night.here.length + '.';
+  } else {
+    $('cookTeam').innerHTML = '';
+    $('cookNote').textContent = label + ' are up, but nobody from them is here that night. It can be sorted on the rota.';
+  }
 
-  /* Only nights with somebody on them: an empty night is a gap in the rota,
-     and listing it here would read as "nobody is feeding you on Thursday"
-     when the real answer is on rota.html. */
-  const after = rota.slice(night.index + 1).filter(n => n.team.length).slice(0, 3);
+  /* The next few nights that actually have someone cooking, with the team on
+     each — an empty night is a gap to fix on rota.html, not to list here. */
+  const after = sched.slice(night.index + 1).filter(n => n.present.length).slice(0, 3);
   if (after.length) {
     $('cookNext').innerHTML = after.map(n => {
-      const names = n.team.map(id => (roster.find(x => x.id === id) || {}).name).filter(Boolean);
-      return `<li><span class="d">${esc(shortNight(n.day))}</span><span class="t">${esc(names.join(' & '))}</span></li>`;
+      const names = n.present.map(id => (roster.find(x => x.id === id) || {}).name).filter(Boolean);
+      return `<li><span class="d">${esc(shortNight(n.day))}</span><span class="t">${esc(teamLabel(n.team, n.teamIndex))}: ${esc(names.join(' & '))}</span></li>`;
     }).join('');
     $('cookNext').hidden = false;
   }
