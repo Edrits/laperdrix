@@ -12,7 +12,7 @@
 <!-- Before styles.css, so the --ph-* stand-ins exist by the time the rule that
      uses one is parsed. Same order as index.html. -->
 <link rel="stylesheet" href="photos.css?v=2">
-<link rel="stylesheet" href="styles.css?v=42">
+<link rel="stylesheet" href="styles.css?v=43">
 <!-- In the <head> and inline, so the attribute lands before the first paint.
      See the same block in index.html. -->
 <script>
@@ -61,25 +61,27 @@
       <h2 class="chart-h">The teams</h2>
       <div class="team-stepper" role="group" aria-label="Number of teams">
         <button class="step" id="teamMinus" type="button" aria-label="One fewer team">−</button>
-        <span class="team-count"><b id="teamCount">0</b> teams</span>
+        <span class="team-count"><b id="teamCount"></b> teams</span>
         <button class="step" id="teamPlus" type="button" aria-label="One more team">＋</button>
       </div>
     </div>
-    <p class="set-note">Build the teams by hand: drag people between them, or tap a team's ＋. The teams take turns cooking, one per night, round and round the fortnight. Whoever of a team is there that evening cooks; anyone away is greyed out.</p>
+    <p class="set-note" id="teamHint"></p>
     <div id="teamGrid"></div>
+    <p class="set-note" id="fillNote" hidden>"Share out the rest" deals everyone still off a team into the teams at random, evens up the sizes, and never removes anyone already placed. Press it again for a different split.</p>
     <p class="empty-note" id="noPeople" hidden>Nobody has added dates yet, so there's no one to put in a team. Add arrive and leave dates on the <a href="index.html">landing page</a>.</p>
   </section>
 
   <!-- The rotation laid out, read-only. Editing happens up in the teams. -->
   <section class="sec">
     <h2 class="chart-h" id="schedHead" hidden>Night by night</h2>
+    <p class="set-note" id="awayNote" hidden>Faded names are away that night. The team still cooks with whoever is here.</p>
     <div id="sched"></div>
   </section>
 </main>
 
 <div class="bar bar-two">
   <button class="btn ghost" id="emptyBtn" type="button">Empty the teams</button>
-  <button class="btn" id="fillBtn" type="button">Fill from who's here</button>
+  <button class="btn" id="fillBtn" type="button">Share out the rest</button>
 </div>
 
 <!-- Adding somebody to a team by tap, the fallback for drag. -->
@@ -177,9 +179,20 @@ let conf   = normalise(Sync.settings().rota);
 let sched  = [];
 let lifted = null;                 // person id currently picked up
 let addingTo = null;               // team id the add sheet is targeting
+let justDragged = 0;               // when a real drag last ended, to swallow the trailing click
 
 const personById = id => people.find(p => p.id === id);
 const teamName = (t, i) => t.name || ('Team ' + (i + 1));
+
+/* "1st", "2nd", "3rd"… for the turn badge on a team card. */
+function ordinal(n){
+  const s = ['th', 'st', 'nd', 'rd'], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+/* A little pencil, to the icon recipe, sitting on the rename button so the name
+   reads as a field you can edit rather than a heading. */
+const PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>';
 
 function save(){ Sync.saveSettings({ rota: conf }); }
 
@@ -214,6 +227,15 @@ function removeTeam(){
   conf.teams.pop();                // its members fall back to unassigned on their own
   save(); render();
 }
+/* Move a team up or down in the order. The array order IS the rotation order, so
+   swapping two teams changes who cooks when, and which team starts. */
+function moveTeam(teamId, dir){
+  const i = conf.teams.findIndex(t => t.id === teamId);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= conf.teams.length) return;
+  const t = conf.teams[i]; conf.teams[i] = conf.teams[j]; conf.teams[j] = t;
+  save(); render();
+}
 /* Deal the spare people into the teams, each going to whichever is smallest, so
    sizes even out whatever the teams already hold. Shuffled, so a fresh press
    composes them differently — the one bit of randomness. */
@@ -242,31 +264,51 @@ const dragChip = (id, teamId) => {
     <span class="x" aria-hidden="true">×</span>
   </button>`;
 };
-const nameChip = id => {
+const nameChip = (id, away) => {
   const p = personById(id);
-  return p ? `<span class="cook"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</span>` : '';
+  return p ? `<span class="cook${away ? ' away' : ''}"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</span>` : '';
 };
 const miniChip = (id, away) => {
   const p = personById(id);
   return p ? `<span class="cook mini${away ? ' away' : ''}"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</span>` : '';
 };
 
+function teamHint(){
+  if (!people.length) return '';                          // #noPeople covers this
+  if (lifted) {
+    const p = personById(lifted);
+    if (p) return `Moving <b>${esc(p.name)}</b>. Tap a team to drop them in, or tap them again to put them down.`;
+  }
+  const anyAssigned = conf.teams.some(t => t.members.some(id => personById(id)));
+  if (!anyAssigned)
+    return "Nobody is on a team yet. Tap a team's ＋ to add people, or tap a person then a team to move them. On a computer you can drag them too.";
+  return "Tap a team's ＋ to add people, or tap a person then a team to move them. On a computer you can drag them too. The teams take turns cooking, one per night, round and round the fortnight.";
+}
+
 function renderTeams(){
   $('noPeople').hidden = people.length > 0;
   $('teamCount').textContent = String(conf.teams.length);
+  $('teamHint').innerHTML = teamHint();
 
+  const last = conf.teams.length - 1;
   const cards = conf.teams.map((t, i) => {
     const name = teamName(t, i);
     const cooks = t.members.filter(id => personById(id));
+    const nights = sched.filter(n => n.teamId === t.id).map(n => shortDay(n.day));
     return `<div class="team" data-team="${esc(t.id)}">
       <div class="team-h">
+        <span class="team-turn" aria-hidden="true">${ordinal(i + 1)} up</span>
         <input class="team-name" value="${esc(name)}" data-team="${esc(t.id)}" maxlength="24" spellcheck="false" aria-label="Team name">
         <span class="team-n">${cooks.length || ''}</span>
+        <button class="team-btn edit" data-edit="${esc(t.id)}" type="button" aria-label="Rename ${esc(name)}">${PENCIL}</button>
+        <button class="team-btn up" data-up="${esc(t.id)}" type="button" aria-label="Move ${esc(name)} earlier"${i === 0 ? ' disabled' : ''}>↑</button>
+        <button class="team-btn down" data-down="${esc(t.id)}" type="button" aria-label="Move ${esc(name)} later"${i === last ? ' disabled' : ''}>↓</button>
       </div>
       <div class="team-cooks">
         ${cooks.map(id => dragChip(id, t.id)).join('')}
         <button class="cook add" data-add="${esc(t.id)}" type="button" aria-label="Add someone to ${esc(name)}"><span class="plus">＋</span></button>
       </div>
+      ${nights.length ? `<p class="team-nights">Cooks ${nights.map(esc).join(', ')}.</p>` : ''}
     </div>`;
   }).join('');
 
@@ -279,19 +321,29 @@ function renderTeams(){
   </div>`;
 
   $('teamGrid').innerHTML = cards + poolCard;
+
+  const spare = pool.length;
+  $('fillBtn').disabled = spare === 0;
+  $('fillNote').hidden = spare === 0;
 }
 
 function renderHero(){
   const night = Rota.nightFor(sched, todayISO());
-  const active = !!(night && night.team);
+  // Nothing to show until at least one person is on a team; a cold load seeds four
+  // blank ones, and a hero over empty teams reads as broken.
+  const anyAssigned = conf.teams.some(t => t.members.some(id => personById(id)));
+  const active = !!(night && night.team && anyAssigned);
   $('heroSec').hidden = !active;
   if (!active) return;
   const today = todayISO();
   const isTonight = night.day === today;
   $('heroWhen').textContent = isTonight ? 'Tonight' : longDay(night.day);
   $('heroTeamName').textContent = teamName(night.team, night.teamIndex) + (isTonight ? ' are on' : ' are up next');
-  $('heroTeam').innerHTML = night.present.length
-    ? night.present.map(nameChip).join('')
+  // Present first, then anyone away that night faded on the end, so tonight and
+  // the night-by-night list tell the same story.
+  const lineup = night.present.map(id => nameChip(id, false)).concat(night.absent.map(id => nameChip(id, true)));
+  $('heroTeam').innerHTML = lineup.length
+    ? lineup.join('')
     : `<p class="cook-none">Nobody from ${esc(teamName(night.team, night.teamIndex))} is here that night. Drag someone in below.</p>`;
   $('heroNote').textContent = 'Cooking for ' + night.here.length + '.';
 }
@@ -299,6 +351,7 @@ function renderHero(){
 function renderSched(){
   const hasTeams = conf.teams.length > 0;
   $('schedHead').hidden = !hasTeams;
+  $('awayNote').hidden = !(hasTeams && sched.some(n => n.absent.length));
   if (!hasTeams) { $('sched').innerHTML = ''; return; }
   const today = todayISO();
   $('sched').innerHTML = sched.map(n => {
@@ -315,6 +368,7 @@ function renderSched(){
 
 function render(){
   sched = Rota.schedule(conf.teams, NIGHTS, people);
+  document.body.classList.toggle('lifting', !!lifted);   // ring every team as a drop target
   renderHero(); renderTeams(); renderSched();
 }
 
@@ -352,6 +406,7 @@ function endDrag(e){
   const el = document.elementFromPoint(e.clientX, e.clientY);
   const team = el && el.closest ? el.closest('.team') : null;
   const held = lifted; lifted = null;
+  justDragged = performance.now();                         // swallow the click the browser fires next
   if (held && team) moveToTeam(held, team.dataset.team);   // moveToTeam re-renders
   else render();
 }
@@ -383,7 +438,18 @@ window.addEventListener('pointercancel', () => {
 
 /* Taps: the fallback that always works. */
 $('teamGrid').addEventListener('click', e => {
+  if (performance.now() - justDragged < 350) return;        // a real drag just ended; ignore its trailing click
   if (e.target.closest('.team-name')) return;               // renaming, not moving
+  const edit = e.target.closest('[data-edit]');
+  if (edit) {                                               // pencil: focus the name field
+    const inp = $('teamGrid').querySelector('.team-name[data-team="' + (window.CSS && CSS.escape ? CSS.escape(edit.dataset.edit) : edit.dataset.edit) + '"]');
+    if (inp) { inp.focus(); inp.select(); }
+    return;
+  }
+  const up = e.target.closest('[data-up]');
+  if (up) { moveTeam(up.dataset.up, -1); return; }
+  const down = e.target.closest('[data-down]');
+  if (down) { moveTeam(down.dataset.down, 1); return; }
   const add = e.target.closest('.cook.add');
   if (add) { openAdd(add.dataset.add); return; }
   const x = e.target.closest('.x');
@@ -420,13 +486,18 @@ function openAdd(teamId){
   const t = conf.teams[i];
   const name = t ? teamName(t, i) : 'the team';
   const on = new Set(t ? t.members : []);
-  const options = people.filter(p => !on.has(p.id));
+  // Where each candidate currently sits, so tapping someone off another team is a
+  // knowing move, not a silent poach. Unassigned people carry no gloss.
+  const loc = new Map();
+  conf.teams.forEach((tt, ti) => { if (tt.id !== teamId) tt.members.forEach(id => loc.set(id, teamName(tt, ti))); });
+  const options = people.filter(p => !on.has(p.id))
+    .sort((a, b) => (loc.has(a.id) ? 1 : 0) - (loc.has(b.id) ? 1 : 0));   // unassigned first, stable within
   $('addTitle').textContent = 'Add to ' + name;
   $('addWhen').textContent = options.length
     ? 'Tap to add. They move here from wherever they are now.'
     : 'Everyone is already on this team.';
   $('addWho').innerHTML = options.map(p =>
-    `<button type="button" class="who-chip" data-id="${esc(p.id)}"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</button>`).join('');
+    `<button type="button" class="who-chip" data-id="${esc(p.id)}"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}${loc.has(p.id) ? `<span class="gloss">${esc(loc.get(p.id))}</span>` : ''}</button>`).join('');
   $('addSheet').classList.add('open');
   $('formScrim').classList.add('open');
   document.body.classList.add('picking');

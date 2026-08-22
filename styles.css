@@ -518,6 +518,10 @@ body.picking .bar{display:none}
    in JS it flashes in, and a script that failed would leave the page with no
    way to add anything at all. */
 .kitty-page .bar{opacity:1;transform:none;visibility:visible}
+/* The rota reuses the fixed foot bar but shouldn't lean on the kitty's class to
+   reveal it: its two buttons (Empty / Share out the rest) are the point of the
+   page and must be visible from the first paint. */
+.rota-page .bar{opacity:1;transform:none;visibility:visible}
 
 .ktop{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -900,7 +904,7 @@ body.picking .bar{display:none}
   min-height:38px;padding:5px 11px 5px 6px;border-radius:99px;
   border:1px solid var(--hair);background:var(--bg);color:var(--tx);
   font:500 13.5px/1 var(--sans);cursor:grab;
-  touch-action:none;               /* we handle the drag ourselves */
+  touch-action:pan-y;              /* let a vertical swipe scroll the page; tap-to-move is the touch path */
   user-select:none;-webkit-user-select:none;
   transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease;
 }
@@ -970,16 +974,35 @@ body.dragging .cook{cursor:grabbing}
 }
 .team.pool{background:transparent;border-style:dashed}
 .team.over{box-shadow:inset 0 0 0 2px var(--accent);background:var(--surface)}
-.team-h{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+/* While a chip is lifted for a tap-move, ring every team so the drop targets are
+   obvious. .team.over (pointer-drag) does the same job during a mouse drag. */
+body.lifting .team{box-shadow:inset 0 0 0 2px var(--accent)}
+.team-h{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+/* The team's place in the rotation, so a renamed team still shows who starts. */
+.team-turn{
+  font:600 10px/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--mut);flex:none;font-variant-numeric:tabular-nums;
+}
 .team-name{
   flex:1;min-width:0;font:600 15px/1.25 var(--serif);letter-spacing:-.01em;
-  background:transparent;border:0;border-bottom:1px solid transparent;
+  background:transparent;border:0;border-bottom:1px solid var(--hair);
   color:var(--tx);padding:2px 0;margin:0;border-radius:0;
 }
 .team-name:focus{outline:none;border-bottom-color:var(--accent)}
-.team-name.pool-name{color:var(--mut);font-weight:500;font-style:italic}
+.team-name.pool-name{color:var(--mut);font-weight:500;font-style:italic;border-bottom-color:transparent}
 .team-n{font-size:12px;color:var(--mut);flex:none;font-variant-numeric:tabular-nums;min-width:1.1em;text-align:right}
+/* Rename, and reorder-in-the-rotation, to the icon recipe. */
+.team-btn{
+  width:28px;height:28px;border-radius:8px;flex:none;cursor:pointer;
+  border:1px solid var(--hair);background:var(--bg);color:var(--mut);
+  display:grid;place-items:center;font:400 15px/1 var(--sans);
+}
+.team-btn:hover{color:var(--tx);border-color:var(--mut)}
+.team-btn:disabled{opacity:.35;cursor:default}
+.team-btn:disabled:hover{color:var(--mut);border-color:var(--hair)}
+.team-btn svg{width:15px;height:15px}
 .team-cooks{display:flex;flex-wrap:wrap;gap:7px}
+.team-nights{margin:10px 0 0;font-size:11.5px;line-height:1.5;color:var(--mut)}
 .pool-empty{font-size:12.5px;color:var(--mut);padding:3px 0}
 
 /* ----------------------------------------------------- night by night */
@@ -997,7 +1020,10 @@ body.dragging .cook{cursor:grabbing}
   pointer-events:none;min-height:0;padding:3px 10px 3px 3px;gap:6px;
   font-size:12.5px;cursor:default;background:var(--bg);
 }
-.cook.mini.away{opacity:.42}
+/* Away that night: faded, and told so, so it reads as intentional rather than a
+   rendering glitch. Covers the hero lineup and the night-by-night minis alike. */
+.cook.away{opacity:.5}
+.cook.away::after{content:" · away";color:var(--mut);font-weight:400}
 
 /* the up-team's name above tonight's lineup */
 .hero-team{margin:0 0 12px;font:600 15px/1.2 var(--serif);color:var(--accent)}
