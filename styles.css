@@ -130,21 +130,6 @@ body::before{
   letter-spacing:-.02em;font-variant-numeric:tabular-nums;
 }
 .count span{font-size:15px;opacity:.86}
-/* The scroll cue: a grapevine tendril off the pergola, curling down and gently
-   swaying, one lichen leaf turning. Decorative (aria-hidden). The green is a
-   literal colour, since the hero is always dark whatever the page theme. The
-   sway hangs off the top (transform-origin), like a real tendril. */
-.cue{
-  position:absolute;left:50%;bottom:14px;z-index:3;
-  width:48px;height:74px;transform:translateX(-50%);transform-origin:50% 0;
-  animation:sway 5s ease-in-out infinite;
-}
-.cue svg{display:block;width:48px;height:74px;color:rgba(147,160,124,.9)}
-.cue .leaf{stroke:#93a07c}
-@keyframes sway{
-  0%,100%{transform:translateX(-50%) rotate(-4deg)}
-  50%{transform:translateX(-50%) rotate(4deg)}
-}
 
 .themes{position:absolute;top:calc(16px + var(--safe-t));right:16px;z-index:4;display:flex;gap:6px}
 .themes button{
@@ -174,7 +159,6 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
   .reveal{opacity:1;transform:none;transition:none}
   .plate span{animation:none}
   .plate span:nth-child(1){opacity:1}
-  .cue{animation:none}
   .sheet{transition:none}
 }
 
