@@ -12,3 +12,6 @@ Photos for project /
 
 # Local copies of the photographs — the Pages repo is public.
 photos/
+
+# Claude Code local worktrees and agent state — never part of the site.
+.claude/
