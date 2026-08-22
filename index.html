@@ -502,7 +502,10 @@ function renderFolk(){
      people, so the bar chart leads. While nobody has dates the chart is absent,
      so open it and keep the first-run nudge (below) in plain sight. */
   const wrap = $('folkWrap');
-  if (wrap) wrap.open = !people.length;
+  // Force it open only while nobody has dates (so the first-run nudge shows).
+  // Once there are dates, leave it alone, so a manual open survives a re-render
+  // rather than snapping shut the moment somebody taps a day on the calendar.
+  if (wrap && !people.length) wrap.open = true;
   if (!people.length && !undated.length){
     el.innerHTML = '<p class="empty">Nobody has added their dates yet. Tap <b>Add your dates</b> below to be the first.</p>';
     return;
