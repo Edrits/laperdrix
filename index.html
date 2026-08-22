@@ -18,7 +18,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=3">
-<link rel="stylesheet" href="styles.css?v=44">
+<link rel="stylesheet" href="styles.css?v=45">
 <!-- Dark is the default, and this has to run in the <head>: set the attribute
      any later and a light frame paints first, which on a phone in a dim room is
      a flash in the eye. Inline and tiny for the same reason — an external file
@@ -43,6 +43,7 @@
        the whole page. Mirrors the theme switcher opposite so the hero stays
        symmetrical. -->
   <nav class="hero-nav" aria-label="Go to">
+    <a href="#when">Dates</a>
     <a href="kitty.html">Kitty</a>
     <a href="rota.html">Rota</a>
   </nav>
@@ -117,7 +118,7 @@
 </div>
 
 <!-- ============================================================ calendar + who's here -->
-<section class="sec cal-sec">
+<section class="sec cal-sec" id="when">
   <div class="reveal">
     <p class="eyebrow">Who's here when</p>
     <h2 class="big">Not everybody's there for the whole fortnight.</h2>
@@ -130,7 +131,6 @@
   </div>
 
   <p class="who" id="who" role="status"></p>
-  <div class="folk" id="folk"></div>
 
   <div class="chart reveal" id="chartWrap" hidden>
     <div class="chart-in">
@@ -140,6 +140,15 @@
     </div>
   </div>
   <p class="chart-empty" id="chartEmpty">Once a couple of people have added their dates, a chart of who overlaps appears here.</p>
+
+  <!-- The bar chart is the prominent read; the per-person date chips live one tap
+       away in here so the two don't crowd each other. renderFolk() still fills
+       #folk, and opens this disclosure by itself while nobody has dates yet so the
+       first-run nudge is never buried (see renderFolk). -->
+  <details class="folk-wrap" id="folkWrap">
+    <summary>Everyone's dates</summary>
+    <div class="folk" id="folk"></div>
+  </details>
 </section>
 
 <!-- ============================================================ pickups -->
@@ -489,6 +498,11 @@ function renderFolk(){
      not yet on the calendar. Shown here so they can be tapped to add their
      dates; kept out of the presence chart, which only knows real stays. */
   const undated = Sync.people().filter(p => p && p.name && !(p.from && p.to));
+  /* The chips live inside a disclosure that is collapsed once there are dated
+     people, so the bar chart leads. While nobody has dates the chart is absent,
+     so open it and keep the first-run nudge (below) in plain sight. */
+  const wrap = $('folkWrap');
+  if (wrap) wrap.open = !people.length;
   if (!people.length && !undated.length){
     el.innerHTML = '<p class="empty">Nobody has added their dates yet. Tap <b>Add your dates</b> below to be the first.</p>';
     return;

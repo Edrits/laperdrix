@@ -269,18 +269,18 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
   display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:7px;
 }
 .dow span{
-  text-align:center;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);
+  text-align:center;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);
 }
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
 .blank{aspect-ratio:1/1.12}
 .day{
-  aspect-ratio:1/1.12;border:1px solid var(--hair);background:var(--surface);
-  border-radius:7px;padding:5px 4px 4px;cursor:pointer;font:inherit;color:var(--tx);
+  aspect-ratio:1/1.14;border:1px solid var(--hair);background:var(--surface);
+  border-radius:7px;padding:6px 4px 5px;cursor:pointer;font:inherit;color:var(--tx);
   display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;
   transition:background .12s ease,border-color .12s ease;
 }
-.day .num{font:600 14px/1 var(--serif);font-variant-numeric:tabular-nums}
-.day .mon{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-top:-1px}
+.day .num{font:600 16px/1 var(--serif);font-variant-numeric:tabular-nums}
+.day .mon{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-top:-1px}
 .day.has{border-color:color-mix(in srgb,var(--lichen) 55%,var(--hair))}
 .day.focus{background:var(--accent);border-color:transparent;color:var(--bg)}
 .day.focus .mon{color:var(--bg);opacity:.72}
@@ -297,7 +297,28 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 .who{margin:16px 0 0;font-size:14px;color:var(--mut);min-height:1.5em}
 .who b{color:var(--tx)}
 
+/* The name-tag chips sit inside a quiet disclosure so the presence chart leads.
+   A lighter treatment than .quiet: an inline summary with the same chevron
+   recipe as the icons, no top hairline, since it is a gentle aside under the
+   chart rather than a section divider. */
+.folk-wrap{margin-top:22px}
+.folk-wrap > summary{
+  list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+  min-height:32px;font-size:13px;color:var(--mut);
+}
+.folk-wrap > summary::-webkit-details-marker{display:none}
+.folk-wrap > summary::marker{content:""}
+.folk-wrap > summary:hover{color:var(--tx)}
+.folk-wrap > summary::after{
+  content:"";flex:none;width:6px;height:6px;
+  border-right:1.7px solid currentColor;border-bottom:1.7px solid currentColor;
+  border-radius:0 0 1.7px 0;
+  transform:translateY(-2px) rotate(45deg);
+  transition:transform .18s ease;
+}
+.folk-wrap[open] > summary::after{transform:translateY(1px) rotate(-135deg)}
 .folk{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+.folk-wrap .folk{margin-top:11px}
 .folk .empty{color:var(--mut);font-size:14px;margin:0}
 .chip{
   display:flex;align-items:center;gap:7px;padding:6px 12px 6px 6px;border-radius:99px;
