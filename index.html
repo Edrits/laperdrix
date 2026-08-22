@@ -701,14 +701,26 @@ function renderLifts(){
 
 function renderCooks(){
   const roster = people.filter(p => p.from && p.to);
-  $('cookSec').hidden = roster.length === 0;
-  if (!roster.length) return;
+
+  /* The band always shows. It carries the link to the rota, so hiding it when
+     nobody has dates yet took the whole rota off the landing page. Empty is a
+     state to describe, not to disappear. */
+  $('cookSec').hidden = false;
 
   /* Cleared up front, not in each branch below. Every one of them returns
      early, and a list left over from the last render would be showing nights
      that the current state says nothing about. */
   $('cookNext').hidden = true;
   $('cookNext').innerHTML = '';
+
+  if (!roster.length) {
+    $('cookWhen').textContent = 'No dates yet';
+    $('cookTeam').innerHTML = '';
+    $('cookNote').textContent =
+      'Once people have added their dates, the teams get built over on the rota.';
+    $('rotaLinkText').textContent = 'Open the rota';
+    return;
+  }
 
   const conf = (Sync.settings() || {}).rota;
   const teams = (conf && Array.isArray(conf.teams)) ? conf.teams : [];
