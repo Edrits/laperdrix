@@ -97,21 +97,22 @@ body::before{
 .plate{position:absolute;inset:0;z-index:0}
 .plate span{
   position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;
-  filter:brightness(.8) saturate(.95) contrast(1.05);animation:cycle 42.5s infinite;
+  filter:brightness(.8) saturate(.95) contrast(1.05);animation:cycle 51s infinite;
 }
-/* Five now, not four. The cycle grew 34s -> 42.5s to keep the same 8.5s slot
-   per image, and the keyframe percentages below were rescaled to the longer
-   cycle so each photograph holds and cross-fades over exactly the same
-   wall-clock time as before. Delays stay 8.5s apart. The pool is deliberately
-   not here: the sunset shot rotates in on the evenings band instead. */
+/* Six now. The cycle grew to 51s to keep the same 8.5s slot per image, and the
+   keyframe percentages below were rescaled to the longer cycle so each
+   photograph holds and cross-fades over exactly the same wall-clock time as
+   before. Delays stay 8.5s apart. The pool stays on the evenings band; the
+   abbey at Brantôme moved up here off its own photo band. */
 .plate span:nth-child(1){background-image:var(--ph-group);background-position:center 26%;animation-delay:0s}
 .plate span:nth-child(2){background-image:var(--ph-lake);animation-delay:8.5s}
 .plate span:nth-child(3){background-image:var(--ph-heads);animation-delay:17s}
 .plate span:nth-child(4){background-image:var(--ph-hens);animation-delay:25.5s}
 .plate span:nth-child(5){background-image:var(--ph-house);animation-delay:34s}
+.plate span:nth-child(6){background-image:var(--ph-abbey);animation-delay:42.5s}
 @keyframes cycle{
-  0%{opacity:0;transform:scale(1.02)} 3.2%{opacity:1} 20%{opacity:1} 24.8%{opacity:0}
-  24.81%{transform:scale(1.02)} 100%{opacity:0;transform:scale(1.11)}
+  0%{opacity:0;transform:scale(1.02)} 2.67%{opacity:1} 16.67%{opacity:1} 20.67%{opacity:0}
+  20.68%{transform:scale(1.02)} 100%{opacity:0;transform:scale(1.11)}
 }
 .wash{
   position:absolute;inset:0;z-index:1;
