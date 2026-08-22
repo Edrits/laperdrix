@@ -242,7 +242,11 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 }
 .band.abbey{background-image:var(--ph-abbey)}
 .band.chair{background-image:var(--ph-chair)}
-.band.garden{background-image:var(--ph-garden)}
+/* Mr Baboo sits low in this frame, so its caption goes to the TOP and the
+   darkening flips to match, keeping the dog in clear view at the foot. */
+.band.garden{background-image:var(--ph-garden);align-items:flex-start}
+.band.garden::after{background:linear-gradient(to bottom,rgba(10,13,8,.88),rgba(10,13,8,.1) 62%)}
+.band.garden .cap{padding:34px 24px 0}
 /* The one band that cross-fades. The sunset pool IS the evening, so it drifts
    in over the chair on the line about the evenings being the point. z-index 0
    sits it above the chair background but below .band::after (the darkening
