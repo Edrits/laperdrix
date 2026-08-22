@@ -18,7 +18,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=3">
-<link rel="stylesheet" href="styles.css?v=43">
+<link rel="stylesheet" href="styles.css?v=44">
 <!-- Dark is the default, and this has to run in the <head>: set the attribute
      any later and a light frame paints first, which on a phone in a dim room is
      a flash in the eye. Inline and tiny for the same reason — an external file
@@ -310,7 +310,7 @@
 <script src="sync.js?v=4"></script>
 <script src="focus.js?v=2"></script>
 <script src="photos.js?v=1"></script>
-<script src="rota.js?v=2"></script>
+<script src="rota.js?v=3"></script>
 <script>
 /* ======================================================================= trip
    The only thing to change when the dates move. Everything on the page is
@@ -711,30 +711,49 @@ function renderCooks(){
   }
 
   const nights = Rota.cookNights(TRIP.start, TRIP.end);
-  const sched = Rota.schedule(teams, nights, roster);
+  const sched = Rota.schedule(teams, nights, roster, (conf.overrides || {}));
   const today = todayLocal();
   const night = Rota.nightFor(sched, today);
   $('rotaLinkText').textContent = 'The whole fortnight';
 
-  if (!night || !night.team) {
+  if (!night) {
     $('cookWhen').textContent = 'Nothing on tonight';
     $('cookTeam').innerHTML = '';
     $('cookNote').textContent = 'The fortnight is over, or nobody has dates covering it.';
     return;
   }
 
-  const label = teamLabel(night.team, night.teamIndex);
-  $('cookWhen').textContent = night.day === today ? 'Tonight' : longNight(night.day);
-  if (night.present.length) {
-    $('cookTeam').innerHTML = night.present.map(id => {
-      const p = roster.find(x => x.id === id);
-      return p ? `<span class="cook"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</span>` : '';
-    }).join('');
-    $('cookNote').textContent = (night.day === today ? label + ' are on. Cooking for ' : label + ' are up next. Cooking for ')
-      + night.here.length + '.';
-  } else {
+  /* Eating out: no team, on purpose. Say so rather than showing an empty band. */
+  if (night.off) {
+    $('cookWhen').textContent = night.day === today ? 'Eating out tonight' : longNight(night.day);
     $('cookTeam').innerHTML = '';
-    $('cookNote').textContent = label + ' are up, but nobody from them is here that night. It can be sorted on the rota.';
+    $('cookNote').textContent = night.day === today
+      ? 'No cooking tonight. Eating out.'
+      : 'Eating out that night. No cooks.';
+    /* Fall through to list the next few cooking nights below. */
+  } else if (!night.team && !night.override) {
+    $('cookWhen').textContent = 'Nothing on tonight';
+    $('cookTeam').innerHTML = '';
+    $('cookNote').textContent = 'The fortnight is over, or nobody has dates covering it.';
+    return;
+  } else {
+    // A team night, or an ad-hoc "just these people" one. The latter has no team,
+    // so there is no team name to lead with.
+    const label = night.team ? teamLabel(night.team, night.teamIndex) : '';
+    $('cookWhen').textContent = night.day === today ? 'Tonight' : longNight(night.day);
+    if (night.present.length) {
+      $('cookTeam').innerHTML = night.present.map(id => {
+        const p = roster.find(x => x.id === id);
+        return p ? `<span class="cook"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</span>` : '';
+      }).join('');
+      const lead = label ? (night.day === today ? label + ' are on. ' : label + ' are up next. ') : '';
+      $('cookNote').textContent = lead + 'Cooking for ' + night.here.length + '.';
+    } else {
+      $('cookTeam').innerHTML = '';
+      $('cookNote').textContent = label
+        ? label + ' are up, but nobody from them is here that night. It can be sorted on the rota.'
+        : 'Nobody chosen for that night is here. It can be sorted on the rota.';
+    }
   }
 
   /* The next few nights that actually have someone cooking, with the team on
@@ -743,7 +762,9 @@ function renderCooks(){
   if (after.length) {
     $('cookNext').innerHTML = after.map(n => {
       const names = n.present.map(id => (roster.find(x => x.id === id) || {}).name).filter(Boolean);
-      return `<li><span class="d">${esc(shortNight(n.day))}</span><span class="t">${esc(teamLabel(n.team, n.teamIndex))}: ${esc(names.join(' & '))}</span></li>`;
+      // An ad-hoc lineup has no team, so lead with just the names.
+      const lbl = n.team ? teamLabel(n.team, n.teamIndex) + ': ' : '';
+      return `<li><span class="d">${esc(shortNight(n.day))}</span><span class="t">${esc(lbl + names.join(' & '))}</span></li>`;
     }).join('');
     $('cookNext').hidden = false;
   }

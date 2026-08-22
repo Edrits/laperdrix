@@ -588,6 +588,92 @@ group('nightFor — what the front page asks');
   eq(R.nightFor(s, '2030-01-01'), null,             'nothing, once it is over');
 }
 
+group('schedule — per-night overrides steer a single night');
+{
+  const people = ALL(9, '2027-07-31', '2027-08-14');
+  const teams = [
+    team('t1', 'Team 1', ['p0', 'p1', 'p2']),
+    team('t2', 'Team 2', ['p3', 'p4', 'p5']),
+    team('t3', 'Team 3', ['p6', 'p7', 'p8']),
+  ];
+
+  // A three-arg call still behaves exactly as before (existing tests already
+  // lean on this, but assert it here too against the new signature).
+  const plain = R.schedule(teams, NIGHTS, people);
+  eq(plain[1].teamId, 't2', 'no overrides, night two is still team two');
+  show(plain.every(n => !n.override && !n.off), 'no override flags when the fourth arg is absent');
+
+  // { team } — a specific team cooks instead of the round-robin one.
+  {
+    const s = R.schedule(teams, NIGHTS, people, { '2027-08-01': { team: 't3' } });
+    const n = s.find(x => x.day === '2027-08-01');   // position 1, normally t2
+    eq(n.teamId, 't3', 'the named team cooks that night');
+    eq(n.override, true, 'and the night is marked as steered');
+    deep(n.present.slice().sort(), ['p6', 'p7', 'p8'], 'with the named team’s people');
+  }
+
+  // { members } — an ad-hoc lineup, not a team.
+  {
+    const s = R.schedule(teams, NIGHTS, people, { '2027-08-01': { members: ['p0', 'p7'] } });
+    const n = s.find(x => x.day === '2027-08-01');
+    eq(n.team, null, 'an ad-hoc lineup is not a team');
+    eq(n.teamId, null, 'so it carries no team id');
+    eq(n.override, true, 'the night is marked as steered');
+    deep(n.present.slice().sort(), ['p0', 'p7'], 'just the named people cook');
+  }
+
+  // { members } with someone away that night: split into present and absent.
+  {
+    const cast = [
+      { id: 'stays', from: '2027-07-31', to: '2027-08-14' },
+      { id: 'early', from: '2027-07-31', to: '2027-08-01' },   // gone after 31 Jul
+    ];
+    const s = R.schedule(teams, NIGHTS, cast, { '2027-08-05': { members: ['stays', 'early'] } });
+    const n = s.find(x => x.day === '2027-08-05');
+    deep(n.present, ['stays'], 'an ad-hoc member who is away is not present');
+    deep(n.absent,  ['early'], 'but is noted as away, not dropped');
+  }
+
+  // { off } — eating out, nobody cooks.
+  {
+    const s = R.schedule(teams, NIGHTS, people, { '2027-08-01': { off: true } });
+    const n = s.find(x => x.day === '2027-08-01');
+    eq(n.off, true, 'the night is flagged as eating out');
+    eq(n.override, true, 'and steered');
+    eq(n.team, null, 'no team is up');
+    deep(n.members, [], 'and nobody is rostered to cook');
+    show(n.here.length === 9, 'but it still knows who is present, for the headcount');
+  }
+
+  // An eating-out night does NOT shift the rotation — later nights are unmoved.
+  {
+    const s = R.schedule(teams, NIGHTS, people, { '2027-08-01': { off: true } });
+    eq(s.find(x => x.day === '2027-08-02').teamId, 't3', 'night three is still team three');
+    eq(s.find(x => x.day === '2027-08-03').teamId, 't1', 'night four is still team one');
+    // The off night itself carries no team (teamIndex -1); every other night keeps
+    // its positional round-robin index, so the rotation has not shifted.
+    show(s.filter(n => !n.off).every(n => n.teamIndex === n.index % 3),
+         'the positional round-robin is untouched by the off night');
+    eq(s[1].teamIndex, -1, 'and the off night carries no team index');
+  }
+
+  // A stale { team } id (the team was deleted) falls back to the round-robin.
+  {
+    const s = R.schedule(teams, NIGHTS, people, { '2027-08-01': { team: 'gone' } });
+    const n = s.find(x => x.day === '2027-08-01');
+    eq(n.teamId, 't2', 'a deleted team id falls back to the round-robin team');
+    eq(n.override, false, 'and the night is not treated as steered');
+  }
+
+  // load still counts ad-hoc override members when they are present.
+  {
+    const s = R.schedule(teams, NIGHTS, people, { '2027-08-01': { members: ['p0'] } });
+    const l = R.load(s, teams);
+    const row = l.find(x => x.id === 'p0');
+    show(row && row.times >= 1, 'an ad-hoc cook is counted in the load');
+  }
+}
+
 /* ----------------------------------------------------------------- pot */
 group('pot — the communal float families pay into and spend down');
 {

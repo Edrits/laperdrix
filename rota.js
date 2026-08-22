@@ -77,32 +77,75 @@
    *                rotation order.
    * @param nights  ['2027-07-31', ...] from cookNights()
    * @param people  [{ id, from, to }] — used only to work out who is present
+   * @param overrides  optional, sparse { '2027-08-07': {…} } — steer a single
+   *                night without touching the rotation. Three shapes:
+   *                  { off: true }        — eating out, nobody cooks
+   *                  { members: [id, …] } — an ad-hoc lineup, not a team
+   *                  { team: teamId }     — a specific team cooks instead
+   *                A display-layer replacement only: the round-robin index stays
+   *                date-positional, so an override never shifts a later night. A
+   *                stale team id falls back to the round-robin team.
    * @returns [{ day, index, team, teamIndex, teamId, teamName,
-   *             members, present, absent, here }]
-   *          team is null when there are no teams yet. members/present/absent
-   *          are the team's people (present = there that night); here is
-   *          everyone present that night, for the headcount.
+   *             members, present, absent, here, override?, off? }]
+   *          team is null when there are no teams yet, on an eating-out night, or
+   *          on an ad-hoc-lineup night. members/present/absent are the cooks
+   *          (present = there that night); here is everyone present that night,
+   *          for the headcount. override is true on any steered night; off is
+   *          true on an eating-out one.
    */
-  function schedule(teams, nights, people) {
+  function schedule(teams, nights, people, overrides) {
     const roster = (people || []).filter(p => p && p.id);
     const byId = new Map(roster.map(p => [p.id, p]));
     const list = (Array.isArray(teams) ? teams : []).filter(t => t && t.id);
+    const ov = (overrides && typeof overrides === 'object') ? overrides : {};
 
     return (nights || []).map((day, i) => {
       const here = roster.filter(p => isHere(p, day)).map(p => p.id);
+      const hereSet = new Set(here);
+      const o = ov[day];
+
+      // Eating out: nobody cooks. The round-robin index is deliberately NOT
+      // bumped, so the team that would have been up this night is still up next
+      // time round — an off night skips a turn, it doesn't hand it on.
+      if (o && o.off) {
+        return { day, index: i, team: null, teamIndex: -1, teamId: null, teamName: '',
+                 off: true, override: true, members: [], present: [], absent: [], here };
+      }
+
+      // An ad-hoc lineup: whoever was named cooks, not a team. Filter to real
+      // people, then split into present and away exactly as for a team.
+      if (o && Array.isArray(o.members)) {
+        const members = o.members.filter(id => byId.has(id));
+        const present = members.filter(id => hereSet.has(id));
+        const absent = members.filter(id => !hereSet.has(id));
+        return { day, index: i, team: null, teamIndex: -1, teamId: null, teamName: '',
+                 override: true, members, present, absent, here };
+      }
+
       if (!list.length) {
         return { day, index: i, team: null, teamIndex: -1, teamId: null, teamName: '',
                  members: [], present: [], absent: [], here };
       }
+      // The team up by position. teamIndex is date-positional and is never
+      // shifted by an override.
       const teamIndex = i % list.length;
-      const team = list[teamIndex];
+      let team = list[teamIndex];
+      let override = false;
+
+      // A named team cooks instead of the round-robin one. A stale id (the team
+      // was deleted) falls back to the round-robin team, so a steer can never
+      // blank a night.
+      if (o && o.team) {
+        const picked = list.find(t => t.id === o.team);
+        if (picked) { team = picked; override = true; }
+      }
+
       // Only members who are still real people (someone removed keeps no ghost).
       const members = (team.members || []).filter(id => byId.has(id));
-      const hereSet = new Set(here);
       const present = members.filter(id => hereSet.has(id));
       const absent = members.filter(id => !hereSet.has(id));
       return { day, index: i, team, teamIndex, teamId: team.id, teamName: team.name || '',
-               members, present, absent, here };
+               override, members, present, absent, here };
     });
   }
 

@@ -1009,11 +1009,26 @@ body.lifting .team{box-shadow:inset 0 0 0 2px var(--accent)}
 #sched{margin-top:14px}
 .snight{padding:11px 0 12px;border-bottom:1px solid var(--hair)}
 .snight:last-child{border-bottom:0}
-.snhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:8px}
-.snday{font:600 13.5px/1.2 var(--sans)}
+.snhead{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.snday{font:600 13.5px/1.2 var(--sans);flex:1;min-width:0;display:flex;align-items:center;gap:7px}
 .snight.tonight .snday{color:var(--accent)}
 .snteam{font:600 13px/1.2 var(--serif);color:var(--mut);flex:none}
 .snight.tonight .snteam{color:var(--tx)}
+.snight.edited .snteam{color:var(--accent)}
+/* A subtle dot marking a night that has been steered off the plain rotation. */
+.snmark{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none}
+/* The per-night edit button, to the icon recipe, a touch smaller than .team-btn. */
+.sn-edit{
+  width:26px;height:26px;border-radius:7px;flex:none;cursor:pointer;padding:0;
+  border:1px solid var(--hair);background:var(--bg);color:var(--mut);
+  display:grid;place-items:center;
+}
+.sn-edit:hover{color:var(--tx);border-color:var(--mut)}
+.sn-edit svg{width:14px;height:14px}
+/* A small section label inside the night sheet: a team, some people, or off. */
+.sheet-lbl{margin:15px 0 8px;font:600 11px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.night-actions{flex-wrap:wrap}
+.btn.ghost.on{border-color:var(--accent);color:var(--accent)}
 .sncooks{display:flex;flex-wrap:wrap;gap:6px}
 .sn-empty{font-size:12px;color:var(--mut)}
 .cook.mini{

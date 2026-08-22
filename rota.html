@@ -12,7 +12,7 @@
 <!-- Before styles.css, so the --ph-* stand-ins exist by the time the rule that
      uses one is parsed. Same order as index.html. -->
 <link rel="stylesheet" href="photos.css?v=2">
-<link rel="stylesheet" href="styles.css?v=43">
+<link rel="stylesheet" href="styles.css?v=44">
 <!-- In the <head> and inline, so the attribute lands before the first paint.
      See the same block in index.html. -->
 <script>
@@ -95,6 +95,24 @@
   </div>
 </div>
 
+<!-- Steering a single night: a team, a few people, or eating out. Shares the
+     form scrim with the add sheet; only one is ever open at a time. -->
+<div class="sheet" id="nightSheet" role="dialog" aria-modal="true" aria-labelledby="nightTitle">
+  <div class="in2">
+    <h2 id="nightTitle">Who cooks</h2>
+    <p class="cf-body" id="nightWhen"></p>
+    <p class="sheet-lbl">A team</p>
+    <div class="payers" id="nightTeams"></div>
+    <p class="sheet-lbl">Just these people</p>
+    <div class="payers" id="nightPeople"></div>
+    <div class="row night-actions">
+      <button class="btn ghost" id="nightOff" type="button">Eating out</button>
+      <button class="btn ghost" id="nightClear" type="button" hidden>Back to the rota</button>
+    </div>
+    <div class="row"><button class="btn ghost" id="nightDone">Done</button></div>
+  </div>
+</div>
+
 <!-- Emptying the teams is destructive of hand-built work, so it asks first. -->
 <div class="scrim" id="scrim"></div>
 <div class="sheet confirm" id="confirmSheet" role="dialog" aria-modal="true" aria-labelledby="cfTitle">
@@ -112,7 +130,7 @@
 <script src="sync.js?v=4"></script>
 <script src="focus.js?v=2"></script>
 <script src="photos.js?v=1"></script>
-<script src="rota.js?v=2"></script>
+<script src="rota.js?v=3"></script>
 <script>
 /* =========================================================================
    The cooking rota — team based.
@@ -164,11 +182,17 @@ function loadPeople(){
    looking never overwrites another's real teams with empties. */
 function normalise(r){
   if (r && Array.isArray(r.teams)) {
-    return { v: 2, teams: r.teams.filter(t => t && t.id).map(t => ({
-      id: t.id, name: t.name || '', members: Array.isArray(t.members) ? t.members.slice() : [],
-    })) };
+    return {
+      v: 2,
+      teams: r.teams.filter(t => t && t.id).map(t => ({
+        id: t.id, name: t.name || '', members: Array.isArray(t.members) ? t.members.slice() : [],
+      })),
+      // Sparse map of per-night steers, keyed by ISO date. Only edited nights
+      // appear; a plain object or nothing, never anything else.
+      overrides: (r.overrides && typeof r.overrides === 'object' && !Array.isArray(r.overrides)) ? { ...r.overrides } : {},
+    };
   }
-  return { v: 2, teams: blankTeams(4) };
+  return { v: 2, teams: blankTeams(4), overrides: {} };
 }
 function blankTeams(n){
   return Array.from({ length: n }, (_, i) => ({ id: Sync.newId(), name: 'Team ' + (i + 1), members: [] }));
@@ -348,26 +372,38 @@ function renderHero(){
   $('heroNote').textContent = 'Cooking for ' + night.here.length + '.';
 }
 
+/* The label on a night's row: the team's name normally, or what the steer put
+   there instead. Never calls teamName with a null team (an off or ad-hoc night
+   has none). */
+function snLabel(n){
+  if (n.off) return 'Eating out';
+  if (n.override && !n.team) return 'Just these people';
+  return teamName(n.team, n.teamIndex);
+}
+
 function renderSched(){
   const hasTeams = conf.teams.length > 0;
   $('schedHead').hidden = !hasTeams;
-  $('awayNote').hidden = !(hasTeams && sched.some(n => n.absent.length));
+  $('awayNote').hidden = !(hasTeams && sched.some(n => n.absent.length && !n.off));
   if (!hasTeams) { $('sched').innerHTML = ''; return; }
   const today = todayISO();
   $('sched').innerHTML = sched.map(n => {
-    const cooks = n.present.map(id => miniChip(id, false)).join('') + n.absent.map(id => miniChip(id, true)).join('');
-    return `<div class="snight${n.day === today ? ' tonight' : ''}">
+    const cooks = n.off
+      ? '<span class="sn-empty">Eating out, no cooks.</span>'
+      : (n.present.map(id => miniChip(id, false)).join('') + n.absent.map(id => miniChip(id, true)).join('')) || '<span class="sn-empty">nobody here yet</span>';
+    return `<div class="snight${n.day === today ? ' tonight' : ''}${n.override ? ' edited' : ''}">
       <div class="snhead">
-        <span class="snday">${shortDay(n.day)}${n.day === today ? ' · tonight' : ''}</span>
-        <span class="snteam">${esc(teamName(n.team, n.teamIndex))}</span>
+        <span class="snday">${shortDay(n.day)}${n.day === today ? ' · tonight' : ''}${n.override ? '<span class="snmark" aria-hidden="true"></span>' : ''}</span>
+        <span class="snteam">${esc(snLabel(n))}</span>
+        <button class="sn-edit" data-night="${esc(n.day)}" type="button" aria-label="Change who cooks on ${esc(shortDay(n.day))}">${PENCIL}</button>
       </div>
-      <div class="sncooks">${cooks || '<span class="sn-empty">nobody here yet</span>'}</div>
+      <div class="sncooks">${cooks}</div>
     </div>`;
   }).join('');
 }
 
 function render(){
-  sched = Rota.schedule(conf.teams, NIGHTS, people);
+  sched = Rota.schedule(conf.teams, NIGHTS, people, conf.overrides || {});
   document.body.classList.toggle('lifting', !!lifted);   // ring every team as a drop target
   renderHero(); renderTeams(); renderSched();
 }
@@ -510,7 +546,10 @@ function closeAdd(){
   addingTo = null; Focus.release();
 }
 $('addCancel').addEventListener('click', closeAdd);
-$('formScrim').addEventListener('click', closeAdd);
+$('formScrim').addEventListener('click', () => {
+  if ($('nightSheet').classList.contains('open')) closeNight();
+  else closeAdd();
+});
 $('addWho').addEventListener('click', e => {
   const b = e.target.closest('.who-chip');
   if (!b || !addingTo) return;
@@ -518,6 +557,90 @@ $('addWho').addEventListener('click', e => {
   moveToTeam(b.dataset.id, team);              // re-renders the page underneath
   openAdd(team);                               // and refresh the list, sheet still up
 });
+
+/* ----------------------------------------------------------- night sheet
+
+   Steering a single night. One sparse override map on the stored bag, keyed by
+   date. A choice writes it (or clears it) and re-renders live, the same pattern
+   as the add sheet — no separate "apply". It is a display-layer replacement:
+   the rotation itself never moves. */
+
+let editingNight = null;                 // ISO date the night sheet targets
+
+function setOverride(day, val){
+  if (!conf.overrides) conf.overrides = {};
+  conf.overrides[day] = val;
+  save(); render(); renderNightSheet();
+}
+function clearOverride(day){
+  if (conf.overrides) delete conf.overrides[day];
+  save(); render(); renderNightSheet();
+}
+
+function renderNightSheet(){
+  const day = editingNight;
+  if (!day) return;
+  const night = sched.find(n => n.day === day);
+  const o = (conf.overrides || {})[day];
+  $('nightTitle').textContent = 'Who cooks on ' + longDay(day);
+  $('nightWhen').textContent = 'Tap a team, choose a few people, or set the night as eating out. The rotation stays put; this steers just this night.';
+
+  // Highlight the team currently up that night: the override team, or the
+  // round-robin one when there is no team steer.
+  const upId = night ? night.teamId : null;
+  $('nightTeams').innerHTML = conf.teams.map((t, i) => {
+    const name = teamName(t, i);
+    const on = !o?.off && !o?.members && t.id === upId;
+    const cooks = t.members.filter(id => personById(id)).length;
+    return `<button type="button" class="who-chip${on ? ' on' : ''}" data-team="${esc(t.id)}">${esc(name)}${cooks ? `<span class="gloss">${cooks}</span>` : ''}</button>`;
+  }).join('');
+
+  const sel = new Set((o && Array.isArray(o.members)) ? o.members : []);
+  $('nightPeople').innerHTML = people.map(p =>
+    `<button type="button" class="who-chip${sel.has(p.id) ? ' on' : ''}" data-person="${esc(p.id)}"><span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>${esc(p.name)}</button>`).join('');
+
+  $('nightOff').classList.toggle('on', !!(o && o.off));
+  $('nightClear').hidden = !o;
+}
+
+function openNight(day){
+  editingNight = day;
+  renderNightSheet();
+  $('nightSheet').classList.add('open');
+  $('formScrim').classList.add('open');
+  document.body.classList.add('picking');
+  Focus.trap($('nightSheet'));
+}
+function closeNight(){
+  $('nightSheet').classList.remove('open');
+  $('formScrim').classList.remove('open');
+  document.body.classList.remove('picking');
+  editingNight = null; Focus.release();
+}
+
+$('sched').addEventListener('click', e => {
+  const b = e.target.closest('.sn-edit');
+  if (b) openNight(b.dataset.night);
+});
+$('nightTeams').addEventListener('click', e => {
+  const b = e.target.closest('[data-team]');
+  if (b && editingNight) setOverride(editingNight, { team: b.dataset.team });
+});
+$('nightPeople').addEventListener('click', e => {
+  const b = e.target.closest('[data-person]');
+  if (!b || !editingNight) return;
+  const day = editingNight;
+  const o = (conf.overrides || {})[day];
+  const sel = (o && Array.isArray(o.members)) ? o.members.slice() : [];
+  const id = b.dataset.person, at = sel.indexOf(id);
+  if (at >= 0) sel.splice(at, 1); else sel.push(id);
+  // Deselecting the last chosen person goes back to the rota rather than
+  // leaving an empty lineup that would read as "nobody cooks".
+  if (sel.length) setOverride(day, { members: sel }); else clearOverride(day);
+});
+$('nightOff').addEventListener('click', () => { if (editingNight) setOverride(editingNight, { off: true }); });
+$('nightClear').addEventListener('click', () => { if (editingNight) clearOverride(editingNight); });
+$('nightDone').addEventListener('click', closeNight);
 
 /* ---------------------------------------------------------- empty confirm */
 
@@ -539,6 +662,7 @@ $('cfGo').addEventListener('click', () => { closeConfirm(); emptyTeams(); });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if ($('confirmSheet').classList.contains('open')) closeConfirm();
+  else if ($('nightSheet').classList.contains('open')) closeNight();
   else if ($('addSheet').classList.contains('open')) closeAdd();
   else if (lifted) { lifted = null; render(); }
 });
