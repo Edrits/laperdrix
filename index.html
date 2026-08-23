@@ -984,9 +984,30 @@ function setEnd(which, raw){
 $('dFrom').addEventListener('change', e => setEnd('from', e.target.value));
 $('dTo').addEventListener('change', e => setEnd('to', e.target.value));
 /* Tapping the field opens the native calendar on every device that supports
-   it, not only the small icon — the same treatment as the kitty's date. */
-for (const id of ['dFrom', 'dTo'])
-  $(id).addEventListener('click', () => { try { $(id).showPicker(); } catch {} });
+   it, not only the small icon — the same treatment as the kitty's date.
+
+   iOS opens an empty date field's picker at today, which is eleven months
+   before the trip, so you would scroll to July 2027 by hand every time. It
+   takes the starting month from the field's own value, not from min, so seed an
+   empty field with the trip's edge (arrive → the start, leave → the end) the
+   instant before the picker opens, and it lands on the trip. A seed is not a
+   choice: nothing is committed until the person actually picks a day (the
+   change event), and blur drops the seed again if they dismissed without one,
+   so the field and the calendar never disagree. Save reads `draft`, never the
+   input, so a lingering seed could not be saved regardless. */
+const dateSeed = { dFrom: TRIP.start, dTo: TRIP.end };
+for (const id of ['dFrom', 'dTo']) {
+  const el = $(id);
+  el.addEventListener('click', () => {
+    if (!el.value) { el.dataset.seeded = '1'; el.value = dateSeed[id]; }
+    try { el.showPicker(); } catch {}
+  });
+  el.addEventListener('blur', () => {
+    const which = id === 'dFrom' ? 'from' : 'to';
+    if (el.dataset.seeded && draft && !draft[which]) el.value = '';
+    delete el.dataset.seeded;
+  });
+}
 
 $('cancel').addEventListener('click', () => { mode='idle'; draft=null; hover=null; render(); });
 
