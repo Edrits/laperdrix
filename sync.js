@@ -93,33 +93,48 @@
     notify();
   }
 
+  // Which HTTP failures are worth trying again. A 4xx means the server
+  // understood the request and refused it, so the same bytes will be refused
+  // next time too; retrying forever just burns a request on every write and
+  // leaves the row's "waiting to share" whisper stuck on for good. Retry only
+  // the transient ones: a 5xx, a rate-limit, or a timeout. A dropped line is
+  // caught as an exception in flush(), which is also a retry.
+  function retryable(status) {
+    return status >= 500 || status === 408 || status === 429;
+  }
+
+  // 'ok' — it landed. 'retry' — a transient failure, try again later. 'drop' —
+  // the server refused it for good (a malformed payload, a stale token, or a
+  // delete of something already gone); there is no point retrying, so let it
+  // leave the queue. The data is still in localStorage either way; 'drop' only
+  // means it will not sync, not that it is lost from this device.
   async function send(job) {
     const t = encodeURIComponent(token());
-    if (job.op === 'del') {
-      const res = await fetch(`${WORKER_URL}/${job.kind}?t=${t}&id=${encodeURIComponent(job.id)}`,
-        { method: 'DELETE' });
-      return res.ok || res.status === 400;   // 400 = never reached the server anyway
-    }
-    const res = await fetch(`${WORKER_URL}/${job.kind}?t=${t}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(job.payload),
-    });
-    return res.ok;
+    const res = job.op === 'del'
+      ? await fetch(`${WORKER_URL}/${job.kind}?t=${t}&id=${encodeURIComponent(job.id)}`, { method: 'DELETE' })
+      : await fetch(`${WORKER_URL}/${job.kind}?t=${t}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(job.payload),
+        });
+    if (res.ok) return 'ok';
+    return retryable(res.status) ? 'retry' : 'drop';
   }
 
   async function flush() {
-    if (!configured()) return { sent: 0, left: queue().length };
-    let q = queue(), sent = 0;
+    if (!configured()) return { sent: 0, dropped: 0, left: queue().length };
+    let q = queue(), sent = 0, dropped = 0;
     const keep = [];
     for (const job of q) {
-      let ok = false;
-      try { ok = await send(job); } catch { ok = false; }
-      ok ? sent++ : keep.push(job);
+      let outcome;
+      try { outcome = await send(job); } catch { outcome = 'retry'; }
+      if (outcome === 'ok') sent++;
+      else if (outcome === 'drop') dropped++;
+      else keep.push(job);
     }
     setQueue(keep);
-    if (sent) notify();          // something left this device; whispers can clear
-    return { sent, left: keep.length };
+    if (sent || dropped) notify();   // the queue shrank; whispers on those rows can clear
+    return { sent, dropped, left: keep.length };
   }
 
   /* -------------------------------------------------------------- writes */

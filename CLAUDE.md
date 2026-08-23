@@ -275,7 +275,14 @@ sprite; a mismatch renders an empty circle with no error.
   make a handful of teams and they take turns cooking, one per night, wrapping round for the whole
   fortnight (a strict round-robin: night `i` is handed to team `i % teams.length`). "Fair" is just
   that everyone on a team cooks their team's nights. The old share-of-your-own-nights, urgency,
-  no-back-to-back and pinning logic is gone; don't reintroduce it.
+  no-back-to-back and *automatic* pinning logic is gone; don't reintroduce it. What did come back,
+  deliberately (commit `8751607`), is a **sparse per-night override**: a single night can be hand
+  steered without touching the rotation, in one of three shapes, keyed by date in `overrides` —
+  `{ off: true }` (eating out, nobody cooks), `{ members: [id, …] }` (an ad-hoc lineup, not a team),
+  or `{ team: teamId }` (a named team cooks instead). It is a display-layer replacement only: the
+  round-robin index stays date-positional, so an override never shifts a later night, and a stale
+  team id falls back to the round-robin team. This is a hand steer, not the fairness machinery, and
+  it is live in both `rota.js` (`schedule`) and `index.html`/`rota.html`'s "who's on tonight" bands.
 - **Teams are built by hand first and foremost.** The page shows blank teams you drag people into
   (or tap a team's ＋). The one **Fill** button tops the blank ones up from the unassigned, dealing
   each spare person into the smallest team so sizes even out — the only randomness, reshuffled on
@@ -285,7 +292,8 @@ sprite; a mismatch renders an empty circle with no error.
   who have gone home or not yet arrived are greyed, not dropped, and the team keeps its turn
   regardless (Ed's call — no skipping empty teams). Round the changeover weekend you re-balance by
   hand; the rota never does it for you.
-- **The stored state is just `{ v: 2, teams: [{ id, name, members: [personId] }] }`.** Everything on
+- **The stored state is `{ v: 2, teams: [{ id, name, members: [personId] }], overrides: { date: {…} } }`**
+  (`overrides` is sparse and often absent — see the per-night steer above). Everything on
   screen — the rotation, tonight's team, the night-by-night list — is derived from it by `rota.js`
   (`schedule`, `nightFor`, `deal`, `load`), which is pure and tested. Nothing recomputes on its own;
   teams change only when someone edits them. The default four blanks live only in memory until the
