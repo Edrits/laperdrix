@@ -39,10 +39,22 @@ Must be served over HTTP; opening `file://` breaks `fetch` and the localStorage 
 ## The deployed Worker: checking it isn't behind the repo
 
 `worker/worker.js` is pasted into the Cloudflare dashboard by hand, so the repo copy can silently
-run ahead of the live one. **As of 11 August 2026 it is not behind**: the `settings` column and the
-`/settings` route are both live, so the cooking rota is genuinely shared rather than per-device.
-The two manual steps that used to be outstanding — the `alter table` below and the paste — have
-landed.
+run ahead of the live one. **As of 11 August 2026 the `settings` migration and paste had landed**:
+the `settings` column and the `/settings` route are both live, so the cooking rota is genuinely
+shared rather than per-device.
+
+**As of 23 August 2026 the repo is AGAIN ahead of the live Worker** and a re-paste is outstanding.
+No migration is needed this time (both columns already exist); it is purely a paste. Two fixes wait
+on it, and see the banner at the top of `worker.js`:
+
+- `pickup_at` was capped at 10 characters, clipping a rough time like "about four-ish". Now 60.
+- A second person sharing a name AND icon (a double-tap on create) returned a `502` that the offline
+  queue then retried forever with the row's "waiting to share" whisper stuck on. It is now swallowed
+  as a duplicate: the person already stored under that name+icon is returned. The client half of this
+  also landed in `sync.js` (a `4xx` now drops from the queue instead of retrying for good).
+
+Until the paste, the live Worker keeps the old behaviour on both; nothing breaks, but neither fix
+takes effect.
 
 `./scripts/check.sh` does not cover the rota, so check that route by hand. Read-only, and the token
 never reaches your shell history:

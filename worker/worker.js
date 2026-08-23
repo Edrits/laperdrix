@@ -9,6 +9,19 @@
 //     optional `household` label. Until this file is re-pasted, a household
 //     typed on a phone is stored locally and then silently dropped on the way
 //     to the database. Run schema.sql's household migration BEFORE pasting.
+//     >>> UNPASTED AS OF 2026-08-23. Two fixes wait on a re-paste (no
+//         migration needed, both columns already exist):
+//           1. `pickup_at` was truncated to 10 characters, clipping a rough
+//              time like "about four-ish" to "about four". Now 60, matching
+//              `pickup_from`.
+//           2. A second person with the same name AND icon (a double-tap on
+//              create) hit the members_trip_name_icon_uniq index and came back
+//              as a 502, which the offline queue then retried forever with the
+//              row's "waiting to share" whisper stuck on. It is now swallowed
+//              as the benign duplicate it is: the person already stored under
+//              that name+icon is returned, so both devices converge on one.
+//         Until this file is re-pasted the live Worker keeps the old
+//         behaviour; nothing breaks, but neither fix takes effect.
 //
 // Two jobs:
 //   1. Hand out short-lived signed URLs for the photographs, which live in a
@@ -221,7 +234,10 @@ const personIn = (b, trip) => ({
   // making their own way, which must store as NULL rather than an empty string
   // so "no pickup" is one value and not two.
   pickup_from: String(b.pickupFrom || '').trim().slice(0, 60).trim() || null,
-  pickup_at: String(b.pickupAt || '').trim().slice(0, 10).trim() || null,
+  // A rough free-text time ("about four-ish", "after lunch"), not an ISO date,
+  // so it needs the same room as pickup_from. A 10-char cap clipped the schema's
+  // own example. The second trim is for a cap landing mid-space.
+  pickup_at: String(b.pickupAt || '').trim().slice(0, 60).trim() || null,
 });
 
 const expenseOut = r => ({
@@ -364,7 +380,28 @@ export default {
       if (isPerson ? !row.name : badAmount(row)) return reply({ error: 'incomplete' }, 400);
 
       const { res, dropped } = await postRow(env, isPerson ? 'members' : 'expenses', row);
-      if (!res.ok) return reply({ error: 'could not save', detail: await res.text() }, 502);
+      if (!res.ok) {
+        const detail = await res.text();
+        // A person whose name AND icon already exist under this trip is almost
+        // certainly a double-tap on create (see members_trip_name_icon_uniq in
+        // schema.sql). The upsert conflicts on id, not on that index, so a new
+        // id with a taken name+icon raises a unique violation (23505). Left as a
+        // 502 the offline queue retried it forever and the row's "waiting to
+        // share" whisper never cleared. Treat it as the benign duplicate it is:
+        // return the person already stored under that name+icon, as a success,
+        // so both devices converge on one rather than fighting the index.
+        if (isPerson && row.name && /members_trip_name_icon_uniq|23505/.test(detail)) {
+          const ex = await sb(env, `members?trip_id=eq.${trip}&icon=eq.${encodeURIComponent(row.icon)}&select=*`);
+          if (ex.ok) {
+            const rows = await ex.json();
+            const hit = Array.isArray(rows)
+              ? rows.find(m => String(m.name || '').toLowerCase() === row.name.toLowerCase())
+              : null;
+            if (hit) return reply(personOut(hit));
+          }
+        }
+        return reply({ error: 'could not save', detail }, 502);
+      }
       const saved = await res.json();
       const one = Array.isArray(saved) ? saved[0] : saved;
       const out = isPerson ? personOut(one) : expenseOut(one);
