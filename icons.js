@@ -34,8 +34,13 @@ const ICONS = [
 
 window.ICONS = ICONS;
 window.colourOf = slug => (ICONS.find(i => i[0] === slug) || ICONS[0])[1];
+// Slugs are a fixed set of [a-z-] keys, but the value arrives from the server
+// (which the pages treat as untrusted), so strip anything that isn't slug-shaped
+// before it lands in an innerHTML sink. A bad slug renders an empty circle, same
+// as an unknown one, rather than injecting markup.
 window.iconOf = (slug, cls) =>
-  '<svg viewBox="0 0 24 24"' + (cls ? ' class="' + cls + '"' : '') + '><use href="#i-' + slug + '"/></svg>';
+  '<svg viewBox="0 0 24 24"' + (cls ? ' class="' + cls + '"' : '')
+    + '><use href="#i-' + String(slug || '').replace(/[^a-z0-9-]/gi, '') + '"/></svg>';
 
 /* Inject the sprite once, as early as possible, so nothing renders a blank
    <use> while waiting for it. */

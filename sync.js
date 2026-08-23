@@ -184,9 +184,11 @@
       write(K_PEOPLE, body.people);
       write(K_SPEND, Array.isArray(body.expenses) ? body.expenses : []);
       // Only overwrite settings when the server actually sent some. Before the
-      // migration lands the field is absent, and clobbering a locally-built
-      // rota with {} would delete it on every refresh.
-      if (body.settings && typeof body.settings === 'object') write(K_SET, body.settings);
+      // migration lands the field is absent, and a settings-aware Worker sends
+      // {} when the column is empty; clobbering a locally-built rota with either
+      // would delete it on every refresh while it is still queued to share.
+      if (body.settings && typeof body.settings === 'object'
+          && Object.keys(body.settings).length) write(K_SET, body.settings);
       return body;
     } catch { return null; }
   }

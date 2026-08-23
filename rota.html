@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <!-- Before styles.css, so the --ph-* stand-ins exist by the time the rule that
      uses one is parsed. Same order as index.html. -->
-<link rel="stylesheet" href="photos.css?v=2">
+<link rel="stylesheet" href="photos.css?v=3">
 <link rel="stylesheet" href="styles.css?v=48">
 <!-- In the <head> and inline, so the attribute lands before the first paint.
      See the same block in index.html. -->
@@ -126,8 +126,8 @@
   </div>
 </div>
 
-<script src="icons.js?v=6"></script>
-<script src="sync.js?v=4"></script>
+<script src="icons.js?v=7"></script>
+<script src="sync.js?v=5"></script>
 <script src="focus.js?v=2"></script>
 <script src="photos.js?v=1"></script>
 <script src="rota.js?v=3"></script>
@@ -353,22 +353,38 @@ function renderTeams(){
 
 function renderHero(){
   const night = Rota.nightFor(sched, todayISO());
-  // Nothing to show until at least one person is on a team; a cold load seeds four
-  // blank ones, and a hero over empty teams reads as broken.
+  // A steered night (eating out, or an ad-hoc "just these people" lineup) is a
+  // deliberate choice and shows regardless. A plain team night waits until at
+  // least one person is on a team: a cold load seeds four blank ones, and a hero
+  // over empty teams reads as broken.
   const anyAssigned = conf.teams.some(t => t.members.some(id => personById(id)));
-  const active = !!(night && night.team && anyAssigned);
+  const isSteer = !!(night && night.override && (night.off || !night.team));
+  const active = !!night && (isSteer || (night.team && anyAssigned));
   $('heroSec').hidden = !active;
   if (!active) return;
   const today = todayISO();
   const isTonight = night.day === today;
+
+  // Eating out: no team, on purpose. Say so rather than blanking the hero. Same
+  // as the landing page's band for a night steered off.
+  if (night.off) {
+    $('heroWhen').textContent = isTonight ? 'Eating out tonight' : longDay(night.day);
+    $('heroTeamName').textContent = isTonight ? 'No cooking tonight' : 'Eating out';
+    $('heroTeam').innerHTML = '';
+    $('heroNote').textContent = isTonight ? 'Eating out.' : 'Eating out that night. No cooks.';
+    return;
+  }
+
   $('heroWhen').textContent = isTonight ? 'Tonight' : longDay(night.day);
-  $('heroTeamName').textContent = teamName(night.team, night.teamIndex) + (isTonight ? ' are on' : ' are up next');
+  // snLabel gives the team name, or "Just these people" for an ad-hoc night that
+  // has no team, so this never calls teamName with a null team.
+  $('heroTeamName').textContent = snLabel(night) + (isTonight ? ' are on' : ' are up next');
   // Present first, then anyone away that night faded on the end, so tonight and
   // the night-by-night list tell the same story.
   const lineup = night.present.map(id => nameChip(id, false)).concat(night.absent.map(id => nameChip(id, true)));
   $('heroTeam').innerHTML = lineup.length
     ? lineup.join('')
-    : `<p class="cook-none">Nobody from ${esc(teamName(night.team, night.teamIndex))} is here that night. Drag someone in below.</p>`;
+    : `<p class="cook-none">Nobody chosen for that night is here. Drag someone in below.</p>`;
   $('heroNote').textContent = 'Cooking for ' + night.here.length + '.';
 }
 

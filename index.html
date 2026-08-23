@@ -312,8 +312,8 @@
 
 <!-- the icon sprite is injected by icons.js, shared with kitty.html -->
 
-<script src="icons.js?v=6"></script>
-<script src="sync.js?v=4"></script>
+<script src="icons.js?v=7"></script>
+<script src="sync.js?v=5"></script>
 <script src="focus.js?v=2"></script>
 <script src="photos.js?v=1"></script>
 <script src="rota.js?v=3"></script>
@@ -1245,6 +1245,16 @@ window.addEventListener('resize', updateChartFade);
 
 /* ---------------------------------------------------------------- go */
 renderRange(); renderCountdown(); renderDow(); render();
+
+/* The countdown and the "who's cooking tonight" band are both keyed to the local
+   calendar day, but a page kept on the home screen renders them once. Re-run the
+   day-sensitive ones at the next local midnight and re-arm, so an overnight device
+   rolls over instead of showing yesterday until reloaded. */
+(function tickAtMidnight(){
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 30);
+  setTimeout(() => { renderCountdown(); render(); tickAtMidnight(); }, next - now);
+})();
 
 /* Pick up anything other people have added. Local data is already on screen by
    this point, so a slow or failed pull costs nothing but freshness. */

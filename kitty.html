@@ -197,8 +197,8 @@
   </div>
 </div>
 
-<script src="icons.js?v=6"></script>
-<script src="sync.js?v=4"></script>
+<script src="icons.js?v=7"></script>
+<script src="sync.js?v=5"></script>
 <script src="focus.js?v=2"></script>
 <script src="money.js?v=4"></script>
 <script>
@@ -675,9 +675,11 @@ function openForm(existing, kind){
     household: '',
   };
   if (!draft.entryType) draft.entryType = 'spend';   // old records predate the field
+  if (!draft.currency) draft.currency = 'EUR';        // ditto; without it an old entry
+                                                      // reads as GBP and gets re-denominated on save
 
   $('fDelete').hidden = !existing;
-  $('fAmount').value = existing ? String(existing.currency === 'GBP' ? existing.amountHome : existing.amountLocal) : '';
+  $('fAmount').value = existing ? String(draft.currency === 'GBP' ? existing.amountHome : existing.amountLocal) : '';
   $('fDetail').value = draft.what || '';
   $('fWhen').value = draft.spentOn;
   $('fNewName').value = '';
