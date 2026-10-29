@@ -74,7 +74,7 @@ Work is split to avoid clobbering. Check which side you're on before editing.
 | Side | Owns | Files |
 |---|---|---|
 | **Calendar** | Itinerary and attendance — data and logic | its own schema file, its own JS |
-| **App / landing** | Profiles, expenses, the kitty, the rota, and **all presentation** | `schema.sql`, `index.html`, `kitty.html`, `rota.html`, `styles.css`, `photos.css`, `icons.js`, `money.js`, `photos.js`, `rota.js`, `sync.js`, `tests.html`, `scripts/`, `worker/` |
+| **App / landing** | Profiles, expenses, the kitty, the rota, and **all presentation** | `schema.sql`, `index.html`, `kitty.html`, `rota.html`, `styles.css`, `photos.css`, `icons.js`, `money.js`, `photos.js`, `rota.js`, `sun.js`, `sync.js`, `tests.html`, `scripts/`, `worker/` |
 
 **The integration surface is two database views and nothing else:**
 
@@ -218,7 +218,7 @@ sprite; a mismatch renders an empty circle with no error.
   inline in a page.
 - **`parseAmount` returns `null` for what it cannot read**, never `0`. Callers must treat `null` as
   "ask the human"; defaulting it to zero silently books a free lunch.
-- **Bump the `?v=` on changed assets** — `styles.css?v=10`, `sync.js?v=1`. Pages caches hard, and
+- **Bump the `?v=` on changed assets** — `styles.css?v=49`, `sync.js?v=4`. Pages caches hard, and
   phones that already have the app will otherwise keep the old file for days.
 - **The kitty is led by its bar chart, and the splitting UI was taken out on purpose.** Ed:
   *"this tool should really just be a place where people can list what they spend… it's not to

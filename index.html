@@ -18,7 +18,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=3">
-<link rel="stylesheet" href="styles.css?v=48">
+<link rel="stylesheet" href="styles.css?v=49">
 <!-- Dark is the default, and this has to run in the <head>: set the attribute
      any later and a light frame paints first, which on a phone in a dim room is
      a flash in the eye. Inline and tiny for the same reason — an external file
@@ -39,6 +39,10 @@
     <span></span><span></span><span></span><span></span><span></span><span></span>
   </div>
   <span class="wash"></span>
+  <!-- A light leak, flaring as each photograph gives way to the next -->
+  <span class="leak" aria-hidden="true"></span>
+  <!-- The orange date a compact camera burned into the corner, from TRIP -->
+  <span class="stamp" id="stamp" aria-hidden="true"></span>
   <!-- Straight to the two things you actually come back for, without scrolling
        the whole page. Mirrors the theme switcher opposite so the hero stays
        symmetrical. -->
@@ -56,13 +60,14 @@
     <h1>La&nbsp;Perdrix</h1>
     <p class="when" id="range"></p>
     <p class="count"><b id="cd">—</b> <span id="cdl"></span></p>
+    <p class="now" id="now"></p>
   </div>
 </header>
 
 <!-- ============================================================ the place -->
 <section class="sec welcome">
   <div class="reveal">
-    <p class="eyebrow">The place</p>
+    <p class="eyebrow"><span class="eb-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-partridge"/></svg></span>The place</p>
     <!-- The walnut-tree headline that used to open here is gone: Peter's line,
          the one his essay ends on, is the opener now, so the top of the page and
          the foot of the essay ring the same note. The housekeeping line sits
@@ -117,7 +122,7 @@
 <!-- ============================================================ calendar + who's here -->
 <section class="sec cal-sec" id="when">
   <div class="reveal">
-    <p class="eyebrow">Who's here when</p>
+    <p class="eyebrow"><span class="eb-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-walnut"/></svg></span>Who's here when</p>
     <h2 class="big">Not everybody's there for the whole fortnight.</h2>
     <p class="muted">People trickle in and out. Add your dates and everyone can see who overlaps with whom. Handy before you promise anyone a lift from the airport.</p>
   </div>
@@ -131,11 +136,14 @@
 
   <div class="chart reveal" id="chartWrap" hidden>
     <div class="chart-in">
+      <!-- weekend shading and today's line, behind everything else -->
+      <div class="cols" id="cols" aria-hidden="true"></div>
       <div class="scale" id="scale"></div>
       <div class="tally" id="tally"></div>
       <div id="bars"></div>
     </div>
   </div>
+  <p class="peak" id="peak" hidden></p>
   <p class="chart-empty" id="chartEmpty">Once a couple of people have added their dates, a chart of who overlaps appears here.</p>
 
   <!-- The bar chart is the prominent read; the per-person date chips live one tap
@@ -152,7 +160,7 @@
 <!-- Read-only. It comes straight from the arrival dates people have already
      entered, so there is nothing extra for anyone to keep up to date. -->
 <section class="sec lifts-sec reveal" id="liftsSec" hidden>
-  <p class="eyebrow">Getting here</p>
+  <p class="eyebrow"><span class="eb-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-bicycle"/></svg></span>Getting here</p>
   <h2 class="big">Who needs collecting.</h2>
   <div id="liftsList"></div>
   <p class="muted" id="liftsNote"></p>
@@ -168,7 +176,7 @@
      only when somebody presses the button — people add their dates over weeks,
      and a rota that rebuilt itself would never settle. -->
 <section class="sec cook-sec reveal" id="cookSec" hidden>
-  <p class="eyebrow">Aux fourneaux</p>
+  <p class="eyebrow"><span class="eb-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-fourneaux"/></svg></span>Aux fourneaux</p>
   <div class="cook-head">
     <span class="cook-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-fourneaux"/></svg></span>
     <div>
@@ -236,6 +244,34 @@
       <span>2–4 Rue des Anciens Combattants, 24600 St Martin de Ribérac<small>Open in Google Maps</small></span>
     </a>
     <p class="foot-line">La Perdrix · Johnny &amp; Ingrid <a href="tel:+33553912477">+33 553 91 24 77</a></p>
+    <!-- A rubber-stamp postmark, so the page ends like a postcard. The date is
+         filled in from TRIP; the ink texture is the pm-ink filter. -->
+    <svg class="postmark" viewBox="0 0 240 130" aria-hidden="true">
+      <defs>
+        <path id="pm-top" d="M21,65 a44,44 0 0,1 88,0"/>
+        <path id="pm-bot" d="M13,65 a52,52 0 0,0 104,0"/>
+        <filter id="pm-ink">
+          <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="7" result="n"/>
+          <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -1.5 0 0 0 1.55" result="m"/>
+          <feComposite in="SourceGraphic" in2="m" operator="in"/>
+        </filter>
+      </defs>
+      <g filter="url(#pm-ink)">
+        <circle cx="65" cy="65" r="60" fill="none" stroke="currentColor" stroke-width="2.2"/>
+        <circle cx="65" cy="65" r="37" fill="none" stroke="currentColor" stroke-width="1.3"/>
+        <text class="pm-arc"><textPath href="#pm-top" startOffset="50%" text-anchor="middle">St Martin de Ribérac</textPath></text>
+        <text class="pm-arc"><textPath href="#pm-bot" startOffset="50%" text-anchor="middle">Dordogne · France</textPath></text>
+        <text class="pm-day" id="pmDay" x="65" y="64" text-anchor="middle"></text>
+        <text class="pm-yr" id="pmYr" x="65" y="80" text-anchor="middle"></text>
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M132,41 q6.5,-5 13,0 t13,0 t13,0 t13,0 t13,0 t13,0 t13,0"/>
+          <path d="M132,53 q6.5,-5 13,0 t13,0 t13,0 t13,0 t13,0 t13,0 t13,0"/>
+          <path d="M132,65 q6.5,-5 13,0 t13,0 t13,0 t13,0 t13,0 t13,0 t13,0"/>
+          <path d="M132,77 q6.5,-5 13,0 t13,0 t13,0 t13,0 t13,0 t13,0 t13,0"/>
+          <path d="M132,89 q6.5,-5 13,0 t13,0 t13,0 t13,0 t13,0 t13,0 t13,0"/>
+        </g>
+      </g>
+    </svg>
   </div>
 </section>
 
@@ -317,6 +353,7 @@
 <script src="focus.js?v=2"></script>
 <script src="photos.js?v=1"></script>
 <script src="rota.js?v=3"></script>
+<script src="sun.js?v=1"></script>
 <script>
 /* ======================================================================= trip
    The only thing to change when the dates move. Everything on the page is
@@ -376,7 +413,36 @@ function renderRange(){
   $('range').textContent =
     DOWL[dowIdx(START)] + ' ' + START.getUTCDate() + (same ? '' : ' ' + MONL[START.getUTCMonth()]) +
     ' – ' + DOWL[dowIdx(END)] + ' ' + END.getUTCDate() + ' ' + MONL[END.getUTCMonth()] + ' ' + END.getUTCFullYear();
+
+  // The camera date stamp, the way they printed it: 'YY M D
+  const y = START.getUTCFullYear();
+  $('stamp').textContent = "'" + String(y).slice(2) + ' ' + (START.getUTCMonth()+1) + ' ' + START.getUTCDate();
+
+  // The postmark, in a post office's Roman-numeral month
+  const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+  $('pmDay').textContent = START.getUTCDate() + ' · ' + ROMAN[START.getUTCMonth()];
+  $('pmYr').textContent  = String(y);
 }
+
+/* The time at the house, and where the sun is. The maths is in sun.js; the
+   words live here with the rest of the page's copy. Fails quietly — it is
+   garnish, and an old browser without Intl time zones just goes without. */
+function renderNow(){
+  if (!window.Sun) return;
+  let t, sun, clock;
+  try { t = new Date(); sun = Sun.times(t); clock = Sun.clock(t); } catch { return; }
+  const toSet = Math.round((sun.set - t) / 60000);
+  const up    = Math.round((t - sun.rise) / 60000);
+  let s;
+  if (t < sun.rise)      s = 'everyone’s asleep, or ought to be';
+  else if (up < 60)      s = 'the sun’s just up over the walnut trees';
+  else if (toSet > 60)   s = 'sunset in ' + Math.floor(toSet/60) + ' h ' + String(toSet%60).padStart(2,'0');
+  else if (toSet > 0)    s = 'sunset in ' + toSet + (toSet === 1 ? ' minute' : ' minutes') + ', time to find a glass';
+  else if (toSet > -45)  s = 'the sun’s just gone behind the church';
+  else                   s = 'lamps on under the vines';
+  $('now').innerHTML = '<b>' + clock + '</b> at La Perdrix · ' + s;
+}
+
 function renderCountdown(){
   /* Compare noon-UTC to noon-UTC. Taking local midnight against a noon-UTC
      start leaves a half-day in the difference, which rounds up and shows a
@@ -411,6 +477,7 @@ function renderGrid(){
   }
 
   let lastMonth = null;
+  const tk = todayLocal();
   DAYS.forEach(d => {
     const k = iso(d);
     const cell = document.createElement('button');
@@ -424,6 +491,7 @@ function renderGrid(){
       (showMonth ? '<span class="mon">'+MON[d.getUTCMonth()]+'</span>' : '');
 
     const staying = people.filter(p => here(p, k));
+    if (k === tk) cell.classList.add('today');
 
     if (mode === 'picking'){
       if (a && k >= a && k <= b){
@@ -514,7 +582,7 @@ function renderFolk(){
     b.dataset.id = p.id;
     const icon = p.icon || ICONS[0][0];
     b.innerHTML = '<span class="av" style="background:'+colourOf(icon)+'">'+iconOf(icon)+'</span>' +
-                  '<span>'+esc(p.name)+'</span><span class="when'+(todo ? ' todo' : '')+'">'+when+'</span>';
+                  '<span>'+esc(p.name)+'</span><span class="dates'+(todo ? ' todo' : '')+'">'+when+'</span>';
     el.appendChild(b);
   };
   people.forEach(p => chip(p, spanLabel(p), false));
@@ -525,9 +593,9 @@ function renderFolk(){
    Same `people` array as the calendar — two views of one source of truth,
    so they can never disagree. */
 function renderChart(){
-  const wrap = $('chartWrap'), empty = $('chartEmpty');
+  const wrap = $('chartWrap'), empty = $('chartEmpty'), peakEl = $('peak');
   if (people.length < 2 || mode === 'picking'){
-    wrap.hidden = true;
+    wrap.hidden = true; peakEl.hidden = true;
     empty.hidden = !(people.length < 2 && mode !== 'picking');
     return;
   }
@@ -536,9 +604,23 @@ function renderChart(){
 
   const counts = DAY_KEYS.map(k => people.filter(p => here(p, k)).length);
   const peak = Math.max(...counts);
+  const tk = todayLocal();
+
+  // Weekend shading, and a line down today while the trip is on.
+  $('cols').innerHTML = '<span></span>' + DAYS.map((d,i) => {
+    const cls = (dowIdx(d) >= 5 ? 'we ' : '') + (DAY_KEYS[i] === tk ? 'today' : '');
+    return '<i class="'+cls.trim()+'"></i>';
+  }).join('');
+
+  const busiest = counts.map((c,i) => c === peak ? i : -1).filter(i => i >= 0);
+  const first = DAYS[busiest[0]];
+  peakEl.hidden = !(peak > 1);
+  peakEl.innerHTML = 'Busiest: <b>' + peak + ' round the table</b> on ' +
+    DOWL[dowIdx(first)] + ' ' + first.getUTCDate() + ' ' + MONL[first.getUTCMonth()] +
+    (busiest.length > 1 ? ', and ' + (busiest.length - 1) + ' other day' + (busiest.length > 2 ? 's' : '') + ' like it' : '') + '.';
 
   $('scale').innerHTML = '<span></span>' + DAYS.map((d,i) =>
-    '<i class="'+(counts[i] === peak && peak > 0 ? 'hot' : '')+'"><b>'+d.getUTCDate()+'</b>'+DOW[dowIdx(d)].slice(0,2)+'</i>'
+    '<i class="'+(counts[i] === peak && peak > 0 ? 'hot ' : '')+(DAY_KEYS[i] === tk ? 'today' : '')+'"><b>'+d.getUTCDate()+'</b>'+DOW[dowIdx(d)].slice(0,2)+'</i>'
   ).join('');
 
   $('tally').innerHTML = '<span class="sp">Heads</span>' + counts.map(c =>
@@ -1244,7 +1326,8 @@ $('chartWrap').addEventListener('scroll', updateChartFade, { passive:true });
 window.addEventListener('resize', updateChartFade);
 
 /* ---------------------------------------------------------------- go */
-renderRange(); renderCountdown(); renderDow(); render();
+renderRange(); renderCountdown(); renderNow(); renderDow(); render();
+setInterval(renderNow, 30000);
 
 /* Pick up anything other people have added. Local data is already on screen by
    this point, so a slow or failed pull costs nothing but freshness. */
