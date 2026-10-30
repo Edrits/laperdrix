@@ -18,7 +18,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=3">
-<link rel="stylesheet" href="styles.css?v=50">
+<link rel="stylesheet" href="styles.css?v=51">
 <!-- Dark is the default, and this has to run in the <head>: set the attribute
      any later and a light frame paints first, which on a phone in a dim room is
      a flash in the eye. Inline and tiny for the same reason — an external file
@@ -133,12 +133,19 @@
   </div>
 
   <!-- The same calendar opened out to a page of its own, with the photograph
-       behind it, everybody on a given day, and every pickup. A real button,
-       straight under the grid: the small pill that first did this job went
-       unnoticed. -->
-  <a class="btn cal-open" id="calOpen" href="calendar.html">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
-    Open the full calendar
+       behind it, everybody on a given day, and every pickup. Made as a ticket
+       stub rather than a button: the plain outlined pill read like a bank's
+       website on a page made of photographs and postmarks. The calendar mark
+       is drawn to the sprite's recipe (1.7 stroke, round joins). -->
+  <a class="cal-open" id="calOpen" href="calendar.html">
+    <span class="co-stub" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.2"/><path d="M3.5 9.8h17"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M7.6 13.6h.01M12 13.6h.01M16.4 13.6h.01M7.6 17h.01M12 17h.01"/><circle cx="16.4" cy="17" r="1.6"/></svg>
+    </span>
+    <span class="co-body">
+      <b>Open the full calendar</b>
+      <small>Everybody, day by day, and who needs collecting</small>
+    </span>
+    <svg class="co-go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="M12 5l7 7-7 7"/></svg>
   </a>
 
   <p class="who" id="who" role="status"></p>

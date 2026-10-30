@@ -1315,18 +1315,47 @@ body.lifting .team{box-shadow:inset 0 0 0 2px var(--accent)}
    photograph reads through without ever sitting directly under text.
    ========================================================================= */
 
-/* The way in from the landing page: a full-width button straight under its
-   calendar. Outlined, not filled, so it doesn't compete with "Add your dates"
-   in the bar at the foot. Hidden while picking: following a link mid-edit
-   would throw the dates away. */
-.btn.cal-open{
-  display:flex;align-items:center;justify-content:center;gap:10px;
-  width:100%;min-height:50px;margin-top:16px;text-decoration:none;
-  background:transparent;color:var(--accent);border:1.5px solid var(--accent);
-  transition:background .16s ease,color .16s ease;
+/* The way in from the landing page: a ticket stub straight under its calendar.
+   A stub with a drawn calendar, a dashed perforation with a notch punched top
+   and bottom, and the rest of the ticket. Set down a fraction crooked, like the
+   prints, and it straightens when you go to pick it up. Paper, not a fill, so
+   it doesn't compete with "Add your dates" in the bar at the foot. Capped in
+   width: stretched across a desktop grid it stopped looking like a ticket, and
+   the tilt turned into a slope. Hidden while picking: following a link mid-edit would throw the dates away. */
+.cal-open{
+  display:flex;align-items:stretch;margin-top:20px;min-height:74px;max-width:560px;
+  color:var(--tx);text-decoration:none;
+  background:var(--surface);border:1px solid var(--hair);border-radius:12px;
+  transform:rotate(-.6deg);
+  box-shadow:0 16px 28px -20px rgba(10,13,8,.8),0 1px 2px rgba(10,13,8,.12);
+  transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
 }
-.btn.cal-open svg{width:17px;height:17px;flex:none}
-.btn.cal-open:hover,.btn.cal-open:focus-visible{background:var(--accent);color:var(--bg)}
+.co-stub{
+  flex:none;width:66px;position:relative;display:grid;place-items:center;
+  color:var(--accent);border-radius:11px 0 0 11px;
+  background:color-mix(in srgb,var(--accent) 10%,transparent);
+  border-right:1.5px dashed color-mix(in srgb,var(--accent) 50%,var(--hair));
+}
+/* The punched notches: page-coloured discs over the ticket's own edge, each
+   with the ticket's hairline, so the edge reads as bitten out. */
+.co-stub::before,.co-stub::after{
+  content:"";position:absolute;right:-8px;width:14px;height:14px;border-radius:99px;
+  background:var(--bg);border:1px solid var(--hair);
+}
+.co-stub::before{top:-8px}
+.co-stub::after{bottom:-8px}
+.co-stub svg{width:28px;height:28px}
+.co-body{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:13px 6px 13px 18px}
+.co-body b{font:600 clamp(18px,2.6vw,21px)/1.15 var(--serif);letter-spacing:-.005em}
+.co-body small{font:italic 400 13.5px/1.35 var(--serif);color:var(--mut)}
+.co-go{flex:none;align-self:center;width:19px;height:19px;margin:0 18px 0 8px;color:var(--accent);transition:transform .22s ease}
+.cal-open:hover,.cal-open:focus-visible{
+  transform:rotate(0) translateY(-3px);
+  border-color:color-mix(in srgb,var(--accent) 45%,var(--hair));
+  box-shadow:0 22px 34px -20px rgba(10,13,8,.85),0 1px 2px rgba(10,13,8,.12);
+}
+.cal-open:hover .co-go,.cal-open:focus-visible .co-go{transform:translateX(4px)}
+.cal-open:active{transform:rotate(0) translateY(0)}
 body.picking .cal-open{display:none}
 
 .cal-page{background:#0e120c}
@@ -1458,4 +1487,4 @@ body.picking .folk-pane,body.picking .lifts-pane,body.picking .chart-pane{displa
 .pk-day:hover{text-decoration:underline;text-underline-offset:3px}
 .lift-day.past{opacity:.5}
 .lifts-pane .lift{padding:9px 0}
-@media (prefers-reduced-motion:reduce){.btn.cal-open{transition:none}}
+@media (prefers-reduced-motion:reduce){.cal-open,.co-go{transition:none}}
