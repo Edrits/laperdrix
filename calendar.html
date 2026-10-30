@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Who's here when · La Perdrix</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="description" content="Who is at La Perdrix on which day, and who needs collecting.">
+<meta name="theme-color" id="tc" content="#171b14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- Before styles.css, so the --ph-* stand-ins exist by the time the rule that
+     uses one is parsed. Same order as index.html. -->
+<link rel="stylesheet" href="photos.css?v=3">
+<link rel="stylesheet" href="styles.css?v=50">
+<!-- In the <head> and inline, so the attribute lands before the first paint.
+     See the same block in index.html. -->
+<script>
+  try {
+    document.documentElement.setAttribute(
+      'data-theme', localStorage.getItem('laperdrix.theme') === 'light' ? 'light' : 'dark');
+  } catch { document.documentElement.setAttribute('data-theme', 'dark'); }
+</script>
+</head>
+<body class="cal-page">
+
+<!-- The landing page's calendar, opened out. Same data, same dates sheet (both
+     come from dates.js), with room to show who is actually there on a day and
+     who needs collecting. The house in the evening light sits behind all of it,
+     fixed, so the panels scroll over the photograph rather than past it. -->
+<div class="cal-back" aria-hidden="true"></div>
+
+<header class="cal-top">
+  <nav class="hero-nav" aria-label="Go to">
+    <a href="index.html">La Perdrix</a>
+    <a href="kitty.html">Kitty</a>
+    <a href="rota.html">Rota</a>
+  </nav>
+  <div class="themes">
+    <button id="t-dark" aria-pressed="true">Dark</button>
+    <button id="t-light" aria-pressed="false">Light</button>
+  </div>
+</header>
+
+<main class="cal-main">
+  <div class="cal-title">
+    <p class="place">Who's here when</p>
+    <h1>The fortnight</h1>
+    <p class="when" id="range"></p>
+  </div>
+
+  <div class="cal-layout">
+    <!-- Two columns on a wide screen, one on a phone. On a phone the wrappers
+         get out of the way (display:contents) and `order` puts the day panel
+         straight under the calendar, which is what you tapped to see. -->
+    <div class="col-a">
+      <section class="pane cal-pane">
+        <div class="cal">
+          <div class="dow" id="dow" aria-hidden="true"></div>
+          <div class="grid rich" id="grid" role="group" aria-label="The days of the trip"></div>
+        </div>
+        <p class="cal-key"><span class="lift-pin" aria-hidden="true"></span>Somebody to collect that day</p>
+      </section>
+
+      <section class="pane folk-pane">
+        <p class="eyebrow">Everyone</p>
+        <div class="folk" id="folk"></div>
+      </section>
+
+      <section class="pane chart-pane">
+        <p class="eyebrow">Who overlaps</p>
+        <div class="chart" id="chartWrap" hidden>
+          <div class="chart-in">
+            <div class="cols" id="cols" aria-hidden="true"></div>
+            <div class="scale" id="scale"></div>
+            <div class="tally" id="tally"></div>
+            <div id="bars"></div>
+          </div>
+        </div>
+        <p class="peak" id="peak" hidden></p>
+        <p class="chart-empty" id="chartEmpty">Once a couple of people have added their dates, a chart of who overlaps appears here.</p>
+      </section>
+    </div>
+
+    <div class="col-b">
+      <section class="pane day-panel" id="dayPanel" aria-live="polite"></section>
+
+      <section class="pane lifts-pane">
+        <p class="eyebrow">Getting here</p>
+        <h2 class="pane-h">Who needs collecting</h2>
+        <div id="pickups"></div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<!-- Visible from the first paint: there is no hero to keep clear here, and
+     adding your dates is half of what the page is for. -->
+<div class="bar bare show"><button class="btn" id="add">Add your dates</button></div>
+
+<script src="icons.js?v=6"></script>
+<script src="sync.js?v=4"></script>
+<script src="focus.js?v=2"></script>
+<script src="photos.js?v=1"></script>
+<script src="dates.js?v=2"></script>
+<script>
+/* Everything about the calendar itself (the grid, the sheet, saving, removing)
+   is in dates.js and shared with the landing page. This page only adds the day
+   panel and the full list of pickups. */
+
+function renderRange(){
+  const same = START.getUTCMonth() === END.getUTCMonth();
+  $('range').textContent =
+    DOWL[dowIdx(START)] + ' ' + START.getUTCDate() + (same ? '' : ' ' + MONL[START.getUTCMonth()]) +
+    ' to ' + DOWL[dowIdx(END)] + ' ' + END.getUTCDate() + ' ' + MONL[END.getUTCMonth()] + ' ' + END.getUTCFullYear();
+}
+
+/* There is always a day in the panel. Today while the trip is on, otherwise
+   the first day; a link from the landing page can name one in the hash. */
+function defaultDay(){
+  const t = todayLocal();
+  return DAY_KEYS.includes(t) ? t : DAY_KEYS[0];
+}
+
+const byName = (a, b) => a.name.localeCompare(b.name);
+const liftNote = p => p.pickupFrom
+  ? 'Collect from ' + esc(p.pickupFrom) + (p.pickupAt ? ', ' + sayTime(p.pickupAt) : '')
+  : '';
+
+/* ------------------------------------------------------------- the day
+   Everybody there on the chosen day, split the way you'd actually ask about
+   it: who turns up, who is around all day, who goes. Every row opens that
+   person's dates, the same as their chip does. */
+function renderDay(){
+  const el = $('dayPanel');
+  // Hidden while picking, like the chips: the sheet is open, and rows that
+  // open somebody else's dates would swap the draft out from under you.
+  el.hidden = mode === 'picking';
+  if (el.hidden) return;
+
+  const k = focus, d = D(k), at = DAY_KEYS.indexOf(k);
+  const today = todayLocal();
+  const staying = people.filter(p => here(p, k)).sort(byName);
+  const arriving = staying.filter(p => p.from === k);
+  const leaving  = staying.filter(p => p.to === k && p.from !== k);
+  const around   = staying.filter(p => p.from !== k && p.to !== k);
+
+  const row = (p, note) =>
+    `<li><button type="button" class="dp-row" data-id="${esc(p.id)}">` +
+      `<span class="av" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>` +
+      `<span class="dp-name">${esc(p.name)}</span>` +
+      `<span class="dp-note${p.pickupFrom && p.from === k ? ' lifted' : ''}">${note}</span>` +
+    `</button></li>`;
+  const group = (title, list, note) => list.length
+    ? `<h3 class="dp-h">${title}<i>${list.length}</i></h3><ul class="dp-list">${list.map(p => row(p, note(p))).join('')}</ul>`
+    : '';
+
+  const n = staying.length;
+  el.innerHTML =
+    `<div class="dp-top">
+       <button type="button" class="dp-step" data-step="-1" aria-label="Day before"${at <= 0 ? ' disabled' : ''}>
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+       <div class="dp-when">
+         <p class="dp-day">${k === today ? 'Today, ' : ''}${DOWL[dowIdx(d)]} ${d.getUTCDate()} ${MONL[d.getUTCMonth()]}</p>
+         <p class="dp-count">${n ? n + (n === 1 ? ' person here' : ' people here') : 'Nobody yet'}</p>
+       </div>
+       <button type="button" class="dp-step" data-step="1" aria-label="Day after"${at >= DAY_KEYS.length - 1 ? ' disabled' : ''}>
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+     </div>` +
+    (n
+      ? group('Arriving', arriving, p => liftNote(p) || 'Making their own way') +
+        group('Here all day', around, p => spanLabel(p)) +
+        group('Leaving', leaving, p => spanLabel(p))
+      : '<p class="muted dp-empty">Nobody has dates covering this day yet.</p>');
+}
+
+$('dayPanel').addEventListener('click', e => {
+  const step = e.target.closest('.dp-step');
+  if (step){
+    const i = DAY_KEYS.indexOf(focus) + Number(step.dataset.step);
+    if (i >= 0 && i < DAY_KEYS.length){ focus = DAY_KEYS[i]; render(); }
+    return;
+  }
+  const r = e.target.closest('.dp-row');
+  if (r) editPerson(r.dataset.id);
+});
+
+/* ------------------------------------------------------------- pickups
+   The landing page shows the next three days with somebody to collect. Here
+   it is the whole fortnight, so the drivers can see the shape of it. Days
+   already gone stay in the list, faded, rather than vanishing mid-trip. */
+function renderPickups(){
+  const el = $('pickups');
+  const days = nextLifts(people, '', Infinity);
+  if (!days.length){
+    el.innerHTML = '<p class="muted">Nobody has asked for a lift yet. If you need one, say so when you add your dates.</p>';
+    return;
+  }
+  const today = todayLocal();
+  const tomorrow = iso(addDays(D(today), 1));
+  const label = day => day === today ? 'Today' : day === tomorrow ? 'Tomorrow' : longNight(day);
+  const total = days.reduce((t, d) => t + d.people.length, 0);
+
+  el.innerHTML =
+    `<p class="muted pk-sum">${total === 1 ? 'One person' : total + ' people'} to collect` +
+    `${days.length > 1 ? ' over ' + days.length + ' days' : ''}.</p>` +
+    days.map(d => `
+      <div class="lift-day${d.day < today ? ' past' : ''}">
+        <button type="button" class="lift-when-head pk-day" data-d="${d.day}">${label(d.day)}</button>
+        ${d.people.map(p => `
+          <div class="lift">
+            <span class="av sm" style="background:${colourOf(p.icon)}">${iconOf(p.icon)}</span>
+            <span class="lift-who">${esc(p.name)}</span>
+            <span class="lift-where">${esc(p.pickupFrom)}${p.pickupAt ? ' · ' + sayTime(p.pickupAt) : ''}</span>
+          </div>`).join('')}
+      </div>`).join('');
+}
+
+/* A day heading in the pickups list shows that day in the panel. On a phone
+   the panel is above, off screen, so bring it into view. */
+$('pickups').addEventListener('click', e => {
+  const b = e.target.closest('.pk-day');
+  if (!b || mode === 'picking' || !DAY_KEYS.includes(b.dataset.d)) return;
+  focus = b.dataset.d;
+  render();
+  $('dayPanel').scrollIntoView({ behavior:'smooth', block:'nearest' });
+});
+
+function render(){
+  // The grid's own handler toggles a day off when tapped twice. Here that
+  // would leave an empty panel, so fall back to the default day.
+  if (mode !== 'picking' && !focus) focus = defaultDay();
+  renderGrid(); renderFolk(); renderChart(); renderSheet(); renderDay(); renderPickups();
+}
+
+/* ---------------------------------------------------------------- photograph */
+Photos.load(['house']);
+
+/* ---------------------------------------------------------------- theme
+   As on every page: dark unless somebody has chosen light. */
+(function(){
+  const root = document.documentElement;
+  const b = { dark:$('t-dark'), light:$('t-light') };
+  const BAR = { dark:'#171b14', light:'#e9e4d7' };
+  const set = m => {
+    root.setAttribute('data-theme', m);
+    $('tc').setAttribute('content', BAR[m]);
+    try { localStorage.setItem('laperdrix.theme', m); } catch {}
+    for (const k in b) b[k].setAttribute('aria-pressed', String(k === m));
+  };
+  for (const k in b) b[k].addEventListener('click', () => set(k));
+  let saved = 'dark';
+  try { saved = localStorage.getItem('laperdrix.theme') === 'light' ? 'light' : 'dark'; } catch {}
+  set(saved);
+})();
+
+$('chartWrap').addEventListener('scroll', updateChartFade, { passive:true });
+window.addEventListener('resize', updateChartFade);
+
+/* ---------------------------------------------------------------- go */
+const asked = decodeURIComponent(location.hash.slice(1));
+focus = DAY_KEYS.includes(asked) ? asked : defaultDay();
+renderRange(); renderDow(); render();
+
+(async function refresh(){
+  const got = await Sync.pull();
+  if (!got) return;
+  people = load();
+  render();
+})();
+</script>
+</body>
+</html>

@@ -333,12 +333,15 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 .cal-sec{padding-block:78px 0}
 .cal{margin-top:26px}
 .dow{
-  display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:7px;
+  display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-bottom:7px;
 }
 .dow span{
   text-align:center;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);
 }
-.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+/* minmax(0,1fr), not 1fr: a bare 1fr won't shrink below its content, and once
+   ten-odd people are on a day the dots and "+16" are wider than a phone's
+   column, which pushed Sunday off the right edge of the screen. */
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
 .blank{aspect-ratio:1/1.12}
 .day{
   aspect-ratio:1/1.14;border:1px solid var(--hair);background:var(--surface);
@@ -357,7 +360,7 @@ h2.big{font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 14px;letter-s
 .day.pick{background:var(--accent);color:var(--bg)}
 .day.pick .mon{color:var(--bg);opacity:.72}
 .day.today{box-shadow:0 0 0 2px var(--lamp)}
-.dots{display:flex;gap:2px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:auto}
+.dots{display:flex;gap:2px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:auto;max-width:100%}
 .dots .dot{width:5px;height:5px;border-radius:99px;display:block}
 .dots .more{font-style:normal;font-size:8px;color:var(--mut);font-variant-numeric:tabular-nums}
 .day.focus .dots .more,.day.pick .dots .more{color:var(--bg);opacity:.8}
@@ -1303,3 +1306,156 @@ body.lifting .team{box-shadow:inset 0 0 0 2px var(--accent)}
 .lift-when{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-bottom:14px}
 .lift-when label{margin-bottom:0;flex:none}
 .lift-when input{width:auto;margin-bottom:0}
+
+/* =========================================================================
+   The calendar, opened out — calendar.html.
+   The landing page's calendar at full size, over the house in evening light.
+   The photograph is fixed and the panels scroll over it; each panel is the
+   page surface at a little under full strength with a blur behind, so the
+   photograph reads through without ever sitting directly under text.
+   ========================================================================= */
+
+/* The way in from the landing page: a full-width button straight under its
+   calendar. Outlined, not filled, so it doesn't compete with "Add your dates"
+   in the bar at the foot. Hidden while picking: following a link mid-edit
+   would throw the dates away. */
+.btn.cal-open{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;min-height:50px;margin-top:16px;text-decoration:none;
+  background:transparent;color:var(--accent);border:1.5px solid var(--accent);
+  transition:background .16s ease,color .16s ease;
+}
+.btn.cal-open svg{width:17px;height:17px;flex:none}
+.btn.cal-open:hover,.btn.cal-open:focus-visible{background:var(--accent);color:var(--bg)}
+body.picking .cal-open{display:none}
+
+.cal-page{background:#0e120c}
+.cal-back{
+  position:fixed;inset:0;z-index:-1;background:#0e120c var(--ph-house) center 40%/cover no-repeat;
+}
+.cal-back::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(to bottom,rgba(10,13,8,.5),rgba(10,13,8,.3) 30%,rgba(10,13,8,.72) 100%);
+}
+:root[data-theme="light"] .cal-back::after{
+  background:linear-gradient(to bottom,rgba(10,13,8,.4),rgba(10,13,8,.12) 30%,rgba(10,13,8,.45) 100%);
+}
+
+/* The hero's own pills and theme switch, which already sit on a photograph. */
+.cal-top{position:relative;height:calc(56px + var(--safe-t))}
+
+.cal-main{max-width:1180px;margin:0 auto;padding:0 24px calc(100px + var(--safe-b))}
+.cal-title{color:#f2ece0;padding:clamp(22px,7vh,70px) 0 clamp(20px,4vh,34px)}
+.cal-title .place{margin-bottom:10px}
+.cal-title h1{
+  font:600 clamp(44px,9vw,92px)/.9 var(--serif);margin:0 0 10px;
+  letter-spacing:-.02em;text-shadow:0 2px 40px rgba(0,0,0,.5);
+}
+.cal-title .when{margin:0;text-shadow:0 1px 20px rgba(0,0,0,.5)}
+
+.cal-layout{display:flex;flex-direction:column;gap:16px}
+.col-a,.col-b{display:contents}
+.cal-pane{order:1}
+.day-panel{order:2}
+.lifts-pane{order:3}
+.folk-pane{order:4}
+.chart-pane{order:5}
+
+.pane{
+  background:color-mix(in srgb,var(--surface) 86%,transparent);
+  -webkit-backdrop-filter:blur(18px) saturate(1.1);backdrop-filter:blur(18px) saturate(1.1);
+  border:1px solid color-mix(in srgb,var(--hair) 70%,transparent);border-radius:18px;
+  padding:20px;box-shadow:0 24px 60px -30px rgba(10,13,8,.85);min-width:0;
+}
+.pane .eyebrow{margin-bottom:14px}
+.pane-h{font:600 22px/1.2 var(--serif);margin:0 0 6px}
+.pane .folk{margin-top:0}
+.pane .chart{margin-top:4px}
+.pane .chart-empty{margin:0}
+.cal-pane .cal{margin-top:0}
+
+@media (min-width:980px){
+  .cal-layout{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(300px,1fr);align-items:start}
+  .col-a,.col-b{display:flex;flex-direction:column;gap:16px;min-width:0}
+}
+@media (max-width:600px){
+  .cal-main{padding-inline:12px}
+  .cal-title{padding-inline:12px}
+  .pane{padding:16px 14px;border-radius:16px}
+}
+
+/* ------------------------------------------------------- the big grid
+   On a phone it is the landing page's calendar with taller cells. From a
+   tablet up, the dots give way to the faces themselves and a head count. */
+.grid.rich{gap:6px}
+.grid.rich .blank{aspect-ratio:auto}
+.grid.rich .day{aspect-ratio:auto;min-height:70px;border-radius:10px;padding:7px 4px 6px}
+.grid.rich .day .num{font-size:16px}
+.grid.rich .n-here,.grid.rich .faces{display:none}
+.grid.rich .dots{gap:3px}
+.grid.rich .dots .dot{width:6px;height:6px}
+.lift-pin{
+  position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:99px;
+  background:var(--accent);box-shadow:0 0 0 2px var(--surface);
+}
+.day.focus .lift-pin,.day.pick .lift-pin{background:var(--bg);box-shadow:none}
+.cal-key{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:12.5px;color:var(--mut)}
+.cal-key .lift-pin{position:static;flex:none}
+
+@media (min-width:700px){
+  .grid.rich .day{min-height:136px;align-items:flex-start;padding:10px 9px 9px;gap:3px}
+  .grid.rich .day .num{font-size:19px}
+  .grid.rich .dots{display:none}
+  .grid.rich .n-here{display:block;font-size:11px;color:var(--mut);font-variant-numeric:tabular-nums}
+  .grid.rich .faces{display:flex;flex-wrap:wrap;gap:3px;margin-top:auto}
+  .faces i{width:19px;height:19px;border-radius:99px;display:grid;place-items:center;color:#fff}
+  .faces i svg{width:12px;height:12px}
+  .faces b{font-size:10.5px;font-weight:600;color:var(--mut);align-self:center;margin-left:1px}
+  .day.focus .n-here,.day.pick .n-here,.day.focus .faces b,.day.pick .faces b{color:var(--bg);opacity:.8}
+  .day.focus .faces i{box-shadow:0 0 0 1.5px var(--bg)}
+  .lift-pin{top:10px;right:10px;width:8px;height:8px}
+}
+/* While picking, the sheet covers the bottom of the screen and the calendar
+   has to fit in the strip above it, so the faces fold away. */
+body.picking .grid.rich .day{min-height:64px}
+body.picking .grid.rich .faces,body.picking .grid.rich .n-here{display:none}
+body.picking .grid.rich .dots{display:flex}
+body.picking .folk-pane,body.picking .lifts-pane,body.picking .chart-pane{display:none}
+
+/* ------------------------------------------------------- the day panel */
+.dp-top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.dp-when{flex:1;min-width:0;text-align:center}
+.dp-day{font:600 21px/1.2 var(--serif);margin:0}
+.dp-count{font-size:13px;color:var(--mut);margin:3px 0 0;font-variant-numeric:tabular-nums}
+.dp-step{
+  width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:99px;
+  border:1px solid var(--hair);background:transparent;color:var(--tx);cursor:pointer;padding:0;
+}
+.dp-step svg{width:18px;height:18px}
+.dp-step:disabled{opacity:.3;cursor:default}
+.dp-h{
+  display:flex;align-items:center;gap:8px;margin:20px 0 6px;
+  font:600 11px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);
+}
+.dp-h i{font-style:normal;color:var(--mut);font-variant-numeric:tabular-nums}
+.dp-list{list-style:none;margin:0;padding:0}
+.dp-row{
+  display:flex;align-items:center;gap:11px;width:100%;padding:8px 4px;
+  background:none;border:0;border-bottom:1px solid var(--hair);
+  font:inherit;color:var(--tx);text-align:left;cursor:pointer;
+}
+.dp-list li:last-child .dp-row{border-bottom:0}
+.dp-row:hover .dp-name{text-decoration:underline;text-underline-offset:3px}
+.dp-name{font:600 14.5px/1.25 var(--sans);flex:none;max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dp-note{margin-left:auto;text-align:right;font-size:12.5px;color:var(--mut);min-width:0}
+.dp-note.lifted{color:var(--accent)}
+.dp-empty{margin-top:18px;font-size:14px}
+
+/* ------------------------------------------------------- pickups */
+.pk-sum{font-size:14px;margin-bottom:18px}
+.lifts-pane .lift-day + .lift-day{margin-top:18px}
+.pk-day{background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.pk-day:hover{text-decoration:underline;text-underline-offset:3px}
+.lift-day.past{opacity:.5}
+.lifts-pane .lift{padding:9px 0}
+@media (prefers-reduced-motion:reduce){.btn.cal-open{transition:none}}

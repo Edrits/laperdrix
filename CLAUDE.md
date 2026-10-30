@@ -5,16 +5,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 A private web app for a group holiday at **La Perdrix**, St Martin de Ribérac, Dordogne —
-31 July – 14 August 2027, around 27 people across several households. Three pages:
+31 July – 14 August 2027, around 27 people across several households. Four pages:
 
 1. **`index.html` — the landing page.** Atmosphere first. A cinematic hero, the shape of the
    fortnight, a presence chart showing who's there on which days, and read-only bands for tonight's
    cooks and the kitty total. You go here to *enjoy the feeling of the holiday*, not to do admin.
 2. **`kitty.html` — the spend tracker**, deliberately **behind a click** off the landing page.
 3. **`rota.html` — the cooking rota** ("Aux fourneaux"), where teams are generated and hand-edited.
+4. **`calendar.html` — the calendar, opened out.** The landing page's calendar at full size over
+   the house photograph (`--ph-house`), with a panel listing everybody there on the chosen day
+   (arriving / here all day / leaving) and the whole fortnight's pickups. Reached from "Open the
+   full calendar", the full-width button under the landing page's grid, which carries the focused day in the hash
+   (`calendar.html#2027-08-03`). One column on a phone, two from 980px.
 
 The landing page never *writes* rota or kitty state; it renders what those two pages stored. Kitty
 and Rota are also reachable top-left from every page.
+
+**The calendar and the dates sheet live in `dates.js`, shared by `index.html` and `calendar.html`.**
+It is a classic script, not a module: its top-level `const`/`let`s (`people`, `focus`, `mode`,
+`DAYS`, `iso`, `$`…) are globals the page's inline script reads, and each page defines its own
+`render()`, which the handlers in `dates.js` call. It also injects the sheet and the "Take yourself
+off?" confirm into `<body>`, so neither page carries that markup. Don't copy any of it back into a
+page: two copies of the save path are two places to forget a field.
 
 > Ed's framing, and it governs every design decision: *"a spending tracker so we can keep an eye on
 > the balance, **not a direct accounting tool which helps settle**."* The app shows what people have
@@ -74,7 +86,7 @@ Work is split to avoid clobbering. Check which side you're on before editing.
 | Side | Owns | Files |
 |---|---|---|
 | **Calendar** | Itinerary and attendance — data and logic | its own schema file, its own JS |
-| **App / landing** | Profiles, expenses, the kitty, the rota, and **all presentation** | `schema.sql`, `index.html`, `kitty.html`, `rota.html`, `styles.css`, `photos.css`, `icons.js`, `money.js`, `photos.js`, `rota.js`, `sun.js`, `sync.js`, `tests.html`, `scripts/`, `worker/` |
+| **App / landing** | Profiles, expenses, the kitty, the rota, and **all presentation** | `schema.sql`, `index.html`, `calendar.html`, `kitty.html`, `rota.html`, `styles.css`, `photos.css`, `icons.js`, `dates.js`, `money.js`, `photos.js`, `rota.js`, `sun.js`, `sync.js`, `tests.html`, `scripts/`, `worker/` |
 
 **The integration surface is two database views and nothing else:**
 
@@ -260,9 +272,10 @@ sprite; a mismatch renders an empty circle with no error.
   children paid the same as a lone adult, which is the unfairness the person-as-atom model exists to
   avoid. `split_basis = 'per_household'` in the schema means the wrong thing; don't wire it up.
 - **Any new field on a person has to be added in four places**, and three of them fail silently:
-  `personIn` *and* `personOut` in `worker.js`, the mapper in `kitty.html`'s `loadPeople()`, and the
-  mapper in `index.html`. The landing page one is the nastiest — it rebuilds the record on save, so
-  a field it drops is erased the next time anyone edits their dates.
+  `personIn` *and* `personOut` in `worker.js`, the mapper in `kitty.html`'s `loadPeople()`, and
+  `load()` in `dates.js` (used by both `index.html` and `calendar.html`). That last one is the
+  nastiest — the save path rebuilds the record from it, so a field it drops is erased the next time
+  anyone edits their dates. The sheet's save handler, also in `dates.js`, has to write it too.
 - **Clearing the spending deletes through `Sync.removeExpense`, one id at a time**, off a snapshot of
   the ids rather than the live array. Clearing only `localStorage` would look like it worked and then
   have the next `pull()` put everything back. The confirm names the real count and total — a dialog
