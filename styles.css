@@ -1622,21 +1622,22 @@ body.picking .box-open{display:none}
     transform:translateY(-7px) rotate(-1deg);
   }
 }
-/* Tucked down into the corner when the prints are out */
+/* Fades away once the lid lifts and the prints spill out */
 .shoebox.is-open{
-  transform:translate(-165%,92%) rotate(-7deg) scale(.62);
+  transform:translate(-50%,-44%) rotate(-2deg) scale(.88);
+  opacity:0;pointer-events:none;
 }
 /* Centered at the foot with lid off when catching a newly dropped print */
 .shoebox.is-receiving{
   transform:translate(-50%,32%) rotate(-1deg) scale(.86);
 }
 .shoebox.settle{
-  animation:shoeboxCatch .46s cubic-bezier(.2,.8,.3,1);
+  animation:shoeboxCatch .46s cubic-bezier(.2,.8,.3,1) forwards;
 }
 @keyframes shoeboxCatch{
-  0%{transform:translate(-50%,32%) scale(.86)}
-  42%{transform:translate(-50%,38%) scale(.83,.9)}
-  100%{transform:translate(-165%,92%) rotate(-7deg) scale(.62)}
+  0%{transform:translate(-50%,32%) scale(.86);opacity:1}
+  42%{transform:translate(-50%,38%) scale(.83,.9);opacity:1}
+  100%{transform:translate(-50%,34%) scale(.78);opacity:0}
 }
 
 /* Deep dark timber interior of the trunk base */
@@ -1699,8 +1700,8 @@ body.picking .box-open{display:none}
 }
 .shoebox.is-open .shoebox-lid,
 .shoebox.is-receiving .shoebox-lid{
-  transform:translate(135px,-78px) rotate(16deg) scale(.92);
-  opacity:.42;
+  transform:translate(0,-48px) rotate(6deg) scale(.94);
+  opacity:0;pointer-events:none;
 }
 
 /* Heavy vertical wrought-iron trunk straps on left and right of lid */
@@ -1816,7 +1817,7 @@ body.picking .box-open{display:none}
 .prints-layer{position:absolute;inset:0;z-index:22;pointer-events:none}
 .polaroid{
   position:absolute;left:50%;top:50%;
-  width:min(84vw,376px);
+  width:min(88vw,424px);
   background:#fbf8f0;padding:14px 14px 20px;border-radius:3px;
   box-shadow:0 18px 40px -12px rgba(0,0,0,.88),0 1px 3px rgba(0,0,0,.32);
   transform:translate(-50%,-45%) scale(.28) rotate(0deg);
@@ -1827,6 +1828,7 @@ body.picking .box-open{display:none}
     box-shadow .35s ease;
 }
 .polaroid.out{opacity:1;pointer-events:auto}
+.polaroid.tucked.out{opacity:.82}
 .polaroid.active-print{
   z-index:28 !important;
   box-shadow:0 32px 64px -14px rgba(0,0,0,.95),0 0 0 1px rgba(232,178,92,.32);
@@ -1912,7 +1914,7 @@ body.picking .box-open{display:none}
   .box-sec .muted{font-size:14px;line-height:1.45}
   .box-stage{
     margin-top:12px;
-    height:clamp(360px,56svh,450px);min-height:360px;
+    height:clamp(390px,60svh,470px);min-height:390px;
   }
   .box-meta-top{top:6px;left:0;right:0}
   .shoebox{width:min(76vw,264px);height:164px}
@@ -1922,14 +1924,14 @@ body.picking .box-open{display:none}
   .shoebox-label b{font-size:16.5px}
   .shoebox-label em{font-size:11.5px}
   .shoebox-prompt{bottom:-32px;font-size:13px}
-  .shoebox.is-open{transform:translate(-115%,108%) rotate(-8deg) scale(.46)}
+  .shoebox.is-open{transform:translate(-50%,-44%) rotate(-2deg) scale(.84);opacity:0;pointer-events:none}
   .shoebox.is-receiving{transform:translate(-50%,32%) rotate(-1deg) scale(.74)}
   .polaroid{
-    width:min(74vw,276px);
-    padding:10px 10px 14px;
+    width:min(88vw,344px);
+    padding:11px 11px 16px;
   }
-  .polaroid-stamp{font-size:12px;right:7px;bottom:6px}
-  .polaroid-cap{font-size:14.5px;padding:10px 4px 2px;min-height:1.5em}
+  .polaroid-stamp{font-size:12.5px;right:8px;bottom:7px}
+  .polaroid-cap{font-size:15.5px;padding:11px 4px 2px;min-height:1.5em}
   .box-controls{margin-top:10px;gap:8px}
   .box-nav-btns{width:100%;display:grid;grid-template-columns:repeat(4,auto);justify-content:space-between;gap:6px}
   .box-nav-btns .pill{padding:8px 11px;font-size:12px;text-align:center}

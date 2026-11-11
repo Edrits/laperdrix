@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="photos.css?v=3">
-<link rel="stylesheet" href="styles.css?v=56">
+<link rel="stylesheet" href="styles.css?v=57">
 <script>
   try {
     document.documentElement.setAttribute(
@@ -158,23 +158,21 @@ const HOUSE_PRINTS = [
 ];
 
 const DESKTOP_SLOTS = [
-  { x: -255, y: -22, r: -14, s: 0.58 },
-  { x:  255, y: -18, r:  13, s: 0.58 },
-  { x: -205, y:  42, r:  -8, s: 0.62 },
-  { x:  210, y:  38, r:   9, s: 0.62 },
-  { x: -135, y: -42, r:  -5, s: 0.64 },
-  { x:  140, y: -38, r:   6, s: 0.64 },
-  { x: -235, y:  12, r: -11, s: 0.60 },
-  { x:  238, y:  10, r:  11, s: 0.60 },
+  { x: -162, y: -16, r: -10, s: 0.46 },
+  { x:  164, y: -14, r:   9, s: 0.46 },
+  { x: -148, y:  22, r:  -6, s: 0.48 },
+  { x:  150, y:  20, r:   7, s: 0.48 },
+  { x: -124, y: -26, r:  -4, s: 0.45 },
+  { x:  126, y: -24, r:   5, s: 0.45 },
 ];
 
 const MOBILE_SLOTS = [
-  { x: -46, y: -26, r: -11, s: 0.72 },
-  { x:  48, y: -22, r:  10, s: 0.72 },
-  { x: -38, y:  24, r:  -7, s: 0.75 },
-  { x:  40, y:  22, r:   8, s: 0.75 },
-  { x: -22, y: -32, r:  -4, s: 0.77 },
-  { x:  24, y: -30, r:   5, s: 0.77 },
+  { x: -78, y: -18, r:  -9, s: 0.50 },
+  { x:  80, y: -16, r:   8, s: 0.50 },
+  { x: -72, y:  20, r:  -6, s: 0.52 },
+  { x:  74, y:  18, r:   7, s: 0.52 },
+  { x: -58, y: -24, r:  -4, s: 0.48 },
+  { x:  60, y: -22, r:   5, s: 0.48 },
 ];
 
 function readLocalBox() {
@@ -361,16 +359,21 @@ function layoutCascade(stagger) {
     if (idx === activeIdx) {
       el.classList.add('active-print');
       el.classList.remove('tucked');
-      const tilt = idx % 2 === 0 ? -1.3 : 1.2;
+      const tilt = idx % 2 === 0 ? -1.1 : 1.0;
       el.style.transform = `translate(-50%, -50%) scale(1) rotate(${tilt}deg)`;
     } else {
       el.classList.remove('active-print');
       el.classList.add('tucked');
-      const slot = slots[slotCursor % slots.length];
-      slotCursor++;
-      el.style.zIndex = String(18 + (slotCursor % 7));
-      el.style.transform =
-        `translate(calc(-50% + ${slot.x}px), calc(-50% + ${slot.y}px)) scale(${slot.s}) rotate(${slot.r}deg)`;
+      const rel = (idx - activeIdx + list.length) % list.length;
+      if (rel <= slots.length) {
+        const slot = slots[rel - 1];
+        el.style.zIndex = String(25 - rel);
+        el.style.transform =
+          `translate(calc(-50% + ${slot.x}px), calc(-50% + ${slot.y}px)) scale(${slot.s}) rotate(${slot.r}deg)`;
+      } else {
+        el.style.zIndex = '17';
+        el.style.transform = 'translate(-50%, -50%) scale(0.42) rotate(0deg)';
+      }
     }
   });
 
