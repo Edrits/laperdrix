@@ -19,7 +19,10 @@
 // Routes
 //   GET    /health              → {ok:true}. No token. For checking the deploy.
 //   GET    /photos?t=           → {name: signedUrl, …} for all photographs.
-//   GET    /data?t=             → {people:[…], expenses:[…]}
+//   GET    /box?t=              → {photos:[{id, caption, stamp, createdAt, url}, …]}
+//   POST   /box?t=              → upload a JPEG to private bucket + record in settings.box
+//   DELETE /box?t=&id=          → remove a shoebox photo from bucket and settings.box
+//   GET    /data?t=             → {people:[…], expenses:[…], settings:{…}}
 //   POST   /person?t=           → upsert one person   (body = the record)
 //   POST   /expense?t=          → upsert one expense  (body = the record)
 //   DELETE /person?t=&id=       → remove one person
@@ -164,9 +167,9 @@ async function tripId(env) {
   return Array.isArray(rows) && rows.length ? rows[0].id : null;
 }
 
-async function signOne(env, name) {
+async function signPath(env, objectPath, expiresIn = EXPIRES_IN) {
   const res = await fetch(
-    `${env.SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/${name}.jpg`,
+    `${env.SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/${objectPath}`,
     {
       method: 'POST',
       headers: {
@@ -174,7 +177,7 @@ async function signOne(env, name) {
         apikey: env.SUPABASE_SERVICE_ROLE_KEY,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ expiresIn: EXPIRES_IN }),
+      body: JSON.stringify({ expiresIn }),
     },
   );
   if (!res.ok) return null;
@@ -184,6 +187,29 @@ async function signOne(env, name) {
   const rel = body.signedURL || body.signedUrl;
   if (!rel) return null;
   return `${env.SUPABASE_URL}/storage/v1${rel.startsWith('/') ? '' : '/'}${rel}`;
+}
+
+async function signOne(env, name) {
+  return signPath(env, `${name}.jpg`);
+}
+
+function decodeJpegDataUrl(dataUrl) {
+  if (typeof dataUrl !== 'string') return null;
+  const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl.trim());
+  if (!m) return null;
+  try {
+    const bin = atob(m[1]);
+    // Cap at 1.5 MB and check the JPEG magic header bytes (FF D8 FF).
+    if (bin.length < 128 || bin.length > 1500000) return null;
+    if (bin.charCodeAt(0) !== 0xff || bin.charCodeAt(1) !== 0xd8 || bin.charCodeAt(2) !== 0xff) {
+      return null;
+    }
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  } catch {
+    return null;
+  }
 }
 
 /* ------------------------------------------------- shapes on the wire
@@ -311,6 +337,120 @@ export default {
     const trip = await tripId(env);
     if (!trip) return reply({ error: 'could not reach the trip' }, 502);
 
+    /* ------------------------------------------------- the photo shoebox */
+    if (path === '/box' && request.method === 'GET') {
+      const sr = await sb(env, `trips?id=eq.${trip}&select=settings&limit=1`);
+      let box = [];
+      if (sr.ok) {
+        const rows = await sr.json();
+        const raw = rows && rows[0] && rows[0].settings && rows[0].settings.box;
+        if (Array.isArray(raw)) box = raw;
+      }
+      const signed = await Promise.all(
+        box
+          .filter(item => item && UUID.test(item.id || ''))
+          .map(async item => {
+            const link = await signPath(env, `box/${item.id}.jpg`);
+            return link ? {
+              id: item.id,
+              caption: String(item.caption || '').slice(0, 80),
+              stamp: String(item.stamp || '').slice(0, 16),
+              createdAt: Number(item.createdAt) || Date.now(),
+              url: link,
+            } : null;
+          }),
+      );
+      return new Response(JSON.stringify({ photos: signed.filter(Boolean) }), {
+        headers: { ...json, 'Cache-Control': 'private, max-age=300' },
+      });
+    }
+
+    if (path === '/box' && request.method === 'POST') {
+      let body;
+      try { body = await request.json(); } catch { return reply({ error: 'bad body' }, 400); }
+      if (!body || typeof body !== 'object') return reply({ error: 'bad body' }, 400);
+
+      const id = String(body.id || '');
+      if (!UUID.test(id)) return reply({ error: 'bad id' }, 400);
+      const bytes = decodeJpegDataUrl(body.image);
+      if (!bytes) return reply({ error: 'bad image' }, 400);
+
+      const caption = String(body.caption || '').trim().slice(0, 80).trim();
+      const stamp = String(body.stamp || '').trim().slice(0, 16).trim();
+
+      // Upload the JPEG bytes to the private Supabase bucket under box/<uuid>.jpg.
+      const up = await fetch(
+        `${env.SUPABASE_URL}/storage/v1/object/${BUCKET}/box/${id}.jpg`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+            apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+            'Content-Type': 'image/jpeg',
+            'x-upsert': 'true',
+          },
+          body: bytes,
+        },
+      );
+      if (!up.ok) {
+        return reply({ error: 'could not store photograph', detail: await up.text() }, 502);
+      }
+
+      // Record the metadata in trips.settings.box (capped at 400 prints).
+      const sr = await sb(env, `trips?id=eq.${trip}&select=settings&limit=1`);
+      let current = {};
+      if (sr.ok) {
+        const rows = await sr.json();
+        if (Array.isArray(rows) && rows[0] && rows[0].settings && typeof rows[0].settings === 'object') {
+          current = rows[0].settings;
+        }
+      }
+      const prevBox = Array.isArray(current.box) ? current.box : [];
+      const entry = { id, caption, stamp, createdAt: Date.now() };
+      const nextBox = [entry, ...prevBox.filter(x => x && x.id !== id)].slice(0, 400);
+      const nextSettings = { ...current, box: nextBox };
+
+      const pr = await sb(env, `trips?id=eq.${trip}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ settings: nextSettings }),
+      });
+      if (!pr.ok) return reply({ error: 'could not save photo record' }, 502);
+
+      const signedUrl = await signPath(env, `box/${id}.jpg`);
+      return reply({ ok: true, photo: { ...entry, url: signedUrl } });
+    }
+
+    if (path === '/box' && request.method === 'DELETE') {
+      const id = url.searchParams.get('id') || '';
+      if (!UUID.test(id)) return reply({ error: 'bad id' }, 400);
+
+      await fetch(
+        `${env.SUPABASE_URL}/storage/v1/object/${BUCKET}/box/${id}.jpg`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+            apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          },
+        },
+      );
+
+      const sr = await sb(env, `trips?id=eq.${trip}&select=settings&limit=1`);
+      if (sr.ok) {
+        const rows = await sr.json();
+        const current = (Array.isArray(rows) && rows[0] && rows[0].settings) || {};
+        if (Array.isArray(current.box)) {
+          const nextSettings = { ...current, box: current.box.filter(x => x && x.id !== id) };
+          await sb(env, `trips?id=eq.${trip}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ settings: nextSettings }),
+          });
+        }
+      }
+      return reply({ ok: true });
+    }
+
     if (path === '/data' && request.method === 'GET') {
       const [pr, er, sr] = await Promise.all([
         sb(env, `members?trip_id=eq.${trip}&select=*&order=created_at.asc`),
@@ -333,19 +473,28 @@ export default {
       });
     }
 
-    /* Shared app state — currently just the cooking rota. Last write wins,
-       which is right for something one person regenerates deliberately rather
-       than a field many people edit at once. */
+    /* Shared app state — currently the cooking rota and the photo shoebox list.
+       Preserve `box` from the database when a rota write comes in from a phone
+       that hasn't pulled the latest shoebox list yet. */
     if (path === '/settings' && request.method === 'POST') {
       let body;
       try { body = await request.json(); } catch { return reply({ error: 'bad body' }, 400); }
       if (!body || typeof body !== 'object' || Array.isArray(body)) {
         return reply({ error: 'bad body' }, 400);
       }
+      let nextSettings = body;
+      const sr = await sb(env, `trips?id=eq.${trip}&select=settings&limit=1`);
+      if (sr.ok) {
+        const rows = await sr.json();
+        const prev = (Array.isArray(rows) && rows[0] && rows[0].settings) || {};
+        if (Array.isArray(prev.box) && !Array.isArray(body.box)) {
+          nextSettings = { ...body, box: prev.box };
+        }
+      }
       const res = await sb(env, `trips?id=eq.${trip}`, {
         method: 'PATCH',
         headers: { Prefer: 'return=representation' },
-        body: JSON.stringify({ settings: body }),
+        body: JSON.stringify({ settings: nextSettings }),
       });
       if (!res.ok) return reply({ error: 'could not save', detail: await res.text() }, 502);
       const saved = await res.json();

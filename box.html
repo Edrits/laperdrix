@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The wooden crate · La Perdrix</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="description" content="Photographs from La Perdrix, St Martin de Ribérac.">
+<meta name="theme-color" id="tc" content="#171b14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="photos.css?v=3">
+<link rel="stylesheet" href="styles.css?v=55">
+<script>
+  try {
+    document.documentElement.setAttribute(
+      'data-theme', localStorage.getItem('laperdrix.theme') === 'light' ? 'light' : 'dark');
+  } catch { document.documentElement.setAttribute('data-theme', 'dark'); }
+</script>
+</head>
+<body class="kitty-page box-page">
+
+<header class="ktop">
+  <div class="ktop-left">
+    <a class="back" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H6"/><path d="M12 5l-7 7 7 7"/></svg>
+      La Perdrix
+    </a>
+    <a class="hop" href="kitty.html">Kitty</a>
+    <a class="hop" href="rota.html">Rota</a>
+  </div>
+  <div class="themes ktheme">
+    <button id="t-dark" aria-pressed="true">Dark</button>
+    <button id="t-light" aria-pressed="false">Light</button>
+  </div>
+</header>
+
+<main>
+  <section class="sec box-sec">
+    <p class="eyebrow"><span class="eb-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-camera"/></svg></span>La malle aux photos</p>
+    <h1 class="big" style="font:600 clamp(28px,5.4vw,42px)/1.1 var(--serif);margin:0 0 8px;letter-spacing:-.015em">The wooden crate</h1>
+    <p class="muted" id="boxSub">Tap the lid to spill the prints out, flick through the pile, or drop one of your own back in.</p>
+
+    <div class="box-stage" id="stage">
+      <div class="box-leak" id="leak" aria-hidden="true"></div>
+
+      <div class="box-meta-top">
+        <span class="box-badge" id="stageStatus">Lid on</span>
+        <span class="box-count-pill" id="countPill" hidden>1 / 12</span>
+      </div>
+
+      <div class="prints-layer" id="printsLayer"></div>
+
+      <button type="button" class="shoebox" id="shoebox" aria-label="Open the wooden crate of photographs">
+        <span class="shoebox-base">
+          <span class="shoebox-stack"></span>
+        </span>
+        <span class="shoebox-lid">
+          <span class="shoebox-dust-coat" id="dustCoat" aria-hidden="true"></span>
+          <span class="shoebox-twine" aria-hidden="true"></span>
+          <span class="shoebox-label">
+            <small>St Martin de Ribérac</small>
+            <b>La Perdrix</b>
+            <em id="lidCount">Photographs</em>
+          </span>
+        </span>
+        <span class="shoebox-prompt" id="boxPrompt">Tap the crate to lift the lid</span>
+      </button>
+    </div>
+
+    <div class="box-controls" id="boxControls" hidden>
+      <div class="box-nav-btns">
+        <button type="button" class="pill" id="prevBtn">Previous</button>
+        <button type="button" class="pill on" id="nextBtn">Next print</button>
+        <button type="button" class="pill" id="shuffleBtn">Shuffle pile</button>
+        <button type="button" class="pill" id="closeBoxBtn">Close crate</button>
+      </div>
+      <button type="button" class="linkish" id="removePrintBtn" style="margin-top:0" hidden>Take this print out of the crate</button>
+    </div>
+  </section>
+</main>
+
+<div class="bar">
+  <button class="btn" id="openUploadBtn" type="button">Put a photo in the crate</button>
+</div>
+
+<!-- Sheet for dropping a new Polaroid into the crate -->
+<div class="scrim behind" id="formScrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="in2">
+    <h2 id="sheetTitle">Put a photo in the crate</h2>
+    <p class="hint" id="sheetHint">Shrunk on your phone and stripped of location data before it leaves your hand.</p>
+
+    <label class="photo-pick-drop" for="photoInput" id="dropZone">
+      <div id="pickEmpty">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-camera"/></svg>
+        <div style="font-weight:600;color:var(--tx);margin-top:4px">Choose a photograph</div>
+        <div style="font-size:12.5px">From your camera roll or computer</div>
+      </div>
+      <div class="photo-pick-preview" id="pickPreview" hidden>
+        <div class="im" id="previewIm"></div>
+        <div class="cap" id="previewCap">Fresh print</div>
+      </div>
+      <input id="photoInput" type="file" accept="image/*" hidden>
+    </label>
+
+    <label for="pCap">A line on the margin (optional)</label>
+    <input id="pCap" type="text" maxlength="80" placeholder="Morning market in Ribérac">
+
+    <div class="row">
+      <button type="button" class="btn ghost" id="cancelBtn">Cancel</button>
+      <button type="button" class="btn" id="saveBtn" disabled>Put in the crate</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm sheet for taking an uploaded print out of the crate -->
+<div class="scrim" id="scrim"></div>
+<div class="sheet confirm" id="confirmSheet" role="dialog" aria-modal="true" aria-labelledby="cfTitle">
+  <div class="in2">
+    <h2 id="cfTitle">Take this print out of the crate?</h2>
+    <p class="cf-body" id="cfBody">This removes the photograph from the shared crate for everyone.</p>
+    <div class="row">
+      <button type="button" class="btn danger" id="cfGo">Take it out</button>
+      <button type="button" class="btn" id="cfCancel">Keep it</button>
+    </div>
+  </div>
+</div>
+
+<script src="icons.js?v=6"></script>
+<script src="sync.js?v=4"></script>
+<script src="focus.js?v=2"></script>
+<script src="photos.js?v=1"></script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const K_BOX = 'laperdrix.box.v1';
+
+/* The house photographs that already live in the private bucket. They use the
+   --ph-* custom properties from photos.css (blur stand-ins first, then signed
+   URLs once Photos.load finishes), so the shoebox is never empty. */
+const HOUSE_PRINTS = [
+  { id: 'house-group',  ph: 'group',  caption: 'All of us in the garden',                        stamp: "'27 7 31" },
+  { id: 'house-table',  ph: 'table',  caption: 'The long table beneath the grapevines',          stamp: "'27 8 01" },
+  { id: 'house-heads',  ph: 'heads',  caption: 'Terracotta heads against the limestone wall',    stamp: "'27 8 02" },
+  { id: 'house-hens',   ph: 'hens',   caption: 'Two hens in the dappled shade',                  stamp: "'27 8 03" },
+  { id: 'house-garden', ph: 'garden', caption: 'Mr Baboo keeping an eye on the garden',          stamp: "'27 8 04" },
+  { id: 'house-lake',   ph: 'lake',   caption: 'Afternoon down by the water',                    stamp: "'27 8 05" },
+  { id: 'house-mirror', ph: 'mirror', caption: 'A dim room of gilt mirrors lit by one lamp',     stamp: "'27 8 06" },
+  { id: 'house-chair',  ph: 'chair',  caption: 'The evenings. Time for a game of werewolves?',   stamp: "'27 8 07" },
+  { id: 'house-pool',   ph: 'pool',   caption: 'Last light on the pool',                         stamp: "'27 8 08" },
+  { id: 'house-abbey',  ph: 'abbey',  caption: 'Down by the river at Brantôme',                  stamp: "'27 8 09" },
+  { id: 'house-window', ph: 'window', caption: 'Looking out across towards the village church',  stamp: "'27 8 10" },
+  { id: 'house-house',  ph: 'house',  caption: 'La Perdrix in the evening light',                stamp: "'27 8 11" },
+];
+
+const DESKTOP_SLOTS = [
+  { x: -255, y: -22, r: -14, s: 0.58 },
+  { x:  255, y: -18, r:  13, s: 0.58 },
+  { x: -205, y:  42, r:  -8, s: 0.62 },
+  { x:  210, y:  38, r:   9, s: 0.62 },
+  { x: -135, y: -42, r:  -5, s: 0.64 },
+  { x:  140, y: -38, r:   6, s: 0.64 },
+  { x: -235, y:  12, r: -11, s: 0.60 },
+  { x:  238, y:  10, r:  11, s: 0.60 },
+];
+
+const MOBILE_SLOTS = [
+  { x: -46, y: -26, r: -11, s: 0.72 },
+  { x:  48, y: -22, r:  10, s: 0.72 },
+  { x: -38, y:  24, r:  -7, s: 0.75 },
+  { x:  40, y:  22, r:   8, s: 0.75 },
+  { x: -22, y: -32, r:  -4, s: 0.77 },
+  { x:  24, y: -30, r:   5, s: 0.77 },
+];
+
+function readLocalBox() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(K_BOX));
+    return Array.isArray(raw) ? raw : [];
+  } catch { return []; }
+}
+
+function writeLocalBox(list) {
+  try { localStorage.setItem(K_BOX, JSON.stringify(list)); } catch {}
+}
+
+let uploadedPrints = readLocalBox();
+let isOpen = false;
+let activeIdx = 0;
+let pendingDataUrl = null;
+
+function allPrints() {
+  return [...uploadedPrints, ...HOUSE_PRINTS];
+}
+
+function cameraStampForToday() {
+  const d = new Date();
+  const y = String(d.getFullYear()).slice(2);
+  const m = d.getMonth() + 1;
+  const day = String(d.getDate()).padStart(2, '0');
+  return `'${y} ${m} ${day}`;
+}
+
+function triggerLeak() {
+  const leak = $('leak');
+  leak.classList.add('flare');
+  setTimeout(() => leak.classList.remove('flare'), 420);
+}
+
+function spawnDust() {
+  const stage = $('stage');
+  // Soft, dry cellar-dust wisps curling off the edges of the wooden lid (no sparkle)
+  for (let c = 0; c < 7; c++) {
+    const cloud = document.createElement('span');
+    cloud.className = 'dust-cloud';
+    const w = 78 + Math.random() * 68;
+    const h = 28 + Math.random() * 24;
+    cloud.style.width = w + 'px';
+    cloud.style.height = h + 'px';
+    cloud.style.left = (35 + Math.random() * 26) + '%';
+    cloud.style.top = (38 + Math.random() * 20) + '%';
+    const angle = (Math.random() - 0.5) * Math.PI * 1.3 - Math.PI * 0.15;
+    const dist = 65 + Math.random() * 95;
+    cloud.style.setProperty('--dx', Math.round(Math.cos(angle) * dist) + 'px');
+    cloud.style.setProperty('--dy', Math.round(Math.sin(angle) * dist - 18) + 'px');
+    cloud.style.setProperty('--dur', (1.9 + Math.random() * 0.8).toFixed(2) + 's');
+    stage.appendChild(cloud);
+    setTimeout(() => cloud.remove(), 2800);
+  }
+  // A few tiny matte silt specks (blurred, low opacity, no glow)
+  for (let i = 0; i < 10; i++) {
+    const mote = document.createElement('span');
+    mote.className = 'dust-mote';
+    const size = 1.6 + Math.random() * 2.2;
+    mote.style.width = size + 'px';
+    mote.style.height = size + 'px';
+    mote.style.left = (38 + Math.random() * 24) + '%';
+    mote.style.top = (40 + Math.random() * 18) + '%';
+    const angle = (Math.random() - 0.5) * Math.PI * 1.2;
+    const dist = 45 + Math.random() * 85;
+    const dur = 1.6 + Math.random() * 0.9;
+    mote.style.setProperty('--dx', Math.round(Math.cos(angle) * dist) + 'px');
+    mote.style.setProperty('--dy', Math.round(Math.sin(angle) * dist - 20) + 'px');
+    mote.style.setProperty('--dur', dur.toFixed(2) + 's');
+    stage.appendChild(mote);
+    setTimeout(() => mote.remove(), Math.round(dur * 1000) + 100);
+  }
+}
+
+/* Like blowing dust off the shoulder of an aged bottle of red wine: a horizontal
+   breath sweeps across the dark wood planks from left to right, lifting a soft,
+   matte grey-taupe plume of cellar silt that curls and dissipates into the air. */
+function blowDustOffBox() {
+  const stage = $('stage');
+  for (let c = 0; c < 11; c++) {
+    setTimeout(() => {
+      const cloud = document.createElement('span');
+      cloud.className = 'dust-cloud';
+      const w = 88 + Math.random() * 76;
+      const h = 26 + Math.random() * 22;
+      cloud.style.width = w + 'px';
+      cloud.style.height = h + 'px';
+      cloud.style.left = (30 + c * 3.2 + Math.random() * 4) + '%';
+      cloud.style.top = (36 + Math.random() * 22) + '%';
+      cloud.style.setProperty('--dx', Math.round(115 + Math.random() * 110) + 'px');
+      cloud.style.setProperty('--dy', Math.round(-14 - Math.random() * 34) + 'px');
+      cloud.style.setProperty('--dur', (2.1 + Math.random() * 0.8).toFixed(2) + 's');
+      stage.appendChild(cloud);
+      setTimeout(() => cloud.remove(), 3000);
+    }, c * 80);
+  }
+  for (let i = 0; i < 14; i++) {
+    setTimeout(() => {
+      const mote = document.createElement('span');
+      mote.className = 'dust-mote';
+      const size = 1.5 + Math.random() * 2;
+      mote.style.width = size + 'px';
+      mote.style.height = size + 'px';
+      mote.style.left = (33 + Math.random() * 26) + '%';
+      mote.style.top = (38 + Math.random() * 20) + '%';
+      const dx = 95 + Math.random() * 130;
+      const dy = -10 - Math.random() * 38 + (Math.random() - 0.5) * 18;
+      const dur = 1.8 + Math.random() * 0.9;
+      mote.style.setProperty('--dx', Math.round(dx) + 'px');
+      mote.style.setProperty('--dy', Math.round(dy) + 'px');
+      mote.style.setProperty('--dur', dur.toFixed(2) + 's');
+      stage.appendChild(mote);
+      setTimeout(() => mote.remove(), Math.round(dur * 1000) + 120);
+    }, i * 55);
+  }
+}
+
+function backgroundStyleFor(p) {
+  if (p.ph) return `background-image:var(--ph-${p.ph})`;
+  const src = p.url || p.dataUrl || '';
+  return `background-image:url("${esc(src)}")`;
+}
+
+function updateLidCount() {
+  const total = allPrints().length;
+  $('lidCount').textContent = total === 1 ? '1 print inside' : `${total} prints inside`;
+}
+
+function buildDomPrints() {
+  const list = allPrints();
+  updateLidCount();
+  const layer = $('printsLayer');
+  layer.innerHTML = '';
+
+  list.forEach((p, idx) => {
+    const el = document.createElement('div');
+    el.className = 'polaroid';
+    el.dataset.idx = String(idx);
+    const cap = p.caption ? esc(p.caption) : '&nbsp;';
+    el.innerHTML = `
+      <div class="polaroid-im" style='${backgroundStyleFor(p)}'>
+        <span class="polaroid-stamp">${esc(p.stamp || "'27 8 01")}</span>
+      </div>
+      <div class="polaroid-cap">${cap}</div>
+    `;
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      if (!isOpen) return;
+      if (idx === activeIdx) {
+        activeIdx = (activeIdx + 1) % list.length;
+      } else {
+        activeIdx = idx;
+      }
+      triggerLeak();
+      layoutCascade(false);
+    });
+    layer.appendChild(el);
+  });
+}
+
+function layoutCascade(stagger) {
+  const list = allPrints();
+  if (!list.length) return;
+  if (activeIdx >= list.length) activeIdx = 0;
+  if (activeIdx < 0) activeIdx = list.length - 1;
+
+  const slots = window.innerWidth < 680 ? MOBILE_SLOTS : DESKTOP_SLOTS;
+  const els = [...$('printsLayer').querySelectorAll('.polaroid')];
+  let slotCursor = 0;
+
+  els.forEach((el, idx) => {
+    if (!isOpen) {
+      el.classList.remove('out', 'active-print', 'tucked');
+      el.style.transitionDelay = '0ms';
+      el.style.transform = `translate(-50%, -45%) scale(0.34) rotate(${((idx % 5) - 2) * 3}deg)`;
+      return;
+    }
+
+    el.classList.add('out');
+    el.style.transitionDelay = stagger ? `${Math.min(idx, 10) * 48}ms` : '0ms';
+
+    if (idx === activeIdx) {
+      el.classList.add('active-print');
+      el.classList.remove('tucked');
+      const tilt = idx % 2 === 0 ? -1.3 : 1.2;
+      el.style.transform = `translate(-50%, -50%) scale(1) rotate(${tilt}deg)`;
+    } else {
+      el.classList.remove('active-print');
+      el.classList.add('tucked');
+      const slot = slots[slotCursor % slots.length];
+      slotCursor++;
+      el.style.zIndex = String(18 + (slotCursor % 7));
+      el.style.transform =
+        `translate(calc(-50% + ${slot.x}px), calc(-50% + ${slot.y}px)) scale(${slot.s}) rotate(${slot.r}deg)`;
+    }
+  });
+
+  const current = list[activeIdx];
+  $('countPill').hidden = !isOpen;
+  $('countPill').textContent = `${activeIdx + 1} / ${list.length}`;
+  $('stageStatus').textContent = isOpen ? 'Swipe or tap a print' : 'Lid on';
+  $('boxControls').hidden = !isOpen;
+  $('removePrintBtn').hidden = !(isOpen && current && !current.ph);
+}
+
+function openShoebox(startAtRandom = true) {
+  const list = allPrints();
+  if (!list.length) return;
+  isOpen = true;
+  if (startAtRandom) {
+    activeIdx = Math.floor(Math.random() * list.length);
+  }
+  $('shoebox').classList.add('is-open');
+  $('shoebox').setAttribute('aria-label', 'Put the prints back in the wooden crate');
+  spawnDust();
+  triggerLeak();
+  layoutCascade(true);
+}
+
+function closeShoebox() {
+  if (!isOpen) return;
+  isOpen = false;
+  $('shoebox').classList.remove('is-open', 'is-receiving');
+  $('shoebox').setAttribute('aria-label', 'Open the wooden crate of photographs');
+  layoutCascade(false);
+}
+
+$('shoebox').addEventListener('click', () => {
+  if (!isOpen) openShoebox(true);
+  else closeShoebox();
+});
+
+$('nextBtn').addEventListener('click', () => {
+  const list = allPrints();
+  if (!isOpen || !list.length) return;
+  activeIdx = (activeIdx + 1) % list.length;
+  triggerLeak();
+  layoutCascade(false);
+});
+
+$('prevBtn').addEventListener('click', () => {
+  const list = allPrints();
+  if (!isOpen || !list.length) return;
+  activeIdx = (activeIdx - 1 + list.length) % list.length;
+  triggerLeak();
+  layoutCascade(false);
+});
+
+$('shuffleBtn').addEventListener('click', () => {
+  const list = allPrints();
+  if (!list.length) return;
+  let next = Math.floor(Math.random() * list.length);
+  if (list.length > 1 && next === activeIdx) next = (next + 1) % list.length;
+  activeIdx = next;
+  spawnDust();
+  triggerLeak();
+  layoutCascade(true);
+});
+
+$('closeBoxBtn').addEventListener('click', closeShoebox);
+
+window.addEventListener('resize', () => {
+  if (isOpen) layoutCascade(false);
+});
+
+/* Swipe left/right on the table stage to flick through prints on a phone */
+(function wireSwipe() {
+  let sx = 0, sy = 0, dragging = false;
+  const stage = $('stage');
+  stage.addEventListener('touchstart', e => {
+    if (!isOpen || !e.touches || !e.touches[0]) return;
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+    dragging = false;
+  }, { passive: true });
+  stage.addEventListener('touchmove', e => {
+    if (!isOpen || !e.touches || !e.touches[0]) return;
+    const dx = e.touches[0].clientX - sx;
+    const dy = e.touches[0].clientY - sy;
+    if (!dragging && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.15) {
+      dragging = true;
+    }
+    if (!dragging) return;
+    const activeEl = $('printsLayer').querySelector('.polaroid.active-print');
+    if (activeEl) {
+      activeEl.style.transition = 'none';
+      const baseTilt = activeIdx % 2 === 0 ? -1.3 : 1.2;
+      const tilt = baseTilt + dx * 0.045;
+      activeEl.style.transform = `translate(calc(-50% + ${Math.round(dx * 0.65)}px), -50%) scale(1) rotate(${tilt.toFixed(2)}deg)`;
+    }
+  }, { passive: true });
+  stage.addEventListener('touchend', e => {
+    if (!isOpen || !e.changedTouches || !e.changedTouches[0]) return;
+    const activeEl = $('printsLayer').querySelector('.polaroid.active-print');
+    if (activeEl) activeEl.style.transition = '';
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.15) {
+      const list = allPrints();
+      activeIdx = dx < 0
+        ? (activeIdx + 1) % list.length
+        : (activeIdx - 1 + list.length) % list.length;
+      triggerLeak();
+    }
+    dragging = false;
+    layoutCascade(false);
+  }, { passive: true });
+})();
+
+/* ------------------------------------------------- upload sheet & canvas resize */
+
+function openUploadSheet() {
+  pendingDataUrl = null;
+  $('photoInput').value = '';
+  $('pCap').value = '';
+  $('pickEmpty').hidden = false;
+  $('pickPreview').hidden = true;
+  $('saveBtn').disabled = true;
+  $('sheetHint').textContent = 'Shrunk on your phone and stripped of location data before it leaves your hand.';
+  $('formScrim').classList.add('open');
+  $('sheet').classList.add('open');
+  Focus.trap($('sheet'), $('cancelBtn'));
+}
+
+function closeUploadSheet() {
+  $('sheet').classList.remove('open');
+  $('formScrim').classList.remove('open');
+  Focus.release();
+}
+
+$('openUploadBtn').addEventListener('click', openUploadSheet);
+$('cancelBtn').addEventListener('click', closeUploadSheet);
+$('formScrim').addEventListener('click', closeUploadSheet);
+
+$('pCap').addEventListener('input', () => {
+  const v = $('pCap').value.trim();
+  $('previewCap').textContent = v || 'Fresh print';
+});
+
+/* Resize on an HTML <canvas> (max 1400px, JPEG 0.82) so GPS/EXIF metadata is
+   stripped before the file ever leaves the phone, and a 10 MB camera photo
+   becomes ~220 KB for poor Dordogne signal and the private Supabase bucket. */
+$('photoInput').addEventListener('change', e => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 1400;
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      pendingDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+      $('previewIm').style.backgroundImage = `url("${pendingDataUrl}")`;
+      $('previewCap').textContent = $('pCap').value.trim() || 'Fresh print';
+      $('pickEmpty').hidden = true;
+      $('pickPreview').hidden = false;
+      $('saveBtn').disabled = false;
+    };
+    img.onerror = () => {
+      $('sheetHint').textContent = 'Could not read that image file. Try a standard photograph.';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+async function syncPrintToWorker(entry) {
+  if (!Sync.configured()) return;
+  try {
+    const res = await fetch(`${Sync.WORKER_URL}/box?t=${encodeURIComponent(Sync.token())}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: entry.id,
+        caption: entry.caption,
+        stamp: entry.stamp,
+        image: entry.dataUrl,
+      }),
+    });
+    if (!res.ok) return;
+    const body = await res.json();
+    if (body && body.photo && body.photo.url) {
+      // Keep a smaller local entry once the server has confirmed and signed it
+      uploadedPrints = uploadedPrints.map(p =>
+        p.id === entry.id ? { ...p, url: body.photo.url } : p
+      );
+      writeLocalBox(uploadedPrints);
+    }
+  } catch {}
+}
+
+$('saveBtn').addEventListener('click', () => {
+  if (!pendingDataUrl) return;
+  const caption = $('pCap').value.trim().slice(0, 80);
+  const stamp = cameraStampForToday();
+  const entry = {
+    id: Sync.newId(),
+    caption,
+    stamp,
+    createdAt: Date.now(),
+    dataUrl: pendingDataUrl,
+  };
+
+  closeUploadSheet();
+
+  // Gather any open prints back so the shoebox can catch the new Polaroid
+  isOpen = false;
+  layoutCascade(false);
+  const box = $('shoebox');
+  box.classList.remove('is-open');
+  box.classList.add('is-receiving');
+  $('stageStatus').textContent = 'Developing and dropping into the crate…';
+  $('boxControls').hidden = true;
+  $('countPill').hidden = true;
+
+  const dropEl = document.createElement('div');
+  dropEl.className = 'polaroid dropping-in';
+  dropEl.innerHTML = `
+    <div class="polaroid-im" style='background-image:url("${entry.dataUrl}")'>
+      <span class="polaroid-stamp">${esc(entry.stamp)}</span>
+    </div>
+    <div class="polaroid-cap">${caption ? esc(caption) : '&nbsp;'}</div>
+  `;
+  $('printsLayer').appendChild(dropEl);
+
+  uploadedPrints = [entry, ...uploadedPrints];
+  writeLocalBox(uploadedPrints);
+  syncPrintToWorker(entry);
+
+  setTimeout(() => {
+    spawnDust();
+    box.classList.add('settle');
+  }, 1350);
+
+  setTimeout(() => {
+    dropEl.remove();
+    box.classList.remove('is-receiving', 'settle');
+    buildDomPrints();
+    activeIdx = 0;
+    openShoebox(false);
+  }, 1820);
+});
+
+/* ------------------------------------------------- taking a print out */
+
+function openRemoveConfirm() {
+  const current = allPrints()[activeIdx];
+  if (!current || current.ph) return;
+  $('cfBody').textContent = current.caption
+    ? `Remove "${current.caption}" from the crate?`
+    : 'Remove this photograph from the crate?';
+  $('scrim').classList.add('open');
+  $('confirmSheet').classList.add('open');
+  Focus.trap($('confirmSheet'), $('cfCancel'));
+}
+
+function closeRemoveConfirm() {
+  $('confirmSheet').classList.remove('open');
+  $('scrim').classList.remove('open');
+  Focus.release();
+}
+
+$('removePrintBtn').addEventListener('click', openRemoveConfirm);
+$('cfCancel').addEventListener('click', closeRemoveConfirm);
+$('scrim').addEventListener('click', closeRemoveConfirm);
+
+$('cfGo').addEventListener('click', async () => {
+  const current = allPrints()[activeIdx];
+  closeRemoveConfirm();
+  if (!current || current.ph) return;
+
+  uploadedPrints = uploadedPrints.filter(p => p.id !== current.id);
+  writeLocalBox(uploadedPrints);
+  buildDomPrints();
+  if (activeIdx >= allPrints().length) activeIdx = 0;
+  layoutCascade(false);
+
+  if (Sync.configured()) {
+    try {
+      await fetch(
+        `${Sync.WORKER_URL}/box?t=${encodeURIComponent(Sync.token())}&id=${encodeURIComponent(current.id)}`,
+        { method: 'DELETE' }
+      );
+    } catch {}
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if ($('confirmSheet').classList.contains('open')) closeRemoveConfirm();
+    else if ($('sheet').classList.contains('open')) closeUploadSheet();
+    else if (isOpen) closeShoebox();
+    return;
+  }
+  if (!isOpen || $('sheet').classList.contains('open') || $('confirmSheet').classList.contains('open')) return;
+  if (e.key === 'ArrowRight') {
+    activeIdx = (activeIdx + 1) % allPrints().length;
+    triggerLeak();
+    layoutCascade(false);
+  } else if (e.key === 'ArrowLeft') {
+    activeIdx = (activeIdx - 1 + allPrints().length) % allPrints().length;
+    triggerLeak();
+    layoutCascade(false);
+  }
+});
+
+/* ------------------------------------------------- theme */
+(function(){
+  const root = document.documentElement;
+  const b = { dark: $('t-dark'), light: $('t-light') };
+  const BAR = { dark: '#171b14', light: '#e9e4d7' };
+  const set = m => {
+    root.setAttribute('data-theme', m);
+    $('tc').setAttribute('content', BAR[m]);
+    try { localStorage.setItem('laperdrix.theme', m); } catch {}
+    for (const k in b) b[k].setAttribute('aria-pressed', String(k === m));
+  };
+  for (const k in b) b[k].addEventListener('click', () => set(k));
+  let saved = 'dark';
+  try { saved = localStorage.getItem('laperdrix.theme') === 'light' ? 'light' : 'dark'; } catch {}
+  set(saved);
+})();
+
+/* ------------------------------------------------- load photographs */
+buildDomPrints();
+Photos.load(['group', 'lake', 'abbey', 'chair', 'mirror', 'heads', 'hens', 'table', 'window', 'garden', 'house', 'pool']);
+setTimeout(blowDustOffBox, 180);
+
+(async function pullBoxFromWorker() {
+  if (!Sync.configured()) return;
+  try {
+    const res = await fetch(`${Sync.WORKER_URL}/box?t=${encodeURIComponent(Sync.token())}`);
+    if (!res.ok) return;
+    const body = await res.json();
+    if (!body || !Array.isArray(body.photos)) return;
+
+    // Merge server prints with any local prints that haven't finished uploading yet
+    const serverIds = new Set(body.photos.map(p => p.id));
+    const unsyncedLocal = uploadedPrints.filter(p => p.dataUrl && !serverIds.has(p.id));
+    uploadedPrints = [...unsyncedLocal, ...body.photos];
+    writeLocalBox(uploadedPrints);
+    buildDomPrints();
+    if (isOpen) layoutCascade(false);
+
+    // Flush any local-only prints up to the Worker
+    for (const item of unsyncedLocal) {
+      syncPrintToWorker(item);
+    }
+  } catch {}
+})();
+</script>
+</body>
+</html>

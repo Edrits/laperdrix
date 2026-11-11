@@ -18,7 +18,7 @@
 <!-- Generated blur stand-ins. Must load BEFORE styles.css so its :root defaults
      are in place when the rules that use var(--ph-*) are parsed. -->
 <link rel="stylesheet" href="photos.css?v=3">
-<link rel="stylesheet" href="styles.css?v=51">
+<link rel="stylesheet" href="styles.css?v=55">
 <!-- Dark is the default, and this has to run in the <head>: set the attribute
      any later and a light frame paints first, which on a phone in a dim room is
      a flash in the eye. Inline and tiny for the same reason — an external file
@@ -50,6 +50,7 @@
     <a href="#when">Dates</a>
     <a href="kitty.html">Kitty</a>
     <a href="rota.html">Rota</a>
+    <a href="box.html">Photos</a>
   </nav>
   <div class="themes">
     <button id="t-dark" aria-pressed="true">Dark</button>
@@ -89,6 +90,16 @@
       <figcaption></figcaption>
     </figure>
   </div>
+  <a class="box-open reveal" href="box.html">
+    <span class="bo-end" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><use href="#i-camera"/></svg>
+    </span>
+    <span class="bo-body">
+      <b>Open the wooden crate</b>
+      <small>Flick through the photographs, or drop one of your own in</small>
+    </span>
+    <svg class="bo-go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="M12 5l7 7-7 7"/></svg>
+  </a>
 </section>
 
 <!-- ============================================================ in their words -->
