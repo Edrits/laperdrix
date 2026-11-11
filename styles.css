@@ -649,8 +649,22 @@ body.picking .bar{display:none}
    The kitty — everything transactional, behind a click from the landing page.
    ========================================================================= */
 
-.kitty-page{background:var(--bg)}
+.kitty-page{background:var(--bg);position:relative;isolation:isolate}
 .kitty-page .sec{padding-inline:24px}
+/* Faint backgammon-board backdrop on the kitty page — atmospheric, never
+   competing with the numbers. */
+.kitty-back{
+  position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:var(--ph-backgammon) center 48%/cover no-repeat;
+  opacity:.15;
+  filter:saturate(.85) contrast(.96);
+  -webkit-mask-image:radial-gradient(ellipse 92% 88% at 50% 45%,#000 18%,rgba(0,0,0,.35) 100%);
+          mask-image:radial-gradient(ellipse 92% 88% at 50% 45%,#000 18%,rgba(0,0,0,.35) 100%);
+}
+:root[data-theme="light"] .kitty-back{
+  opacity:.12;
+  filter:saturate(.8) contrast(.92);
+}
 /* Clear the fixed action bar. Without this the last content on the page —
    the "Start again" button inside its disclosure — sits underneath the
    hovering Add spend / Pay in bar and cannot be tapped. */
@@ -707,7 +721,9 @@ body.picking .bar{display:none}
    was previously loose type on the page background, indistinguishable from the
    filters and the chart heading below it. */
 .pot-card{
-  border:1px solid var(--hair);border-radius:16px;background:var(--surface);
+  border:1px solid var(--hair);border-radius:16px;
+  background:color-mix(in srgb,var(--surface) 84%,transparent);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
   padding:15px 17px 17px;margin-top:12px;
 }
 /* A small wink under the heading. Inside the panel it no longer has to tuck up

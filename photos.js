@@ -32,11 +32,29 @@ const Photos = (() => {
     if (!Sync.configured()) return;           // stand-ins stay; nothing is broken
 
     try {
-      const res = await fetch(`${Sync.WORKER_URL}/photos?t=${encodeURIComponent(Sync.token())}`);
-      if (!res.ok) return;
-      const map = await res.json();
-      for (const [name, url] of Object.entries(map)) {
-        if (names.includes(name)) set(name, url);
+      const other = names.filter(n => n !== 'backgammon');
+      if (other.length) {
+        const res = await fetch(`${Sync.WORKER_URL}/photos?t=${encodeURIComponent(Sync.token())}`);
+        if (res.ok) {
+          const map = await res.json();
+          for (const [name, url] of Object.entries(map)) {
+            if (names.includes(name)) set(name, url);
+          }
+        }
+      }
+      // 'backgammon' lives in the shared photo crate (box/917afdb9-…jpg), so
+      // sign it straight from /box without needing a second upload or Worker paste.
+      if (names.includes('backgammon')) {
+        const bRes = await fetch(`${Sync.WORKER_URL}/box?t=${encodeURIComponent(Sync.token())}`);
+        if (bRes.ok) {
+          const bBody = await bRes.json();
+          const list = (bBody && Array.isArray(bBody.photos)) ? bBody.photos : [];
+          const hit = list.find(p =>
+            p.id === '917afdb9-a8c5-4275-aefc-33b47216586a' ||
+            /backgammon/i.test(p.caption || '')
+          );
+          if (hit && hit.url) set('backgammon', hit.url);
+        }
       }
     } catch {}
   }

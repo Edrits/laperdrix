@@ -9,7 +9,8 @@
 <meta name="theme-color" id="tc" content="#171b14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="styles.css?v=57">
+<link rel="stylesheet" href="photos.css?v=4">
+<link rel="stylesheet" href="styles.css?v=58">
 <!-- In the <head> and inline, so the attribute lands before the first paint.
      See the same block in index.html. -->
 <script>
@@ -20,6 +21,7 @@
 </script>
 </head>
 <body class="kitty-page">
+<div class="kitty-back" aria-hidden="true"></div>
 
 <header class="ktop">
   <div class="ktop-left">
@@ -201,6 +203,7 @@
 <script src="icons.js?v=7"></script>
 <script src="sync.js?v=4"></script>
 <script src="focus.js?v=2"></script>
+<script src="photos.js?v=2"></script>
 <script src="money.js?v=4"></script>
 <script>
 /* =========================================================================
@@ -905,6 +908,7 @@ $('rate').addEventListener('change', () => {
 })();
 
 render();
+Photos.load(['backgammon']);
 
 /* The queue changed: an entry was just saved on this phone, or one finally
    reached the server. Only the entry and pay-in lists carry the whisper, so
