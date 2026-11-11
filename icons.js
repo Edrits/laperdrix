@@ -185,10 +185,12 @@ window.iconOf = (slug, cls) =>
     <path d="M9.8 8.6h5.6"/><path d="M12 16.4 14.2 8.6"/>
     <path d="M8.4 16.4h3.6"/></g>
   <g id="i-camera" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 8.4h18v11H3z"/>
-    <path d="M8 8.4l1.4-2.6h5.2L16 8.4"/>
-    <circle cx="12" cy="13.8" r="3.4"/>
-    <path d="M5.6 11h1.2"/></g>
+    <rect x="3.5" y="3.2" width="17" height="12.2" rx="2.2"/>
+    <path d="M3.5 12.2h17"/>
+    <circle cx="12" cy="7.7" r="2.4"/>
+    <path d="M6.4 6h1.6M17 6h.01M12 10.1v2.1"/>
+    <path d="M7.2 15.4v5.8h9.6v-5.8"/>
+    <path d="M7.2 18.7h9.6"/></g>
   <g id="i-book" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
     <path d="M12 6.6C10.2 5 7.4 4.2 3.6 4.4v13c3.8-.2 6.6.6 8.4 2.2"/>
     <path d="M12 6.6c1.8-1.6 4.6-2.4 8.4-2.2v13c-3.8-.2-6.6.6-8.4 2.2"/>

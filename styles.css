@@ -1520,18 +1520,13 @@ body.picking .folk-pane,body.picking .lifts-pane,body.picking .chart-pane{displa
       rgba(0,0,0,.08) 14px 29px,
       rgba(255,240,215,.01) 29px 47px),
     linear-gradient(160deg,#261c14 0%,#1c140e 55%,#140e0a 100%);
-  border:1px solid #3d2e21;border-bottom:4px solid #0e0a07;border-radius:5px;
+  border:0;border-bottom:4px solid #0e0a07;border-radius:5px;
   transform:rotate(.55deg);
   box-shadow:
     inset 0 1px 0 rgba(255,235,205,.08),
     inset 0 0 24px rgba(0,0,0,.65),
     0 18px 32px -20px rgba(10,13,8,.9),0 1px 2px rgba(10,13,8,.35);
-  transition:transform .24s ease,box-shadow .24s ease,border-color .24s ease;
-}
-/* Iron corner bracket hint inside the crate edge */
-.box-open::before{
-  content:"";position:absolute;inset:0;pointer-events:none;border-radius:4px;
-  box-shadow:inset 0 0 0 2px rgba(18,14,10,.7);
+  transition:transform .24s ease,box-shadow .24s ease;
 }
 .bo-end{
   flex:none;width:68px;position:relative;display:grid;place-items:center;
@@ -1575,42 +1570,41 @@ body.picking .box-open{display:none}
 .box-page main{padding-bottom:calc(104px + var(--safe-b))}
 .box-sec{padding-block:18px 0}
 
-/* The lamp-lit terrace table where the shoebox sits and the prints spill out. */
+/* The lamp-lit space where the wooden crate sits and the prints spill out. */
 .box-stage{
-  position:relative;margin-top:20px;
-  height:min(76svh,640px);min-height:480px;
-  border-radius:14px;overflow:hidden;isolation:isolate;
+  position:relative;margin-top:16px;
+  height:min(74svh,620px);min-height:460px;
+  border-radius:0;overflow:visible;isolation:isolate;
   background:
-    radial-gradient(ellipse 68% 62% at 50% 42%,rgba(232,178,92,.16),rgba(16,20,14,.96) 74%),
-    #141811;
-  border:1px solid color-mix(in srgb,var(--lamp) 28%,var(--hair));
-  box-shadow:0 26px 52px -28px rgba(10,13,8,.85),inset 0 0 64px rgba(0,0,0,.75);
+    radial-gradient(ellipse 58% 52% at 50% 48%,color-mix(in srgb,var(--lamp) 13%,transparent),transparent 74%);
+  border:0;
+  box-shadow:none;
   user-select:none;-webkit-user-select:none;
   touch-action:pan-y;
 }
 /* Warm light-leak flare when the lid comes off or a new print is dealt */
 .box-leak{
-  position:absolute;inset:0;z-index:35;pointer-events:none;mix-blend-mode:screen;
+  position:absolute;inset:-20px;z-index:35;pointer-events:none;mix-blend-mode:screen;
   opacity:0;transition:opacity .45s ease-out;
   background:
-    radial-gradient(55% 75% at 14% 58%,rgba(255,126,46,.55),rgba(214,58,30,.22) 45%,transparent 72%),
-    radial-gradient(45% 65% at 88% 28%,rgba(255,176,78,.42),transparent 68%);
+    radial-gradient(48% 58% at 24% 56%,rgba(255,126,46,.42),rgba(214,58,30,.16) 45%,transparent 70%),
+    radial-gradient(42% 52% at 78% 34%,rgba(255,176,78,.32),transparent 65%);
 }
 .box-leak.flare{opacity:1}
 
 .box-meta-top{
-  position:absolute;top:14px;left:16px;right:16px;z-index:30;
+  position:absolute;top:6px;left:0;right:0;z-index:30;
   display:flex;justify-content:space-between;align-items:center;gap:10px;
   pointer-events:none;
 }
 .box-badge{
   font:500 11.5px/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;
-  color:rgba(242,236,224,.72);
+  color:var(--mut);
 }
 .box-count-pill{
   font:500 12px/1 var(--sans);font-variant-numeric:tabular-nums;
   padding:6px 11px;border-radius:99px;
-  background:rgba(14,18,12,.68);border:1px solid rgba(242,236,224,.22);color:#f2ece0;
+  background:var(--card);border:1px solid var(--hair);color:var(--tx);
 }
 
 /* The Dark Used Wooden Crate / Trunk on the table */
@@ -1651,11 +1645,10 @@ body.picking .box-open{display:none}
   background:
     repeating-linear-gradient(90deg,rgba(255,235,205,.015) 0 16px,rgba(0,0,0,.12) 16px 34px),
     linear-gradient(170deg,#1c140e,#0f0a07);
-  border:2px solid #2d2016;border-radius:4px;
+  border:0;border-radius:4px;
   box-shadow:
     0 28px 54px -10px rgba(0,0,0,.92),
-    inset 0 18px 32px rgba(0,0,0,.85),
-    inset 0 0 0 4px #16100b;
+    inset 0 18px 32px rgba(0,0,0,.85);
 }
 /* Tarnished iron lock plate on the front of the trunk base */
 .shoebox-base::after{
@@ -1676,7 +1669,7 @@ body.picking .box-open{display:none}
 .shoebox.is-open .shoebox-stack,
 .shoebox.is-receiving .shoebox-stack{opacity:.88}
 
-/* Heavy dark aged wood plank lid with recessed plank seams and iron corner framing */
+/* Heavy dark aged wood plank lid with recessed plank seams */
 .shoebox-lid{
   position:absolute;inset:0;overflow:hidden;
   background:
@@ -1694,7 +1687,7 @@ body.picking .box-open{display:none}
       transparent 5px 9px),
     /* aged dark walnut/oak stain, darker around the worn edges */
     radial-gradient(ellipse 85% 80% at 50% 48%,#2b1f16 0%,#1f160f 62%,#140e09 100%);
-  border:1.5px solid #3a2a1d;
+  border:0;
   border-bottom:5px solid #0d0906;
   border-radius:5px;
   box-shadow:
@@ -1703,12 +1696,6 @@ body.picking .box-open{display:none}
     0 14px 28px rgba(0,0,0,.68);
   display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;
   transition:transform .64s cubic-bezier(.22,.85,.3,1),opacity .45s ease;
-}
-/* Outer iron corner bevels & brass/iron studs */
-.shoebox-lid::before{
-  content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
-  border:3px solid rgba(18,14,11,.75);border-radius:4px;
-  box-shadow:inset 0 0 0 1px rgba(255,230,195,.05);
 }
 .shoebox.is-open .shoebox-lid,
 .shoebox.is-receiving .shoebox-lid{
@@ -1742,25 +1729,25 @@ body.picking .box-open{display:none}
     radial-gradient(circle at 10px 50%,#2a2118 0 2.5px,#6e5a40 3px,transparent 4px),
     radial-gradient(circle at calc(100% - 10px) 50%,#2a2118 0 2.5px,#6e5a40 3px,transparent 4px),
     linear-gradient(175deg,#dfd5c1 0%,#cbbda4 100%);
-  color:#1e1812;padding:11px 24px 9px;border-radius:2px;
-  border:1px solid #786952;
+  color:#1e1812;padding:11px 22px 9px;border-radius:2px;
   transform:rotate(.6deg);
   box-shadow:0 3px 9px rgba(0,0,0,.65),inset 0 0 14px rgba(70,52,30,.22);
-  text-align:center;position:relative;z-index:2;max-width:216px;
+  text-align:center;position:relative;z-index:2;max-width:244px;
 }
 .shoebox-label small{
   display:block;font:600 9.5px/1.2 var(--sans);letter-spacing:.2em;
   text-transform:uppercase;color:#6e3b23;
 }
 .shoebox-label b{
-  display:block;font:600 22px/1.15 var(--serif);margin:3px 0 2px;color:#1b150f;
+  display:block;font:600 19.5px/1.15 var(--serif);margin:3px 0 2px;color:#1b150f;
+  white-space:nowrap;
 }
 .shoebox-label em{
   display:block;font:italic 400 12.5px/1.3 var(--serif);color:#52483a;
 }
 .shoebox-prompt{
   position:absolute;left:50%;bottom:-38px;transform:translateX(-50%);
-  white-space:nowrap;font:italic 400 14px/1.3 var(--serif);color:rgba(230,222,206,.72);
+  white-space:nowrap;font:italic 400 14px/1.3 var(--serif);color:var(--mut);
   transition:opacity .25s ease;pointer-events:none;
 }
 .shoebox.is-open .shoebox-prompt,
@@ -1926,14 +1913,13 @@ body.picking .box-open{display:none}
   .box-stage{
     margin-top:12px;
     height:clamp(360px,56svh,450px);min-height:360px;
-    border-radius:12px;
   }
-  .box-meta-top{top:10px;left:12px;right:12px}
-  .shoebox{width:min(74vw,256px);height:162px}
-  .shoebox-twine::before{left:16px;width:15px}
-  .shoebox-twine::after{right:16px;width:15px}
-  .shoebox-label{padding:9px 18px 8px;max-width:184px}
-  .shoebox-label b{font-size:19px}
+  .box-meta-top{top:6px;left:0;right:0}
+  .shoebox{width:min(76vw,264px);height:164px}
+  .shoebox-twine::before{left:14px;width:15px}
+  .shoebox-twine::after{right:14px;width:15px}
+  .shoebox-label{padding:8px 14px 7px;max-width:210px}
+  .shoebox-label b{font-size:16.5px}
   .shoebox-label em{font-size:11.5px}
   .shoebox-prompt{bottom:-32px;font-size:13px}
   .shoebox.is-open{transform:translate(-115%,108%) rotate(-8deg) scale(.46)}
