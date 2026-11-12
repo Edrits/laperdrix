@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="photos.css?v=4">
-<link rel="stylesheet" href="styles.css?v=58">
+<link rel="stylesheet" href="styles.css?v=59">
 <script>
   try {
     document.documentElement.setAttribute(
@@ -43,6 +43,15 @@
     <p class="muted" id="boxSub">Tap the lid to spill the prints out, flick through the pile, or drop one of your own back in.</p>
 
     <div class="box-stage" id="stage">
+      <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+        <defs>
+          <filter id="wood-stamp">
+            <feTurbulence type="fractalNoise" baseFrequency=".78" numOctaves="2" seed="11" result="n"/>
+            <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -1.15 0 0 0 1.48" result="m"/>
+            <feComposite in="SourceGraphic" in2="m" operator="in"/>
+          </filter>
+        </defs>
+      </svg>
       <div class="box-leak" id="leak" aria-hidden="true"></div>
 
       <div class="box-meta-top">
@@ -128,7 +137,7 @@
   </div>
 </div>
 
-<script src="icons.js?v=7"></script>
+<script src="icons.js?v=8"></script>
 <script src="sync.js?v=4"></script>
 <script src="focus.js?v=2"></script>
 <script src="photos.js?v=2"></script>
