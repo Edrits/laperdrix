@@ -763,6 +763,31 @@ body.picking .bar{display:none}
 .view{padding-block:16px 0}
 .empty-note{color:var(--mut);font-size:14px;margin:20px 0 0}
 
+/* One-tap quick spend starters under the pot panel: pre-selects the category
+   (and sets Alcohol to off-kitty) so logging a shop or boulangerie run takes
+   only an amount and Save. */
+.quick-sec{padding-block:14px 0}
+.quick-label{
+  font:600 10.5px/1.2 var(--sans);letter-spacing:.15em;text-transform:uppercase;
+  color:var(--mut);margin:0 0 8px;
+}
+.quick-adds{display:flex;gap:7px;flex-wrap:wrap}
+.qadd{
+  display:inline-flex;align-items:center;gap:7px;
+  font:inherit;font-size:13px;padding:6px 13px 6px 7px;border-radius:99px;cursor:pointer;
+  border:1px solid var(--hair);
+  background:color-mix(in srgb,var(--surface) 82%,transparent);
+  color:var(--tx);
+  transition:border-color .15s ease,transform .15s ease;
+}
+.qadd:hover{border-color:var(--accent);transform:translateY(-1px)}
+.qadd:active{transform:translateY(0)}
+.qadd-ic{
+  width:21px;height:21px;border-radius:99px;display:grid;place-items:center;
+  color:#fff;flex:none;
+}
+.qadd-ic svg{width:13px;height:13px}
+
 /* Filter and choice pills. Used by the phase filters and by "who it was for" —
    without these they fall back to the browser's default button chrome, which
    on a dark ground is a white slab. */

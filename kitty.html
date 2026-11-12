@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="photos.css?v=4">
-<link rel="stylesheet" href="styles.css?v=59">
+<link rel="stylesheet" href="styles.css?v=60">
 <!-- In the <head> and inline, so the attribute lands before the first paint.
      See the same block in index.html. -->
 <script>
@@ -54,6 +54,13 @@
       <p class="pot-cap" id="potCap"></p>
       <div class="payins" id="payinList" hidden></div>
     </div>
+  </section>
+
+  <!-- One-tap spend starters: opens the sheet with "what for" already chosen
+       (and Alcohol set to off-kitty) so you only need the amount. -->
+  <section class="sec quick-sec">
+    <p class="quick-label">Quick add</p>
+    <div class="quick-adds" id="quickAdds"></div>
   </section>
 
   <!-- These filter the whole page below them — chart, entries and all. -->
@@ -242,8 +249,47 @@ const K_CONF = 'laperdrix.kitty.v1';
 /* Tags rather than free text: a list you can tap is faster than typing on a
    phone, and it makes the spending groupable later. The detail field is always
    there for anything a tag doesn't cover. */
-const TAGS = ['Food shop', 'Restaurant', 'Drinks', 'Alcohol', 'Market', 'Fuel', 'Tolls',
-              'Activities', 'The house', 'Travel', 'Other'];
+const TAGS = ['Food shop', 'Boulangerie', 'Market', 'Alcohol', 'Drinks', 'Restaurant',
+              'Activities', 'Fuel', 'Tolls', 'The house', 'Travel', 'Other'];
+
+const QUICK_ADDS = [
+  { label: 'Add shop',          category: 'Food shop',   icon: 'tomato',    fromKitty: true },
+  { label: 'Add alcohol spend', category: 'Alcohol',     icon: 'wine',      fromKitty: false },
+  { label: 'Add boulangerie',   category: 'Boulangerie', icon: 'bread',     fromKitty: true },
+  { label: 'Add market',        category: 'Market',      icon: 'sunflower', fromKitty: true },
+  { label: 'Add activity',      category: 'Activities',  icon: 'swim',      fromKitty: true },
+  { label: 'Add meal or café',  category: 'Restaurant',  icon: 'coffee',    fromKitty: true },
+  { label: 'Add fuel or tolls', category: 'Fuel',        icon: 'bicycle',   fromKitty: true },
+  { label: 'Add house bits',    category: 'The house',   icon: 'lamp',      fromKitty: true },
+];
+
+const TAG_TITLES = {
+  'Food shop':   'Add food shop',
+  'Boulangerie': 'Add boulangerie',
+  'Market':      'Add market spend',
+  'Alcohol':     'Add alcohol spend',
+  'Drinks':      'Add drinks spend',
+  'Restaurant':  'Add meal or café',
+  'Activities':  'Add activity',
+  'Fuel':        'Add fuel spend',
+  'Tolls':       'Add tolls spend',
+  'The house':   'Add house bits',
+  'Travel':      'Add travel spend',
+};
+
+const TAG_HINTS = {
+  'Food shop':   'Intermarché, Carrefour, Leclerc…',
+  'Boulangerie': 'Morning baguettes & croissants…',
+  'Market':      'Ribérac market, cheese, melons…',
+  'Alcohol':     'Wine, beer, Pineau, apéro…',
+  'Drinks':      'Juice, Orangina, sparkling water…',
+  'Restaurant':  'Lunch in Brantôme, ice creams, tabac…',
+  'Activities':  'Canoes on the Dronne, caves, tennis…',
+  'Fuel':        'Diesel, petrol, airport run…',
+  'Tolls':       'Autoroute péage…',
+  'The house':   'Charcoal, ice, pool bits…',
+  'Travel':      'Ferry, Eurotunnel, train, flights…',
+};
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -656,11 +702,14 @@ function applyMode(){
   const isPayin = draft.entryType === 'payin';
   $('fTitle').textContent = isPayin
     ? (draft.id ? 'Edit pay-in' : "I've paid in")
-    : (draft.id ? 'Edit spend' : 'Add spend');
+    : (draft.id ? 'Edit spend' : (TAG_TITLES[draft.category] || 'Add spend'));
   $('payLabel').textContent = isPayin ? 'Who paid in' : 'Who paid';
   $('tagLabel').hidden = isPayin;
   $('fTags').hidden = isPayin;
   $('fDetail').hidden = isPayin;
+  $('fDetail').placeholder = (!isPayin && TAG_HINTS[draft.category])
+    ? TAG_HINTS[draft.category]
+    : 'Anything worth adding (optional)';
   // The toggle is only meaningful for a spend, and only once a pot exists to
   // draw from — before the first pay-in there is nothing for it to mean.
   $('fKittyWrap').hidden = isPayin || payins().length === 0;
@@ -668,12 +717,14 @@ function applyMode(){
   [...$('fKitty').children].forEach(b => b.classList.toggle('on', (b.dataset.kitty === 'yes') === yes));
 }
 
-function openForm(existing, kind){
+function openForm(existing, kind, preset){
   people = loadPeople();
   const lastPayer = read(K_ME, null);
   draft = existing ? Object.assign({}, existing) : {
     id: null, entryType: kind === 'payin' ? 'payin' : 'spend',
-    category: null, what: '', currency: 'EUR', fromKitty: true,
+    category: preset ? preset.category : null,
+    what: '', currency: 'EUR',
+    fromKitty: preset && preset.fromKitty !== undefined ? preset.fromKitty : true,
     paidBy: personById(lastPayer) ? lastPayer : (people[0] ? people[0].id : '__new'),
     spentOn: todayISO(),
     household: '',
@@ -716,6 +767,17 @@ function closeForm(){
    above it (see --kb). One extra tap, but you can always see the number. */
 $('addBtn').addEventListener('click', () => openForm(null, 'spend'));
 $('payInBtn').addEventListener('click', () => openForm(null, 'payin'));
+
+$('quickAdds').innerHTML = QUICK_ADDS.map((q, idx) =>
+  `<button type="button" class="qadd" data-qidx="${idx}">
+     <span class="qadd-ic" style="background:${colourOf(q.icon)}">${iconOf(q.icon)}</span>${esc(q.label)}
+   </button>`).join('');
+$('quickAdds').addEventListener('click', e => {
+  const b = e.target.closest('.qadd');
+  if (!b) return;
+  const preset = QUICK_ADDS[Number(b.dataset.qidx)];
+  if (preset) openForm(null, 'spend', preset);
+});
 $('payinList').addEventListener('click', e => {
   const row = e.target.closest('.payin-row');
   if (!row) return;
