@@ -1547,7 +1547,7 @@ body.picking .folk-pane,body.picking .lifts-pane,body.picking .chart-pane{displa
    prints: a dark weathered wooden crate/trunk with plank seams, iron straps,
    and a tacked cellar label. */
 .box-open{
-  display:flex;align-items:stretch;margin-top:26px;min-height:78px;max-width:560px;
+  display:flex;align-items:stretch;margin:28px auto 0;min-height:78px;max-width:560px;
   color:#e6dfd1;text-decoration:none;position:relative;
   background:
     /* horizontal plank seams */
@@ -1801,36 +1801,30 @@ body.picking .box-open{display:none}
 .shoebox.is-open .shoebox-prompt,
 .shoebox.is-receiving .shoebox-prompt{opacity:0}
 
-/* Settled matte grey-taupe cellar dust on the dark wood, wiping clear from left
-   to right as a breath blows across the top like an aged bottle of red wine. */
+/* Settled matte grey-taupe cellar dust on the dark wood, clearing radially
+   outward from the centre as if blown on straight from the front. */
 .shoebox-dust-coat{
   position:absolute;inset:0;border-radius:5px;pointer-events:none;z-index:4;
   background:
-    radial-gradient(ellipse 90% 70% at 46% 45%,rgba(176,169,156,.34),rgba(152,145,133,.22) 58%,transparent 85%),
+    radial-gradient(ellipse 90% 70% at 50% 50%,rgba(176,169,156,.34),rgba(152,145,133,.22) 58%,transparent 88%),
     linear-gradient(180deg,rgba(186,179,166,.22),rgba(148,141,129,.12));
-  -webkit-mask-image:linear-gradient(102deg,transparent 0%,transparent 32%,#000 54%,#000 100%);
-          mask-image:linear-gradient(102deg,transparent 0%,transparent 32%,#000 54%,#000 100%);
-  -webkit-mask-size:260% 100%;
-          mask-size:260% 100%;
-  -webkit-mask-position:100% 0;
-          mask-position:100% 0;
-  animation:wineBottleDustWipe 2.8s cubic-bezier(.22,.55,.32,1) forwards;
+  -webkit-mask-image:radial-gradient(ellipse 52% 48% at 50% 50%,rgba(0,0,0,.18) 0%,rgba(0,0,0,.55) 45%,#000 78%);
+          mask-image:radial-gradient(ellipse 52% 48% at 50% 50%,rgba(0,0,0,.18) 0%,rgba(0,0,0,.55) 45%,#000 78%);
+  transform-origin:50% 50%;
+  animation:wineBottleDustWipe 2.7s cubic-bezier(.2,.58,.3,1) forwards;
 }
 @keyframes wineBottleDustWipe{
   0%{
-    -webkit-mask-position:100% 0;
-            mask-position:100% 0;
-    opacity:.95;
+    transform:scale(1);
+    opacity:.96;
   }
-  18%{
-    -webkit-mask-position:92% 0;
-            mask-position:92% 0;
-    opacity:.95;
+  16%{
+    transform:scale(1.03);
+    opacity:.94;
   }
   100%{
-    -webkit-mask-position:12% 0;
-            mask-position:12% 0;
-    opacity:.22;
+    transform:scale(2.15);
+    opacity:.16;
   }
 }
 
@@ -1844,7 +1838,7 @@ body.picking .box-open{display:none}
 }
 .dust-cloud{
   position:absolute;border-radius:999px;pointer-events:none;z-index:31;
-  background:radial-gradient(ellipse at center,rgba(178,171,158,.22) 0%,rgba(156,149,137,.11) 52%,transparent 78%);
+  background:radial-gradient(ellipse at center,rgba(178,171,158,.23) 0%,rgba(156,149,137,.11) 52%,transparent 78%);
   filter:blur(11px);
   animation:cloudBlow var(--dur,2.5s) cubic-bezier(.14,.58,.28,1) forwards;
 }
@@ -1854,10 +1848,10 @@ body.picking .box-open{display:none}
   100%{transform:translate(var(--dx),var(--dy)) scale(1.35);opacity:0}
 }
 @keyframes cloudBlow{
-  0%{transform:translate(0,0) scale(.55,.38) rotate(-4deg);opacity:0}
-  18%{opacity:.68}
-  65%{opacity:.34}
-  100%{transform:translate(var(--dx),var(--dy)) scale(2.4,1.35) rotate(6deg);opacity:0}
+  0%{transform:translate(-50%,-50%) scale(.45,.38) rotate(0deg);opacity:0}
+  18%{opacity:.66}
+  65%{opacity:.32}
+  100%{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(2.2,1.65) rotate(var(--rot,8deg));opacity:0}
 }
 
 /* Cascading Polaroids */
@@ -1926,10 +1920,10 @@ body.picking .box-open{display:none}
 
 /* Controls strip under the table */
 .box-controls{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  flex-wrap:wrap;margin-top:14px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  margin-top:14px;
 }
-.box-nav-btns{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.box-nav-btns{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
 .box-hint{font-size:13.5px;color:var(--mut);margin:0}
 
 /* Upload sheet preview */

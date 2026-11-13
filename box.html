@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="photos.css?v=4">
-<link rel="stylesheet" href="styles.css?v=60">
+<link rel="stylesheet" href="styles.css?v=61">
 <script>
   try {
     document.documentElement.setAttribute(
@@ -220,84 +220,97 @@ function triggerLeak() {
 
 function spawnDust() {
   const stage = $('stage');
-  // Soft, dry cellar-dust wisps curling off the edges of the wooden lid (no sparkle)
-  for (let c = 0; c < 7; c++) {
+  // Soft, dry cellar-dust wisps billowing outward in all directions from the lid
+  for (let c = 0; c < 8; c++) {
     const cloud = document.createElement('span');
     cloud.className = 'dust-cloud';
-    const w = 78 + Math.random() * 68;
-    const h = 28 + Math.random() * 24;
+    const w = 68 + Math.random() * 64;
+    const h = 44 + Math.random() * 42;
     cloud.style.width = w + 'px';
     cloud.style.height = h + 'px';
-    cloud.style.left = (35 + Math.random() * 26) + '%';
-    cloud.style.top = (38 + Math.random() * 20) + '%';
-    const angle = (Math.random() - 0.5) * Math.PI * 1.3 - Math.PI * 0.15;
-    const dist = 65 + Math.random() * 95;
+    const angle = (c / 8) * Math.PI * 2 + (Math.random() - 0.5) * 0.65;
+    const startR = 4 + Math.random() * 8;
+    cloud.style.left = (50 + Math.cos(angle) * startR) + '%';
+    cloud.style.top = (48 + Math.sin(angle) * startR * 0.75) + '%';
+    const dist = 75 + Math.random() * 105;
     cloud.style.setProperty('--dx', Math.round(Math.cos(angle) * dist) + 'px');
-    cloud.style.setProperty('--dy', Math.round(Math.sin(angle) * dist - 18) + 'px');
-    cloud.style.setProperty('--dur', (1.9 + Math.random() * 0.8).toFixed(2) + 's');
+    cloud.style.setProperty('--dy', Math.round(Math.sin(angle) * dist * 0.78) + 'px');
+    cloud.style.setProperty('--rot', Math.round((Math.random() - 0.5) * 50) + 'deg');
+    cloud.style.setProperty('--dur', (1.85 + Math.random() * 0.85).toFixed(2) + 's');
     stage.appendChild(cloud);
     setTimeout(() => cloud.remove(), 2800);
   }
-  // A few tiny matte silt specks (blurred, low opacity, no glow)
-  for (let i = 0; i < 10; i++) {
+  // Tiny matte silt specks scattering radially outward
+  for (let i = 0; i < 12; i++) {
     const mote = document.createElement('span');
     mote.className = 'dust-mote';
     const size = 1.6 + Math.random() * 2.2;
     mote.style.width = size + 'px';
     mote.style.height = size + 'px';
-    mote.style.left = (38 + Math.random() * 24) + '%';
-    mote.style.top = (40 + Math.random() * 18) + '%';
-    const angle = (Math.random() - 0.5) * Math.PI * 1.2;
-    const dist = 45 + Math.random() * 85;
+    const angle = Math.random() * Math.PI * 2;
+    mote.style.left = (44 + Math.random() * 12) + '%';
+    mote.style.top = (43 + Math.random() * 10) + '%';
+    const dist = 55 + Math.random() * 100;
     const dur = 1.6 + Math.random() * 0.9;
     mote.style.setProperty('--dx', Math.round(Math.cos(angle) * dist) + 'px');
-    mote.style.setProperty('--dy', Math.round(Math.sin(angle) * dist - 20) + 'px');
+    mote.style.setProperty('--dy', Math.round(Math.sin(angle) * dist * 0.78) + 'px');
     mote.style.setProperty('--dur', dur.toFixed(2) + 's');
     stage.appendChild(mote);
     setTimeout(() => mote.remove(), Math.round(dur * 1000) + 100);
   }
 }
 
-/* Like blowing dust off the shoulder of an aged bottle of red wine: a horizontal
-   breath sweeps across the dark wood planks from left to right, lifting a soft,
-   matte grey-taupe plume of cellar silt that curls and dissipates into the air. */
+/* As if the viewer is blowing straight onto the centre of the crate from in front of
+   the screen: a breath hits the middle of the dark wood planks and scatters soft,
+   matte grey-taupe clouds of cellar silt radially outward in every direction. */
 function blowDustOffBox() {
   const stage = $('stage');
-  for (let c = 0; c < 11; c++) {
+  const cloudCount = 14;
+  for (let c = 0; c < cloudCount; c++) {
     setTimeout(() => {
       const cloud = document.createElement('span');
       cloud.className = 'dust-cloud';
-      const w = 88 + Math.random() * 76;
-      const h = 26 + Math.random() * 22;
+      const w = 72 + Math.random() * 72;
+      const h = 48 + Math.random() * 48;
       cloud.style.width = w + 'px';
       cloud.style.height = h + 'px';
-      cloud.style.left = (30 + c * 3.2 + Math.random() * 4) + '%';
-      cloud.style.top = (36 + Math.random() * 22) + '%';
-      cloud.style.setProperty('--dx', Math.round(115 + Math.random() * 110) + 'px');
-      cloud.style.setProperty('--dy', Math.round(-14 - Math.random() * 34) + 'px');
-      cloud.style.setProperty('--dur', (2.1 + Math.random() * 0.8).toFixed(2) + 's');
+      // Evenly distributed around 360 deg with natural random jitter so it blows outward all around
+      const angle = (c / cloudCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.55;
+      const startR = 3 + Math.random() * 9;
+      cloud.style.left = (50 + Math.cos(angle) * startR) + '%';
+      cloud.style.top = (48 + Math.sin(angle) * startR * 0.72) + '%';
+      const dist = 90 + Math.random() * 125;
+      const dx = Math.cos(angle) * dist + (Math.random() - 0.5) * 28;
+      const dy = Math.sin(angle) * dist * 0.78 + (Math.random() - 0.5) * 24;
+      cloud.style.setProperty('--dx', Math.round(dx) + 'px');
+      cloud.style.setProperty('--dy', Math.round(dy) + 'px');
+      cloud.style.setProperty('--rot', Math.round((Math.random() - 0.5) * 60) + 'deg');
+      cloud.style.setProperty('--dur', (1.95 + Math.random() * 0.85).toFixed(2) + 's');
       stage.appendChild(cloud);
       setTimeout(() => cloud.remove(), 3000);
-    }, c * 80);
+    }, c * 45);
   }
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 18; i++) {
     setTimeout(() => {
       const mote = document.createElement('span');
       mote.className = 'dust-mote';
-      const size = 1.5 + Math.random() * 2;
+      const size = 1.5 + Math.random() * 2.1;
       mote.style.width = size + 'px';
       mote.style.height = size + 'px';
-      mote.style.left = (33 + Math.random() * 26) + '%';
-      mote.style.top = (38 + Math.random() * 20) + '%';
-      const dx = 95 + Math.random() * 130;
-      const dy = -10 - Math.random() * 38 + (Math.random() - 0.5) * 18;
-      const dur = 1.8 + Math.random() * 0.9;
+      const angle = Math.random() * Math.PI * 2;
+      const startR = 2 + Math.random() * 10;
+      mote.style.left = (50 + Math.cos(angle) * startR) + '%';
+      mote.style.top = (48 + Math.sin(angle) * startR * 0.72) + '%';
+      const dist = 75 + Math.random() * 135;
+      const dx = Math.cos(angle) * dist + (Math.random() - 0.5) * 22;
+      const dy = Math.sin(angle) * dist * 0.78 + (Math.random() - 0.5) * 20;
+      const dur = 1.7 + Math.random() * 0.95;
       mote.style.setProperty('--dx', Math.round(dx) + 'px');
       mote.style.setProperty('--dy', Math.round(dy) + 'px');
       mote.style.setProperty('--dur', dur.toFixed(2) + 's');
       stage.appendChild(mote);
       setTimeout(() => mote.remove(), Math.round(dur * 1000) + 120);
-    }, i * 55);
+    }, i * 38);
   }
 }
 
